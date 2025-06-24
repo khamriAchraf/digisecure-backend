@@ -1,11 +1,13 @@
-from passlib.context import CryptContext
-from jose import JWTError, jwt
 from datetime import datetime, timedelta
+from typing import Any, Optional
+
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
 from app.core.logger import logger
 from app.db.models.user import User
-from typing import Any, Optional
-from sqlalchemy.orm import Session
-from app.core.config import settings
 
 SECRET_KEY = settings.JWT_SECRET
 ALGORITHM = settings.JWT_ALGORITHM
@@ -14,26 +16,35 @@ REFRESH_TOKEN_EXPIRE_DAYS = settings.JWT_REFRESH_EXPIRATION_DAYS
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
 
 def get_password_hash(password):
     return pwd_context.hash(password)
 
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.utcnow() + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     logger.info(f"Creating access token: to_encode={to_encode}, expire={expire}")
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+
 def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
+    expire = datetime.utcnow() + (
+        expires_delta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    )
     to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
     user = db.query(User).filter(User.username == username).first()
@@ -41,8 +52,10 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
         return None
     return user
 
+
 def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
     return db.query(User).filter(User.id == user_id).first()
+
 
 def decode_access_token(token: str):
     try:
@@ -53,6 +66,7 @@ def decode_access_token(token: str):
         return user_id
     except JWTError:
         return None
+
 
 def decode_refresh_token(token: str):
     try:

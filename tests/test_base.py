@@ -9,6 +9,6 @@ async def test_root():
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
-        response = await ac.get("/")
+        response = await ac.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"message": "Hello, World!"}
+    assert response.json() == {"message": "API is alive"}

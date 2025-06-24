@@ -12,9 +12,9 @@ console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
 
 # Create formatters and add it to handlers
-formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
+formatter = logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")
 console_handler.setFormatter(formatter)
 
 # Add handlers to the logger if not already added
 if not logger.hasHandlers():
-    logger.addHandler(console_handler) 
+    logger.addHandler(console_handler)
