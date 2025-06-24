@@ -13,7 +13,6 @@ engine = create_engine(DATABASE_URL, pool_size=10, max_overflow=20, pool_pre_pin
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-# Dependency for FastAPI
 def get_db():
     db = SessionLocal()
     try:

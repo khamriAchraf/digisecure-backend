@@ -3,9 +3,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.logger import logger
+from app.core.security import get_password_hash
 from app.db.models.user import User
 from app.db.session import get_db
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services import auth_service
 
 router = APIRouter(
@@ -28,7 +29,7 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=400, detail="Username or email already registered"
         )
-    hashed_password = auth_service.get_password_hash(user_create.password)
+    hashed_password = get_password_hash(user_create.password)
     new_user = User(
         username=user_create.username,
         email=user_create.email,
@@ -40,7 +41,7 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@router.post("/login")
+@router.post("/login", response_model=UserLogin)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
@@ -50,11 +51,11 @@ def login(
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     access_token = auth_service.create_access_token(data={"sub": str(user.id)})
     refresh_token = auth_service.create_refresh_token(data={"sub": str(user.id)})
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-    }
+    return UserLogin(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+    )
 
 
 @router.post("/refresh")
