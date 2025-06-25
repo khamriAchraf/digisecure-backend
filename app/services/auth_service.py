@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from jose import JWTError, jwt
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -36,8 +37,8 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-    user = db.query(User).filter(User.username == username).first()
+def authenticate_user(db: Session, email: EmailStr, password: str) -> Optional[User]:
+    user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user

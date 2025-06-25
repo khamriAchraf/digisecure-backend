@@ -2,7 +2,6 @@ from pydantic import BaseModel, EmailStr
 
 
 class UserBase(BaseModel):
-    username: str
     email: EmailStr
 
 
@@ -18,7 +17,6 @@ class UserLogin(BaseModel):
 
 class UserResponse(UserBase):
     id: int
-    is_active: bool
 
     class Config:
         orm_mode = True

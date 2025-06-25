@@ -18,20 +18,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 @router.post("/register", response_model=UserResponse)
 def register(user_create: UserCreate, db: Session = Depends(get_db)):
-    user = (
-        db.query(User)
-        .filter(
-            (User.username == user_create.username) | (User.email == user_create.email)
-        )
-        .first()
-    )
+    user = db.query(User).filter(User.email == user_create.email).first()
     if user:
-        raise HTTPException(
-            status_code=400, detail="Username or email already registered"
-        )
+        raise HTTPException(status_code=400, detail="Email already registered")
     hashed_password = get_password_hash(user_create.password)
     new_user = User(
-        username=user_create.username,
         email=user_create.email,
         hashed_password=hashed_password,
     )
@@ -49,8 +40,12 @@ def login(
     user = auth_service.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
-    access_token = auth_service.create_access_token(data={"sub": str(user.id)})
-    refresh_token = auth_service.create_refresh_token(data={"sub": str(user.id)})
+    access_token = auth_service.create_access_token(
+        data={"id": str(user.id), "email": user.email}
+    )
+    refresh_token = auth_service.create_refresh_token(
+        data={"id": str(user.id), "email": user.email}
+    )
     return UserLogin(
         access_token=access_token,
         refresh_token=refresh_token,
