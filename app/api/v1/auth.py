@@ -22,9 +22,28 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed_password = get_password_hash(user_create.password)
+    # Find the super-admin role
+    from app.db.models.role import Role
+
+    super_admin_role = db.query(Role).filter_by(name="Super-Admin").first()
+    if not super_admin_role:
+        raise HTTPException(status_code=500, detail="Super-Admin role not found")
     new_user = User(
         email=user_create.email,
+        username=user_create.username,
+        full_name=user_create.full_name,
         hashed_password=hashed_password,
+        language=user_create.language,
+        theme=user_create.theme,
+        status=user_create.status,
+        location=user_create.location,
+        phone=user_create.phone,
+        secondary_phone=user_create.secondary_phone,
+        timezone=user_create.timezone,
+        valid_from=user_create.valid_from,
+        valid_until=user_create.valid_until,
+        administartive_number=user_create.administartive_number,
+        roles=[super_admin_role],
     )
     db.add(new_user)
     db.commit()
@@ -41,10 +60,10 @@ def login(
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     access_token = auth_service.create_access_token(
-        data={"id": str(user.id), "email": user.email}
+        data={"sub": str(user.id), "email": user.email}
     )
     refresh_token = auth_service.create_refresh_token(
-        data={"id": str(user.id), "email": user.email}
+        data={"sub": str(user.id), "email": user.email}
     )
     return UserLogin(
         access_token=access_token,

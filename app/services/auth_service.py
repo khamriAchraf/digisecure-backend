@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
@@ -9,11 +11,14 @@ from app.core.config import settings
 from app.core.logger import logger
 from app.core.security import verify_password
 from app.db.models.user import User
+from app.db.session import get_db
 
 SECRET_KEY = settings.JWT_SECRET
 ALGORITHM = settings.JWT_ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.JWT_EXPIRATION_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.JWT_REFRESH_EXPIRATION_DAYS
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -70,3 +75,21 @@ def decode_refresh_token(token: str):
         return user_id
     except JWTError:
         return None
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+) -> User:
+    logger.info(f"Getting current user with token: {token}")
+    user_id = decode_access_token(token)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+    user = get_user_by_id(db, int(user_id))
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    logger.info(f"User {user.id} authenticated with token {token}")
+    return user
