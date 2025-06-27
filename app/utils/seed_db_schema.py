@@ -58,10 +58,8 @@ def create_super_admin_user(session, username, email, password, full_name):
         )
         return None
 
-    # Hash the password
     hashed_password = get_password_hash(password)
 
-    # Create the user
     user = User(
         username=username,
         email=email,
@@ -70,7 +68,6 @@ def create_super_admin_user(session, username, email, password, full_name):
         status="active",
     )
 
-    # Assign the Super-Admin role
     user.roles.append(super_admin_role)
 
     session.add(user)
@@ -83,7 +80,6 @@ def create_super_admin_user(session, username, email, password, full_name):
 def main():
     args = parse_arguments()
 
-    # Validate required arguments if any are provided
     if any([args.username, args.email, args.password]) and not all(
         [args.username, args.email, args.password]
     ):
@@ -94,11 +90,9 @@ def main():
 
     logger.info(f"Seeding using schema: {settings.DB_SCHEMA}")
 
-    # 1. Create all tables
     logger.info("Creating all tables (if not exist)...")
     Base.metadata.create_all(bind=engine)
 
-    # 2. Preset roles
     preset_roles = [
         {
             "name": "Super-Admin",

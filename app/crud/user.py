@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import and_, or_
@@ -78,7 +77,6 @@ def create_user(db: Session, user_in: UserCreate, hashed_password: str) -> User:
 def update_user(db: Session, user: User, user_in: UserUpdate) -> User:
     for field, value in user_in.dict(exclude_unset=True).items():
         setattr(user, field, value)
-    user.updated_at = datetime.utcnow() if hasattr(user, "updated_at") else None
     db.commit()
     db.refresh(user)
     return user

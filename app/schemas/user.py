@@ -31,13 +31,13 @@ class RoleResponse(RoleBase):
     is_builtin: Optional[bool] = False
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserBase(BaseModel):
     email: EmailStr
     username: str
-    full_name: str
+    full_name: Optional[str] = None
     language: Optional[str] = "en"
     theme: Optional[str] = "light"
     status: Optional[UserStatus] = UserStatus.active
@@ -83,4 +83,4 @@ class UserResponse(UserBase):
     roles: List[RoleResponse] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -2,6 +2,8 @@ import os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.logger import logger
+
 
 class Settings(BaseSettings):
     DB_HOST: str
@@ -41,7 +43,16 @@ class TestSettings(BaseSettings):
     )
 
 
-settings = Settings()  # type: ignore
+def get_settings() -> Settings:
+    """Get settings based on environment."""
+    if os.getenv("ENV_FILE") == ".env.test" or os.getenv("TESTING") == "true":
+        logger.info("Using test settings")
+        return TestSettings()  # type: ignore
+    logger.info("Using dev settings")
+    return Settings()  # type: ignore
+
+
+settings = get_settings()
 
 
 def get_test_settings() -> TestSettings:

@@ -111,5 +111,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+.vscode/
 .idea/*
 app/core/.env.test

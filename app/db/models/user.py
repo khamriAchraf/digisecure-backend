@@ -31,7 +31,7 @@ class User(Base):
     administartive_number = Column(String, unique=True, index=True, nullable=True)
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
-    full_name = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     phone = Column(String, nullable=True)
     secondary_phone = Column(String, nullable=True)

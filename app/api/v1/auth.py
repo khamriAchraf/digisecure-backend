@@ -55,10 +55,10 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
-    logger.info(f"Login attempt: username={form_data.username}")
+    logger.info(f"Login attempt: email={form_data.username}")
     user = auth_service.authenticate_user(db, form_data.username, form_data.password)
     if not user:
-        raise HTTPException(status_code=401, detail="Incorrect username or password")
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
     access_token = auth_service.create_access_token(
         data={"sub": str(user.id), "email": user.email}
     )

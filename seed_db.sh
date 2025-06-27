@@ -12,9 +12,20 @@
 #   ./seed_db.sh admin admin@example.com mypassword
 #   ./seed_db.sh "John Doe" john@company.com "secure123!"
 
+unset DB_HOST
+unset DB_PORT
+unset DB_NAME
+unset DB_USER
+unset DB_SCHEMA
+unset DB_PASSWORD
+unset JWT_SECRET
+unset JWT_ALGORITHM
+unset JWT_EXPIRATION_MINUTES
+unset JWT_REFRESH_EXPIRATION_DAYS
+
 LOGFILE="seed_db.log"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SEED_SCRIPT="$SCRIPT_DIR/app/db/seed.py"
+SEED_SCRIPT="$SCRIPT_DIR/app/utils/seed_db_schema.py"
 
 # Function to display usage
 show_usage() {
