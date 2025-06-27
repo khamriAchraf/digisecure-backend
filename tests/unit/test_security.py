@@ -2,7 +2,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.core.security import get_password_hash, has_permission, verify_password
+from app.core.security import (get_password_hash, has_permission,
+                               verify_password)
 
 
 @pytest.mark.unit
