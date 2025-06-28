@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.logger import logger
+from app.core.rate_limiting import limiter
 from app.core.security import get_password_hash
 from app.db.models.user import User
 from app.db.session import get_db
@@ -17,7 +18,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 @router.post("/register", response_model=UserResponse)
-def register(user_create: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/hour")
+def register(request: Request, user_create: UserCreate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_create.email).first()
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")

@@ -1,11 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.v1 import auth, user
 from app.core.config import settings
 from app.core.logger import logger
+from app.core.rate_limiting import limiter
 
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore
 
 logger.info(f"Starting API with parameters: {settings}")
 
@@ -22,5 +27,6 @@ app.include_router(user.router, prefix="/api/v1")
 
 
 @app.get("/health")
-def read_root():
+@limiter.limit("10/minute")
+def read_root(request: Request):
     return {"message": "API is alive"}

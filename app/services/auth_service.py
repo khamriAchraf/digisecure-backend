@@ -45,6 +45,7 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
 def authenticate_user(db: Session, email: EmailStr, password: str) -> Optional[User]:
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.hashed_password):
+        logger.warning(f"Failed authentication attempt for user {email}")
         return None
     return user
 
@@ -60,7 +61,8 @@ def decode_access_token(token: str):
         if user_id is None:
             return None
         return user_id
-    except JWTError:
+    except JWTError as e:
+        logger.warning(f"Token verification failed: {str(e)}")
         return None
 
 
@@ -80,7 +82,6 @@ def decode_refresh_token(token: str):
 def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> User:
-    logger.info(f"Getting current user with token: {token}")
     user_id = decode_access_token(token)
     if user_id is None:
         raise HTTPException(
