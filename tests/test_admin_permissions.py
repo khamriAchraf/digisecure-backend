@@ -5,7 +5,7 @@ from app.main import app
 from tests.test_data import BASE_URL, TEST_USERS
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
 @pytest.mark.run(order=10)
 @pytest.mark.asyncio
 async def test_admin_user_permissions():

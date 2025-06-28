@@ -3,7 +3,6 @@ import enum
 from sqlalchemy import Column, DateTime, Enum, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.core.config import settings
 from app.db.base import Base
 from app.db.models.role import user_roles
 
@@ -26,7 +25,6 @@ class UserRole(enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = {"schema": settings.DB_SCHEMA}
     id = Column(Integer, primary_key=True, index=True)
     administartive_number = Column(String, unique=True, index=True, nullable=True)
     email = Column(String, unique=True, index=True, nullable=False)

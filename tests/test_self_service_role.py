@@ -5,7 +5,7 @@ from app.main import app
 from tests.test_data import BASE_URL, TEST_USERS
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
 @pytest.mark.run(order=5)
 @pytest.mark.asyncio
 async def test_self_service_user_permissions():

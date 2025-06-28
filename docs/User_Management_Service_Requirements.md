@@ -82,7 +82,7 @@
 - Support bulk operations efficiently
 
 ### 🧪 Testability
-- Unit + integration tests
+- Unit + e2e tests
 - Mock LDAP and SMTP
 
  Permission Matrix Verified:

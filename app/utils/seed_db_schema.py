@@ -88,7 +88,7 @@ def main():
         )
         sys.exit(1)
 
-    logger.info(f"Seeding using schema: {settings.DB_SCHEMA}")
+    logger.info(f"Seeding database: {settings.DB_NAME}")
 
     logger.info("Creating all tables (if not exist)...")
     Base.metadata.create_all(bind=engine)

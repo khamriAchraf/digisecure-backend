@@ -9,7 +9,7 @@ from app.db.session import SessionLocal
 from app.main import app
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
 @pytest.mark.run(order=1)
 @pytest.mark.asyncio
 async def test_root():
@@ -21,13 +21,13 @@ async def test_root():
     assert response.json() == {"message": "API is alive"}
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
 @pytest.mark.run(order=2)
 def test_app_running_in_test_mode():
     """Test that the app is running with test settings."""
     assert (
-        settings.DB_SCHEMA == "test"
-    ), f"Expected DB_SCHEMA to be 'test', but got '{settings.DB_SCHEMA}'"
+        settings.DB_NAME == "test"
+    ), f"Expected DB_NAME to be 'test', but got '{settings.DB_NAME}'"
 
     import os
 
@@ -36,7 +36,7 @@ def test_app_running_in_test_mode():
     ), "TESTING environment variable should be set to 'true'"
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
 @pytest.mark.run(order=3)
 def test_db_seeded_correctly():
     """Test that the database contains required tables and data."""

@@ -1,17 +1,26 @@
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 
 from app.core.config import settings
 from app.core.logger import logger
-from app.db.session import engine
 
 if __name__ == "__main__":
-    if settings.DB_SCHEMA != "test":
+    if settings.DB_NAME != "test":
         raise RuntimeError(
-            f"Refusing to drop tables outside of test schema! Current schema: {settings.DB_SCHEMA}"
+            f"Refusing to clean schema outside of test database! Current database: {settings.DB_NAME}"
         )
-    logger.info(f"Dropping all tables in schema: {settings.DB_SCHEMA}")
+
+    logger.info(f"Cleaning public schema in test database: {settings.DB_NAME}")
+
+    # Connect directly to the test database
+    engine = create_engine(
+        f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+    )
+
     with engine.connect() as conn:
-        conn.execute(text(f"DROP SCHEMA IF EXISTS {settings.DB_SCHEMA} CASCADE"))
-        conn.execute(text(f"CREATE SCHEMA {settings.DB_SCHEMA}"))
+        # Drop and recreate the public schema
+        conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+        conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
         conn.commit()
-    logger.info("All tables dropped.")
+
+    logger.info("Public schema cleaned and recreated.")
