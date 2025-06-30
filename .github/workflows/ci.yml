@@ -36,6 +36,7 @@ jobs:
           DB_USER=${{ secrets.DB_USER }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           DB_NAME=${{ secrets.DB_NAME }}
+          DB_SCHEMA=${{ secrets.DB_SCHEMA }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           JWT_ALGORITHM=${{ secrets.JWT_ALGORITHM }}
           JWT_EXPIRATION_MINUTES=${{ secrets.JWT_EXPIRATION_MINUTES }}
