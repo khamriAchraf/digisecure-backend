@@ -4,6 +4,7 @@
 
 - Python >=3.12
 - Poetry
+- Pre-commit
 - Docker
 
 ### Setup Instructions
@@ -25,13 +26,18 @@ After cloning the repository, follow these steps to set up your development envi
 
    This will install all dependencies specified in `pyproject.toml`.
 
-3. **Install pre-commit Hooks**
+3. **Install and run pre-commit Hooks**
 
-   Install pre-commit using Poetry and set up the hooks:
+   Install pre-commit and set up the hooks:
 
    ```
-   poetry run pip install pre-commit
+   poetry add --group dev pre-commit
+   ```
+
+   Setup and run the pre-commit hooks
+   ```
    poetry run pre-commit install
+   poetry run pre-commit run --all-files
    ```
 
    This ensures code quality checks run automatically before each commit.

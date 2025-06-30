@@ -57,7 +57,12 @@ class UserService:
                 f"User {self.current_user.id} denied CREATE access for user {user_in.email}"
             )
             raise PermissionError("Not allowed to create users.")
-        user = user_crud.create_user(self.db, user_in, hashed_password)
+        try:
+            user = user_crud.create_user(self.db, user_in, hashed_password)
+        except ValueError as e:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=409, detail=str(e))
         logger.info(f"User {self.current_user.id} successfully CREATED user {user.id}")
         return user
 

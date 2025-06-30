@@ -68,8 +68,20 @@ def create_user(db: Session, user_in: UserCreate, hashed_password: str) -> User:
     try:
         db.commit()
         db.refresh(user)
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
+        msg = str(e.orig).lower()
+        if "unique constraint" in msg:
+            if "users_email" in msg:
+                raise ValueError(f"User with email '{user_in.email}' already exists.")
+            if "users_username" in msg:
+                raise ValueError(
+                    f"User with username '{user_in.username}' already exists."
+                )
+            if "users_administartive_number" in msg:
+                raise ValueError(
+                    f"User with administrative number '{user_in.administartive_number}' already exists."
+                )
         raise
     return user
 

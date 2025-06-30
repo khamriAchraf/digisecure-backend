@@ -12,6 +12,9 @@ from app.db.models.role import Permission, Role
 from app.db.models.user import User
 from app.db.session import SessionLocal, engine
 
+sys.path.append(".")  # Ensure project root is in sys.path
+from tests.test_data import TEST_USERS
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -242,6 +245,23 @@ def main():
         "Self-Service": [],
     }
 
+    # 5. Role management permissions
+    role_permissions = [
+        {"action": "read", "resource": "role", "description": "View role information"},
+        {"action": "create", "resource": "role", "description": "Create new roles"},
+        {
+            "action": "update",
+            "resource": "role",
+            "description": "Update role information",
+        },
+        {"action": "delete", "resource": "role", "description": "Delete roles"},
+        {
+            "action": "purge",
+            "resource": "role",
+            "description": "Permanently delete roles",
+        },
+    ]
+
     try:
         logger.info("Inserting preset roles...")
         for role_data in preset_roles:
@@ -265,6 +285,19 @@ def main():
         session.commit()
         logger.info("User management permissions inserted.")
 
+        logger.info("Inserting role management permissions...")
+        for perm_data in role_permissions:
+            perm = (
+                session.query(Permission)
+                .filter_by(action=perm_data["action"], resource=perm_data["resource"])
+                .first()
+            )
+            if not perm:
+                perm = Permission(**perm_data)
+                session.add(perm)
+        session.commit()
+        logger.info("Role management permissions inserted.")
+
         logger.info("Assigning permissions to roles...")
         for role_name, actions in role_permission_map.items():
             role = session.query(Role).filter_by(name=role_name).first()
@@ -282,11 +315,75 @@ def main():
         session.commit()
         logger.info("Permissions assigned to roles.")
 
+        logger.info("Assigning role management permissions to Super-Admin role...")
+        super_admin_role = session.query(Role).filter_by(name="Super-Admin").first()
+        if not super_admin_role:
+            logger.error(
+                "Super-Admin role not found. Skipping assignment of role management permissions."
+            )
+        else:
+            for perm_data in role_permissions:
+                perm = (
+                    session.query(Permission)
+                    .filter_by(
+                        action=perm_data["action"], resource=perm_data["resource"]
+                    )
+                    .first()
+                )
+                if perm and perm not in super_admin_role.permissions:
+                    super_admin_role.permissions.append(perm)
+            session.add(super_admin_role)
+            session.commit()
+            logger.info("Role management permissions assigned to Super-Admin role.")
+
         # Create super-admin user if credentials provided
         if all([args.username, args.email, args.password]):
             create_super_admin_user(
                 session, args.username, args.email, args.password, args.full_name
             )
+
+        # Create a user for each role if the database name contains 'dev'
+        if "dev" in settings.DB_NAME.lower():
+            logger.info(
+                "Detected 'dev' in DB name, creating test users from test_data.py..."
+            )
+            for user_key, user_data in TEST_USERS.items():
+                username = user_data["username"]
+                email = user_data["email"]
+                full_name = f"{user_data['role_name']} User"
+                password = user_data["password"]
+                role_name = user_data["role_name"]
+                # Check if user already exists
+                existing_user = (
+                    session.query(User)
+                    .filter((User.username == username) | (User.email == email))
+                    .first()
+                )
+                if existing_user:
+                    logger.info(
+                        f"User for role '{role_name}' already exists: {username} / {email}"
+                    )
+                    continue
+                role = session.query(Role).filter_by(name=role_name).first()
+                if not role:
+                    logger.warning(
+                        f"Role '{role_name}' not found, skipping user creation for this role."
+                    )
+                    continue
+                hashed_password = get_password_hash(password)
+                user = User(
+                    username=username,
+                    email=email,
+                    full_name=full_name,
+                    hashed_password=hashed_password,
+                    status="active",
+                )
+                user.roles.append(role)
+                session.add(user)
+                logger.info(
+                    f"Created user for role '{role_name}': {username} / {email} (password: {password})"
+                )
+            session.commit()
 
     except IntegrityError as e:
         session.rollback()
