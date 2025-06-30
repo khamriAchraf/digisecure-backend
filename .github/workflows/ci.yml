@@ -9,6 +9,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    environment: .env.test
 
     steps:
       - name: Checkout code
@@ -40,7 +41,7 @@ jobs:
           JWT_EXPIRATION_MINUTES=${{ secrets.JWT_EXPIRATION_MINUTES }}
           JWT_REFRESH_EXPIRATION_DAYS=${{ secrets.JWT_REFRESH_EXPIRATION_DAYS }}
           EOF
-          
+
       - name: Print .env.test file content
         run: cat app/core/.env.test
 
