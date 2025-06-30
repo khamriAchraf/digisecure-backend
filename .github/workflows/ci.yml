@@ -30,4 +30,6 @@ jobs:
       - name: Run tests
         run: |
           chmod +x ./run_all_tests.sh
-          poetry run ./run_all_tests.sh
+          chmod +x ./run_unit_tests.sh
+          chmod +x ./run_e2e_tests.sh
+          ./run_all_tests.sh
