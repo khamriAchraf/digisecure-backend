@@ -27,6 +27,20 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-root
 
+      - name: Create .env.test file
+        run: |
+          cat <<EOF > app/core/.env.test
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_ALGORITHM=${{ secrets.JWT_ALGORITHM }}
+          JWT_EXPIRATION_MINUTES=${{ secrets.JWT_EXPIRATION_MINUTES }}
+          JWT_REFRESH_EXPIRATION_DAYS=${{ secrets.JWT_REFRESH_EXPIRATION_DAYS }}
+          EOF
+
       - name: Run tests
         run: |
           chmod +x ./run_all_tests.sh
