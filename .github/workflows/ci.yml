@@ -43,9 +43,6 @@ jobs:
           JWT_REFRESH_EXPIRATION_DAYS=${{ secrets.JWT_REFRESH_EXPIRATION_DAYS }}
           EOF
 
-      - name: Print .env.test file content
-        run: cat app/core/.env.test
-
       - name: Run tests
         run: |
           chmod +x ./run_all_tests.sh

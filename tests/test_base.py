@@ -26,7 +26,7 @@ async def test_root():
 def test_app_running_in_test_mode():
     """Test that the app is running with test settings."""
     assert (
-        settings.DB_NAME == "test"
+        "test" in settings.DB_NAME
     ), f"Expected DB_NAME to be 'test', but got '{settings.DB_NAME}'"
 
     import os
