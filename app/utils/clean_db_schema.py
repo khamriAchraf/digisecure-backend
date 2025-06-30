@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.core.logger import logger
 
 if __name__ == "__main__":
-    if settings.DB_NAME != "test":
+    if "test" not in settings.DB_NAME:
         raise RuntimeError(
             f"Refusing to clean schema outside of test database! Current database: {settings.DB_NAME}"
         )
