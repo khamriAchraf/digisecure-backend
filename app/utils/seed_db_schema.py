@@ -1,6 +1,7 @@
 import argparse
 import sys
 
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
@@ -77,6 +78,80 @@ def create_super_admin_user(session, username, email, password, full_name):
     return user
 
 
+def create_user_audit_table_and_trigger(session):
+    # Create the audit table
+    session.execute(
+        text(
+            """
+    CREATE TABLE IF NOT EXISTS users_audit (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        action VARCHAR(10),
+        changed_by INTEGER,
+        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        old_data JSONB,
+        new_data JSONB
+    );
+    """
+        )
+    )
+
+    # Create the trigger function
+    session.execute(
+        text(
+            """
+    CREATE OR REPLACE FUNCTION audit_user_changes()
+    RETURNS TRIGGER AS $$
+    DECLARE
+        current_user_id INTEGER;
+    BEGIN
+        BEGIN
+            current_user_id := current_setting('app.current_user_id', true)::INTEGER;
+        EXCEPTION WHEN OTHERS THEN
+            current_user_id := NULL;
+        END;
+
+        IF TG_OP = 'INSERT' THEN
+            INSERT INTO users_audit (user_id, action, changed_by, new_data)
+            VALUES (NEW.id, 'INSERT', current_user_id, row_to_json(NEW));
+            RETURN NEW;
+        ELSIF TG_OP = 'UPDATE' THEN
+            INSERT INTO users_audit (user_id, action, changed_by, old_data, new_data)
+            VALUES (NEW.id, 'UPDATE', current_user_id, row_to_json(OLD), row_to_json(NEW));
+            RETURN NEW;
+        ELSIF TG_OP = 'DELETE' THEN
+            INSERT INTO users_audit (user_id, action, changed_by, old_data)
+            VALUES (OLD.id, 'DELETE', current_user_id, row_to_json(OLD));
+            RETURN OLD;
+        END IF;
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
+    """
+        )
+    )
+
+    # Attach the trigger to the users table (not user)
+    session.execute(
+        text(
+            """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_trigger WHERE tgname = 'user_audit_trigger'
+        ) THEN
+            CREATE TRIGGER user_audit_trigger
+            AFTER INSERT OR UPDATE OR DELETE ON "users"
+            FOR EACH ROW EXECUTE FUNCTION audit_user_changes();
+        END IF;
+    END;
+    $$;
+    """
+        )
+    )
+    session.commit()
+
+
 def main():
     args = parse_arguments()
 
@@ -92,6 +167,14 @@ def main():
 
     logger.info("Creating all tables (if not exist)...")
     Base.metadata.create_all(bind=engine)
+
+    # Ensure DDL is flushed by closing and reopening the session
+    session = SessionLocal()
+    session.close()
+    session = SessionLocal()
+
+    # Create audit table and trigger
+    create_user_audit_table_and_trigger(session)
 
     preset_roles = [
         {
@@ -158,8 +241,6 @@ def main():
         "Observer": ["read"],
         "Self-Service": [],
     }
-
-    session = SessionLocal()
 
     try:
         logger.info("Inserting preset roles...")

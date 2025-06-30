@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.logger import logger
 from app.core.security import has_permission
-from app.crud import user as user_crud
+from app.db.crud import user as user_crud
 from app.db.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 
