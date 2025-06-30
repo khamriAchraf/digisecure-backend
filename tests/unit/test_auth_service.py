@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from jose import JWTError
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
 from app.db.models.user import User
 from app.services import auth_service
 
@@ -300,8 +301,8 @@ class TestUserAuthentication:
 class TestGetCurrentUser:
     """Unit tests for get_current_user dependency function."""
 
-    @patch("app.services.auth_service.decode_access_token")
-    @patch("app.services.auth_service.get_user_by_id")
+    @patch("app.api.dependencies.decode_access_token")
+    @patch("app.api.dependencies.get_user_by_id")
     def test_get_current_user_success(self, mock_get_user_by_id, mock_decode_token):
         """Test successful current user retrieval."""
         # Mock token decoding
@@ -317,13 +318,13 @@ class TestGetCurrentUser:
         mock_token = "valid_token"
         mock_db = Mock(spec=Session)
 
-        result = auth_service.get_current_user(mock_token, mock_db)
+        result = get_current_user(mock_token, mock_db)
 
         mock_decode_token.assert_called_once_with(mock_token)
         mock_get_user_by_id.assert_called_once_with(mock_db, 123)
         assert result == mock_user
 
-    @patch("app.services.auth_service.decode_access_token")
+    @patch("app.api.dependencies.decode_access_token")
     def test_get_current_user_invalid_token(self, mock_decode_token):
         """Test current user retrieval with invalid token."""
         mock_decode_token.return_value = None
@@ -332,14 +333,14 @@ class TestGetCurrentUser:
         mock_db = Mock(spec=Session)
 
         with pytest.raises(HTTPException) as exc_info:
-            auth_service.get_current_user(mock_token, mock_db)
+            get_current_user(mock_token, mock_db)
 
         assert exc_info.value.status_code == 401
         assert exc_info.value.detail == "Invalid token"
         mock_decode_token.assert_called_once_with(mock_token)
 
-    @patch("app.services.auth_service.decode_access_token")
-    @patch("app.services.auth_service.get_user_by_id")
+    @patch("app.api.dependencies.decode_access_token")
+    @patch("app.api.dependencies.get_user_by_id")
     def test_get_current_user_user_not_found(
         self, mock_get_user_by_id, mock_decode_token
     ):
@@ -351,7 +352,7 @@ class TestGetCurrentUser:
         mock_db = Mock(spec=Session)
 
         with pytest.raises(HTTPException) as exc_info:
-            auth_service.get_current_user(mock_token, mock_db)
+            get_current_user(mock_token, mock_db)
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == "User not found"

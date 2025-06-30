@@ -54,6 +54,8 @@ def get_settings() -> Settings:
 
 settings = get_settings()
 
+logger.debug(f"Using password: {settings.DB_PASSWORD}")
+
 
 def get_test_settings() -> TestSettings:
     """Get settings configured for testing environment."""

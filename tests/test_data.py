@@ -3,7 +3,6 @@ Shared test data for all test files.
 Contains user credentials, role information, and other test constants.
 """
 
-# Test user credentials created by test_create_and_list_users()
 TEST_USERS = {
     "admin": {
         "username": "admin1",
@@ -55,7 +54,6 @@ TEST_USERS = {
     },
 }
 
-# Super admin credentials (created by seeding script)
 SUPER_ADMIN = {
     "username": "admin",
     "email": "admin@admin.com",
@@ -65,7 +63,6 @@ SUPER_ADMIN = {
     "permissions": ["read", "create", "update", "delete", "purge"],
 }
 
-# Role information for reference
 ROLES = {
     1: {
         "name": "Super-Admin",
@@ -79,6 +76,5 @@ ROLES = {
     7: {"name": "Self-Service", "permissions": []},
 }
 
-# Test constants
 TEST_PASSWORD = "testpass123!"
 BASE_URL = "http://test/api/v1"
