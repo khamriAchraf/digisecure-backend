@@ -21,12 +21,13 @@ python-multipart = "^0.0.20"
 bcrypt = "4.0.1"
 fastapi-csrf-protect = "^1.0.3"
 slowapi = "^0.1.9"
+httpx = "^0.28.1"
+geoip2 = "^4.8.0"
 
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
 pytest-asyncio = "^1.0.0"
-httpx = "^0.28.1"
 black = "^25.1.0"
 isort = "^6.0.1"
 ruff = "^0.12.0"

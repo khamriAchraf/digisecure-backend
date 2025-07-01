@@ -55,12 +55,26 @@ def register(request: Request, user_create: UserCreate, db: Session = Depends(ge
 
 @router.post("/login", response_model=UserLogin)
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ):
     logger.info(f"Login attempt: email={form_data.username}")
     user = auth_service.authenticate_user(db, form_data.username, form_data.password)
     if not user:
+        # Log failed login attempt
+        from app.utils.connection_logger import connection_logger
+
+        connection_logger.log_login_attempt(
+            request=request, email=form_data.username, success=False
+        )
         raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    # Log successful login to connection.log
+    from app.utils.connection_logger import connection_logger
+
+    connection_logger.log_successful_login(request, user, success=True)
+
     access_token = auth_service.create_access_token(
         data={"sub": str(user.id), "email": user.email}
     )

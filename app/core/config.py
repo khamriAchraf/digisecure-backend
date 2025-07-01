@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     JWT_EXPIRATION_MINUTES: int
     JWT_REFRESH_EXPIRATION_DAYS: int
     DEBUG: bool = False
+    GEOLITE2_DB_PATH: str = os.getenv("GEOLITE2_DB_PATH", "./data/GeoLite2-City.mmdb")
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(__file__), ".env"),
@@ -36,6 +37,7 @@ class TestSettings(BaseSettings):
     JWT_EXPIRATION_MINUTES: int
     JWT_REFRESH_EXPIRATION_DAYS: int
     DEBUG: bool = False
+    GEOLITE2_DB_PATH: str = os.getenv("GEOLITE2_DB_PATH", "./data/GeoLite2-City.mmdb")
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(__file__), ".env.test"),
