@@ -12,7 +12,7 @@ from app.db.models.role import Permission, Role
 from app.db.models.user import User
 from app.db.session import SessionLocal, engine
 
-sys.path.append(".")  # Ensure project root is in sys.path
+sys.path.append(".")
 from tests.test_data import TEST_USERS
 
 
@@ -89,6 +89,7 @@ def create_user_audit_table_and_trigger(session):
     CREATE TABLE IF NOT EXISTS users_audit (
         id SERIAL PRIMARY KEY,
         user_id INTEGER,
+        request_id VARCHAR(64),
         action VARCHAR(10),
         changed_by INTEGER,
         changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -107,24 +108,30 @@ def create_user_audit_table_and_trigger(session):
     RETURNS TRIGGER AS $$
     DECLARE
         current_user_id INTEGER;
+        current_request_id VARCHAR(64);
     BEGIN
         BEGIN
             current_user_id := current_setting('app.current_user_id', true)::INTEGER;
         EXCEPTION WHEN OTHERS THEN
             current_user_id := NULL;
         END;
+        BEGIN
+            current_request_id := current_setting('app.request_id', true);
+        EXCEPTION WHEN OTHERS THEN
+            current_request_id := NULL;
+        END;
 
         IF TG_OP = 'INSERT' THEN
-            INSERT INTO users_audit (user_id, action, changed_by, new_data)
-            VALUES (NEW.id, 'INSERT', current_user_id, row_to_json(NEW));
+            INSERT INTO users_audit (user_id, request_id, action, changed_by, new_data)
+            VALUES (NEW.id, current_request_id, 'INSERT', current_user_id, row_to_json(NEW));
             RETURN NEW;
         ELSIF TG_OP = 'UPDATE' THEN
-            INSERT INTO users_audit (user_id, action, changed_by, old_data, new_data)
-            VALUES (NEW.id, 'UPDATE', current_user_id, row_to_json(OLD), row_to_json(NEW));
+            INSERT INTO users_audit (user_id, request_id, action, changed_by, old_data, new_data)
+            VALUES (NEW.id, current_request_id, 'UPDATE', current_user_id, row_to_json(OLD), row_to_json(NEW));
             RETURN NEW;
         ELSIF TG_OP = 'DELETE' THEN
-            INSERT INTO users_audit (user_id, action, changed_by, old_data)
-            VALUES (OLD.id, 'DELETE', current_user_id, row_to_json(OLD));
+            INSERT INTO users_audit (user_id, request_id, action, changed_by, old_data)
+            VALUES (OLD.id, current_request_id, 'DELETE', current_user_id, row_to_json(OLD));
             RETURN OLD;
         END IF;
         RETURN NULL;

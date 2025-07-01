@@ -9,6 +9,7 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services import auth_service
+from app.utils.connection_logger import log_login_attempt, log_successful_login
 
 router = APIRouter(
     prefix="/auth",
@@ -63,17 +64,11 @@ def login(
     user = auth_service.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         # Log failed login attempt
-        from app.utils.connection_logger import connection_logger
-
-        connection_logger.log_login_attempt(
-            request=request, email=form_data.username, success=False
-        )
+        log_login_attempt(request=request, email=form_data.username, success=False)
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
     # Log successful login to connection.log
-    from app.utils.connection_logger import connection_logger
-
-    connection_logger.log_successful_login(request, user, success=True)
+    log_successful_login(request, user, success=True)
 
     access_token = auth_service.create_access_token(
         data={"sub": str(user.id), "email": user.email}

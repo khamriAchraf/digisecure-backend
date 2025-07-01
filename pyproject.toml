@@ -23,6 +23,8 @@ fastapi-csrf-protect = "^1.0.3"
 slowapi = "^0.1.9"
 httpx = "^0.28.1"
 geoip2 = "^4.8.0"
+argon2-cffi = "^25.1.0"
+python-json-logger = "^3.3.0"
 
 
 [tool.poetry.group.dev.dependencies]

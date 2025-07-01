@@ -48,15 +48,12 @@ class TestSettings(BaseSettings):
 def get_settings() -> Settings:
     """Get settings based on environment."""
     if os.getenv("ENV_FILE") == ".env.test" or os.getenv("TESTING") == "true":
-        logger.info("Using test settings")
+        logger.debug("TEST environment detected")
         return TestSettings()  # type: ignore
-    logger.info("Using dev settings")
     return Settings()  # type: ignore
 
 
 settings = get_settings()
-
-logger.debug(f"Using password: {settings.DB_PASSWORD}")
 
 
 def get_test_settings() -> TestSettings:

@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -5,10 +7,12 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api.v1 import auth, role, user
 from app.core.config import settings
-from app.core.logger import logger
+from app.core.logger import (clear_log_context, logger, set_request_id,
+                             set_user_id)
 from app.core.rate_limiting import limiter
 from app.db.models.role import Permission
 from app.db.session import SessionLocal
+from app.services import auth_service
 
 app = FastAPI()
 app.state.limiter = limiter
@@ -42,3 +46,22 @@ def load_permissions_cache():
 @limiter.limit("10/minute")
 def read_root(request: Request):
     return {"message": "API is alive"}
+
+
+@app.middleware("http")
+async def logging_context_middleware(request: Request, call_next):
+    # Set request_id from header or generate
+    req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    set_request_id(req_id)
+    # Try to extract user_id from Authorization header
+    user_id = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.lower().startswith("bearer "):
+        token = auth_header.split(" ", 1)[1]
+        user_id = auth_service.decode_access_token(token)
+    set_user_id(str(user_id) if user_id else None)
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        clear_log_context()

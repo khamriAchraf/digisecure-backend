@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.logger import logger
+from app.core.logger import logger, request_id_ctx
 from app.db.models.user import User
 from app.db.session import get_db
 from app.services.auth_service import decode_access_token, get_user_by_id
@@ -25,8 +25,10 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    logger.debug(f"User {user.id} authenticated with token {token}")
+    logger.debug(f"User {user.id} authenticated")
+    request_id = request_id_ctx.get() or "-"
     db.execute(text(f"SET LOCAL app.current_user_id = '{user.id}'"))
+    db.execute(text(f"SET LOCAL app.request_id = '{request_id}'"))
     return user
 
 
