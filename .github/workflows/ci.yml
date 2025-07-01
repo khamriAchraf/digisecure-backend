@@ -43,6 +43,11 @@ jobs:
           JWT_REFRESH_EXPIRATION_DAYS=${{ secrets.JWT_REFRESH_EXPIRATION_DAYS }}
           EOF
 
+      - name: Download GeoLite2 City database
+        run: |
+          mkdir -p data
+          curl -L "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz" -o data/GeoLite2-City.mmdb
+
       - name: Run tests
         run: |
           chmod +x ./run_all_tests.sh
