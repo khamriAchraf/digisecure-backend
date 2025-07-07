@@ -103,7 +103,6 @@ def soft_delete_user(db: Session, user: User) -> User:
 
 def search_users(
     db: Session,
-    org_id: Optional[int] = None,
     profile: Optional[str] = None,
     status: Optional[UserStatus] = None,
     department: Optional[str] = None,
@@ -112,8 +111,6 @@ def search_users(
     limit: int = 100,
 ) -> List[User]:
     filters = [User.status != UserStatus.deleted]
-    if org_id is not None:
-        filters.append(User.org_id == org_id)
     if profile is not None:
         filters.append(User.profile == profile)
     if status is not None:

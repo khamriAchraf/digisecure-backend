@@ -241,18 +241,7 @@ def main():
         },
     ]
 
-    # 4. Role-permission mapping
-    role_permission_map = {
-        "Super-Admin": ["read", "create", "update", "delete", "purge"],
-        "Admin": ["read", "create", "update", "delete"],
-        "Supervisor": ["read", "create", "update"],
-        "Technician": ["read", "update"],
-        "Hotliner": ["read"],
-        "Observer": ["read"],
-        "Self-Service": [],
-    }
-
-    # 5. Role management permissions
+    # 4. Role management permissions
     role_permissions = [
         {"action": "read", "resource": "role", "description": "View role information"},
         {"action": "create", "resource": "role", "description": "Create new roles"},
@@ -269,6 +258,56 @@ def main():
         },
     ]
 
+    # 5. Group management permissions
+    group_permissions = [
+        {
+            "action": "read",
+            "resource": "group",
+            "description": "View group information",
+        },
+        {"action": "create", "resource": "group", "description": "Create new groups"},
+        {
+            "action": "update",
+            "resource": "group",
+            "description": "Update group information",
+        },
+        {"action": "delete", "resource": "group", "description": "Delete groups"},
+        {
+            "action": "purge",
+            "resource": "group",
+            "description": "Permanently delete groups",
+        },
+    ]
+
+    ALL_PERMISSIONS = {
+        "user": user_permissions,
+        "role": role_permissions,
+        "group": group_permissions,
+    }
+
+    # Role-permission mapping
+    ROLE_PERMISSION_MAP = {
+        "Super-Admin": {
+            "user": ["read", "create", "update", "delete", "purge"],
+            "role": ["read", "create", "update", "delete", "purge"],
+            "group": ["read", "create", "update", "delete", "purge"],
+        },
+        "Admin": {
+            "user": ["read", "create", "update", "delete"],
+            "role": [],
+            "group": [],
+        },
+        "Supervisor": {
+            "user": ["read", "create", "update"],
+            "role": [],
+            "group": [],
+        },
+        "Technician": {"user": ["read", "update"], "role": [], "group": []},
+        "Hotliner": {"user": ["read"], "role": [], "group": []},
+        "Observer": {"user": ["read"], "role": [], "group": ["read"]},
+        "Self-Service": {"user": [], "role": [], "group": []},
+    }
+
     try:
         logger.info("Inserting preset roles...")
         for role_data in preset_roles:
@@ -279,45 +318,43 @@ def main():
         session.commit()
         logger.info("Preset roles inserted.")
 
-        logger.info("Inserting user management permissions...")
-        for perm_data in user_permissions:
-            perm = (
-                session.query(Permission)
-                .filter_by(action=perm_data["action"], resource=perm_data["resource"])
-                .first()
-            )
-            if not perm:
-                perm = Permission(**perm_data)
-                session.add(perm)
-        session.commit()
-        logger.info("User management permissions inserted.")
-
-        logger.info("Inserting role management permissions...")
-        for perm_data in role_permissions:
-            perm = (
-                session.query(Permission)
-                .filter_by(action=perm_data["action"], resource=perm_data["resource"])
-                .first()
-            )
-            if not perm:
-                perm = Permission(**perm_data)
-                session.add(perm)
-        session.commit()
-        logger.info("Role management permissions inserted.")
-
-        logger.info("Assigning permissions to roles...")
-        for role_name, actions in role_permission_map.items():
-            role = session.query(Role).filter_by(name=role_name).first()
-            if not role:
-                continue
-            for action in actions:
+        logger.info("Inserting all permissions...")
+        for resource, permissions in ALL_PERMISSIONS.items():
+            for perm_data in permissions:
                 perm = (
                     session.query(Permission)
-                    .filter_by(action=action, resource="user")
+                    .filter_by(
+                        action=perm_data["action"], resource=perm_data["resource"]
+                    )
                     .first()
                 )
-                if perm and perm not in role.permissions:
-                    role.permissions.append(perm)
+                if not perm:
+                    perm = Permission(**perm_data)
+                    session.add(perm)
+        session.commit()
+        logger.info("All permissions inserted.")
+
+        logger.info("Assigning permissions to roles...")
+        for role_name, resource_map in ROLE_PERMISSION_MAP.items():
+            role = session.query(Role).filter_by(name=role_name).first()
+            if not role:
+                logger.warning(
+                    f"Role '{role_name}' not found, skipping permission assignment."
+                )
+                continue
+
+            # Clear existing permissions to ensure a clean slate
+            role.permissions.clear()
+
+            for resource, actions in resource_map.items():
+                for action in actions:
+                    perm = (
+                        session.query(Permission)
+                        .filter_by(action=action, resource=resource)
+                        .first()
+                    )
+                    if perm and perm not in role.permissions:
+                        role.permissions.append(perm)
             session.add(role)
         session.commit()
         logger.info("Permissions assigned to roles.")
@@ -342,6 +379,27 @@ def main():
             session.add(super_admin_role)
             session.commit()
             logger.info("Role management permissions assigned to Super-Admin role.")
+
+        logger.info("Assigning group management permissions to Super-Admin role...")
+        super_admin_role = session.query(Role).filter_by(name="Super-Admin").first()
+        if not super_admin_role:
+            logger.error(
+                "Super-Admin role not found. Skipping assignment of group management permissions."
+            )
+        else:
+            for perm_data in group_permissions:
+                perm = (
+                    session.query(Permission)
+                    .filter_by(
+                        action=perm_data["action"], resource=perm_data["resource"]
+                    )
+                    .first()
+                )
+                if perm and perm not in super_admin_role.permissions:
+                    super_admin_role.permissions.append(perm)
+            session.add(super_admin_role)
+            session.commit()
+            logger.info("Group management permissions assigned to Super-Admin role.")
 
         # Create super-admin user if credentials provided
         if all([args.username, args.email, args.password]):

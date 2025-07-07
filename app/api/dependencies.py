@@ -7,6 +7,8 @@ from app.core.logger import logger, request_id_ctx
 from app.db.models.user import User
 from app.db.session import get_db
 from app.services.auth_service import decode_access_token, get_user_by_id
+from app.services.group_service import GroupService
+from app.services.location_service import LocationService
 from app.services.user_service import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -37,3 +39,17 @@ def get_user_service(
     current_user: User = Depends(get_current_user),
 ) -> UserService:
     return UserService(db, current_user)
+
+
+def get_group_service(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GroupService:
+    return GroupService(db, current_user)
+
+
+def get_location_service(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LocationService:
+    return LocationService(db, current_user)

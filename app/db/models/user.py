@@ -4,6 +4,7 @@ from sqlalchemy import Column, DateTime, Enum, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.db.models.group import user_groups
 from app.db.models.role import user_roles
 
 
@@ -42,3 +43,4 @@ class User(Base):
     valid_from = Column(DateTime, nullable=True)
 
     roles = relationship("Role", secondary=user_roles, back_populates="users")
+    groups = relationship("Group", secondary=user_groups, back_populates="users")

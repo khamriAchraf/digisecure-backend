@@ -76,17 +76,8 @@ poetry run python app/db/seed.py --help
 
 ## Role Hierarchy
 
-The seeding script creates the following role hierarchy:
-
-| Role | Permissions | Description |
-|------|-------------|-------------|
-| Super-Admin | read, create, update, delete, purge | Full system access |
-| Admin | read, create, update, delete | Manage users and settings |
-| Supervisor | read, create, update | Oversee teams and approve actions |
-| Technician | read, update | Handle technical tasks |
-| Hotliner | read | First-line support |
-| Observer | read | Read-only access |
-| Self-Service | none | Limited end-user access |
+The seeding script creates a hierarchy of roles with specific permissions. For a detailed breakdown of what each role can do, please refer to the [Role-Based Permissions](./PERMISSIONS.md) documentation.
+This provides a comprehensive matrix of permissions for each resource type (`user`, `role`, `group`).
 
 ## Troubleshooting
 

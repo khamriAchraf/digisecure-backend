@@ -29,6 +29,20 @@ def get_user(
         raise HTTPException(status_code=403, detail=str(e))
 
 
+@router.get("/{identifier}/permissions", response_model=List[dict])
+def get_user_permissions(
+    identifier: str,
+    service: UserService = Depends(get_user_service),
+):
+    try:
+        user = service.get_user_by_identifier(identifier)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return service.get_user_permissions(user)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
 @router.get("/", response_model=List[UserResponse])
 def list_users(
     skip: int = 0,
@@ -87,7 +101,6 @@ def delete_user(
 @router.get("/search/", response_model=List[UserResponse])
 def search_users(
     query: str = Query(None),
-    org_id: int = Query(None),
     status: str = Query(None),
     department: str = Query(None),
     skip: int = 0,
@@ -97,7 +110,6 @@ def search_users(
     try:
         return service.search_users(
             query=query,
-            org_id=org_id,
             status=status,
             department=department,
             skip=skip,

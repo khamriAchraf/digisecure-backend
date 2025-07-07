@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.logger import logger
@@ -102,3 +103,31 @@ class UserService:
         users = user_crud.search_users(self.db, **kwargs)
         logger.info(f"User {self.current_user.id} successfully SEARCHED users")
         return users
+
+    def get_user_permissions(self, user: User) -> list[dict]:
+        """
+        Returns all permissions of the user in the format {'action': ..., 'resource': ...}
+        """
+        permissions = set()
+        for role in user.roles:
+            for perm in role.permissions:
+                permissions.add((perm.action, perm.resource))
+        # Return as list of dicts
+        return [
+            {"action": action, "resource": resource} for action, resource in permissions
+        ]
+
+    def get_user_by_identifier(self, identifier: str) -> User:
+        """
+        Fetch a user by id (int), username, or email.
+        """
+        query = self.db.query(User)
+        if identifier.isdigit():
+            user = query.filter(User.id == int(identifier)).first()
+            if user:
+                return user
+        # Try username or email
+        user = query.filter(
+            or_(User.username == identifier, User.email == identifier)
+        ).first()
+        return user

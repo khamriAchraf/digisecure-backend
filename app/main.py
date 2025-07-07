@@ -5,7 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api.v1 import auth, role, user
+from app.api.v1 import auth, group, role, user
+from app.api.v1.configuration import router as configuration_router
 from app.core.config import settings
 from app.core.logger import (clear_log_context, logger, set_request_id,
                              set_user_id)
@@ -31,6 +32,8 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(user.router, prefix="/api/v1")
 app.include_router(role.router, prefix="/api/v1")
+app.include_router(group.router, prefix="/api/v1")
+app.include_router(configuration_router, prefix="/api/v1")
 
 permissions_cache = []
 

@@ -1,12 +1,11 @@
 import contextvars
 import logging
+import os
 import sys
 from logging.handlers import RotatingFileHandler
-import os
 
 from pythonjsonlogger.json import JsonFormatter
 
-# Context variables for request_id and user_id
 request_id_ctx = contextvars.ContextVar(
     "request_id", default=None
 )  # type: contextvars.ContextVar[str | None]
@@ -16,12 +15,12 @@ user_id_ctx = contextvars.ContextVar(
 
 SERVICE_NAME = "backend"
 LOGGER_NAME = "app"
-LOG_FILE = "logs/app.log"
+LOG_FILE = "/home/achraf/xxx/backend/logs/app.log"
 LOG_MAX_BYTES = 5 * 1024 * 1024  # 5MB
 LOG_BACKUP_COUNT = 5
 
-# Ensure logs directory exists
 os.makedirs("logs", exist_ok=True)
+
 
 class ContextFilter(logging.Filter):
     def filter(self, record):

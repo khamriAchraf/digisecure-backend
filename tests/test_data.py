@@ -10,7 +10,6 @@ TEST_USERS = {
         "password": "testpass123!",
         "role_id": 2,
         "role_name": "Admin",
-        "permissions": ["read", "create", "update", "delete"],
     },
     "supervisor": {
         "username": "supervisor1",
@@ -18,7 +17,6 @@ TEST_USERS = {
         "password": "testpass123!",
         "role_id": 3,
         "role_name": "Supervisor",
-        "permissions": ["read", "create", "update"],
     },
     "technician": {
         "username": "technician1",
@@ -26,7 +24,6 @@ TEST_USERS = {
         "password": "testpass123!",
         "role_id": 4,
         "role_name": "Technician",
-        "permissions": ["read", "update"],
     },
     "hotliner": {
         "username": "hotliner1",
@@ -34,7 +31,6 @@ TEST_USERS = {
         "password": "testpass123!",
         "role_id": 5,
         "role_name": "Hotliner",
-        "permissions": ["read"],
     },
     "observer": {
         "username": "observer1",
@@ -42,7 +38,6 @@ TEST_USERS = {
         "password": "testpass123!",
         "role_id": 6,
         "role_name": "Observer",
-        "permissions": ["read"],
     },
     "self_service": {
         "username": "selfservice1",
@@ -50,7 +45,6 @@ TEST_USERS = {
         "password": "testpass123!",
         "role_id": 7,
         "role_name": "Self-Service",
-        "permissions": [],
     },
 }
 
@@ -60,20 +54,16 @@ SUPER_ADMIN = {
     "password": "admin",
     "role_id": 1,
     "role_name": "Super-Admin",
-    "permissions": ["read", "create", "update", "delete", "purge"],
 }
 
 ROLES = {
-    1: {
-        "name": "Super-Admin",
-        "permissions": ["read", "create", "update", "delete", "purge"],
-    },
-    2: {"name": "Admin", "permissions": ["read", "create", "update", "delete"]},
-    3: {"name": "Supervisor", "permissions": ["read", "create", "update"]},
-    4: {"name": "Technician", "permissions": ["read", "update"]},
-    5: {"name": "Hotliner", "permissions": ["read"]},
-    6: {"name": "Observer", "permissions": ["read"]},
-    7: {"name": "Self-Service", "permissions": []},
+    1: {"name": "Super-Admin"},
+    2: {"name": "Admin"},
+    3: {"name": "Supervisor"},
+    4: {"name": "Technician"},
+    5: {"name": "Hotliner"},
+    6: {"name": "Observer"},
+    7: {"name": "Self-Service"},
 }
 
 TEST_PASSWORD = "testpass123!"
