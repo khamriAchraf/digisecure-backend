@@ -44,3 +44,6 @@ class User(Base):
 
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     groups = relationship("Group", secondary=user_groups, back_populates="users")
+    refresh_tokens = relationship(
+        "RefreshToken", back_populates="user", cascade="all, delete-orphan"
+    )

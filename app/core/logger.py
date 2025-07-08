@@ -20,6 +20,17 @@ LOG_MAX_BYTES = 5 * 1024 * 1024  # 5MB
 LOG_BACKUP_COUNT = 5
 
 os.makedirs("logs", exist_ok=True)
+# Ensure the logs directory and required log files exist
+log_files = [
+    "logs/app.log",
+    "logs/auth.log",
+    "logs/permission.log",
+    "logs/connection.log",
+]
+for log_file in log_files:
+    if not os.path.exists(log_file):
+        with open(log_file, "a"):
+            pass
 
 
 class ContextFilter(logging.Filter):

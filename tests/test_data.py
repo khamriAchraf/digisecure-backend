@@ -66,5 +66,30 @@ ROLES = {
     7: {"name": "Self-Service"},
 }
 
+TEST_LOCATIONS = {
+    "location1": {
+        "name": "Test Location 1",
+        "postal_code": "12345",
+        "building_number": "42",
+        "latitude": 40.7128,
+        "altitude": 100.0,
+        "comment": "Test location for development",
+        "address": "123 Test Street",
+        "town": "Test City",
+        "country": "Test Country",
+        "state": "Test State",
+        "room_number": "101",
+        "longitude": -74.0060,
+        "floor_number": "1",
+    },
+}
+
+TEST_MANUFACTURERS = {
+    "manufacturer1": {
+        "name": "Test Manufacturer 1",
+        "comment": "Test manufacturer for development",
+    },
+}
+
 TEST_PASSWORD = "testpass123!"
 BASE_URL = "http://test/api/v1"

@@ -7,3 +7,4 @@ class Manufacturer(Base):
     __tablename__ = "manufacturers"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
+    comment = Column(String, nullable=True)

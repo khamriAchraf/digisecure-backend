@@ -78,6 +78,16 @@ class UserLogin(BaseModel):
     token_type: str
 
 
+class TokenRefresh(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class LogoutResponse(BaseModel):
+    message: str
+
+
 class UserResponse(UserBase):
     id: int
     roles: List[RoleResponse] = []

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class ManufacturerBase(BaseModel):
     name: str
+    comment: Optional[str] = None
 
 
 class ManufacturerCreate(ManufacturerBase):
@@ -13,6 +14,7 @@ class ManufacturerCreate(ManufacturerBase):
 
 class ManufacturerUpdate(BaseModel):
     name: Optional[str] = None
+    comment: Optional[str] = None
 
 
 class ManufacturerInDBBase(ManufacturerBase):

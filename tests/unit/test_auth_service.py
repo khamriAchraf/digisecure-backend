@@ -35,6 +35,8 @@ class TestTokenCreation:
             "sub": "123",
             "email": "test@example.com",
             "exp": expected_expire,
+            "iat": mock_now,
+            "type": "access",
         }
         mock_jwt.encode.assert_called_once_with(
             expected_payload, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM
@@ -55,7 +57,12 @@ class TestTokenCreation:
         result = auth_service.create_access_token(data, expires_delta=custom_expiry)
 
         expected_expire = mock_now + custom_expiry
-        expected_payload = {"sub": "123", "exp": expected_expire}
+        expected_payload = {
+            "sub": "123",
+            "exp": expected_expire,
+            "iat": mock_now,
+            "type": "access",
+        }
         mock_jwt.encode.assert_called_once_with(
             expected_payload, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM
         )
@@ -71,7 +78,14 @@ class TestTokenCreation:
         mock_jwt.encode.return_value = "mock_refresh_token"
 
         data = {"sub": "123", "email": "test@example.com"}
-        result = auth_service.create_refresh_token(data)
+
+        mock_db = Mock(spec=Session)
+        with patch("app.services.auth_service.refresh_token_crud.create_refresh_token"):
+            with patch(
+                "app.services.auth_service.secrets.token_urlsafe",
+                return_value="fixed_jti",
+            ):
+                result = auth_service.create_refresh_token(data, db=mock_db)
 
         expected_expire = mock_now + timedelta(
             days=auth_service.REFRESH_TOKEN_EXPIRE_DAYS
@@ -80,6 +94,8 @@ class TestTokenCreation:
             "sub": "123",
             "email": "test@example.com",
             "exp": expected_expire,
+            "iat": mock_now,
+            "jti": "fixed_jti",
             "type": "refresh",
         }
         mock_jwt.encode.assert_called_once_with(
@@ -98,10 +114,24 @@ class TestTokenCreation:
 
         data = {"sub": "123"}
         custom_expiry = timedelta(days=30)
-        result = auth_service.create_refresh_token(data, expires_delta=custom_expiry)
+        mock_db = Mock(spec=Session)
+        with patch("app.services.auth_service.refresh_token_crud.create_refresh_token"):
+            with patch(
+                "app.services.auth_service.secrets.token_urlsafe",
+                return_value="fixed_jti",
+            ):
+                result = auth_service.create_refresh_token(
+                    data, db=mock_db, expires_delta=custom_expiry
+                )
 
         expected_expire = mock_now + custom_expiry
-        expected_payload = {"sub": "123", "exp": expected_expire, "type": "refresh"}
+        expected_payload = {
+            "sub": "123",
+            "exp": expected_expire,
+            "iat": mock_now,
+            "jti": "fixed_jti",
+            "type": "refresh",
+        }
         mock_jwt.encode.assert_called_once_with(
             expected_payload, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM
         )
@@ -115,7 +145,7 @@ class TestTokenDecoding:
     @patch("app.services.auth_service.jwt")
     def test_decode_access_token_success(self, mock_jwt):
         """Test successful access token decoding."""
-        mock_payload = {"sub": "123", "email": "test@example.com"}
+        mock_payload = {"sub": "123", "email": "test@example.com", "type": "access"}
         mock_jwt.decode.return_value = mock_payload
 
         result = auth_service.decode_access_token("valid_token")
@@ -157,17 +187,22 @@ class TestTokenDecoding:
     @patch("app.services.auth_service.jwt")
     def test_decode_refresh_token_success(self, mock_jwt):
         """Test successful refresh token decoding."""
-        mock_payload = {"sub": "123", "type": "refresh"}
+        mock_payload = {"sub": "123", "type": "refresh", "jti": "test_jti"}
         mock_jwt.decode.return_value = mock_payload
 
-        result = auth_service.decode_refresh_token("valid_refresh_token")
+        mock_db = Mock(spec=Session)
+        with patch(
+            "app.services.auth_service.refresh_token_crud.get_valid_refresh_token",
+            return_value=True,
+        ):
+            result = auth_service.decode_refresh_token("valid_refresh_token", mock_db)
 
         mock_jwt.decode.assert_called_once_with(
             "valid_refresh_token",
             auth_service.SECRET_KEY,
             algorithms=[auth_service.ALGORITHM],
         )
-        assert result == "123"
+        assert result == ("123", "test_jti")
 
     @patch("app.services.auth_service.jwt")
     def test_decode_refresh_token_wrong_type(self, mock_jwt):
@@ -175,7 +210,8 @@ class TestTokenDecoding:
         mock_payload = {"sub": "123", "type": "access"}  # Wrong type
         mock_jwt.decode.return_value = mock_payload
 
-        result = auth_service.decode_refresh_token("wrong_type_token")
+        mock_db = Mock(spec=Session)
+        result = auth_service.decode_refresh_token("wrong_type_token", mock_db)
 
         assert result is None
 
@@ -185,7 +221,8 @@ class TestTokenDecoding:
         mock_payload = {"sub": "123"}  # Missing 'type'
         mock_jwt.decode.return_value = mock_payload
 
-        result = auth_service.decode_refresh_token("missing_type_token")
+        mock_db = Mock(spec=Session)
+        result = auth_service.decode_refresh_token("missing_type_token", mock_db)
 
         assert result is None
 
@@ -195,7 +232,8 @@ class TestTokenDecoding:
         mock_payload = {"type": "refresh"}  # Missing 'sub'
         mock_jwt.decode.return_value = mock_payload
 
-        result = auth_service.decode_refresh_token("missing_sub_token")
+        mock_db = Mock(spec=Session)
+        result = auth_service.decode_refresh_token("missing_sub_token", mock_db)
 
         assert result is None
 
@@ -204,7 +242,8 @@ class TestTokenDecoding:
         """Test refresh token decoding with JWT error."""
         mock_jwt.decode.side_effect = JWTError("Invalid refresh token")
 
-        result = auth_service.decode_refresh_token("invalid_refresh_token")
+        mock_db = Mock(spec=Session)
+        result = auth_service.decode_refresh_token("invalid_refresh_token", mock_db)
 
         assert result is None
 
@@ -393,7 +432,13 @@ class TestTokenExpiration:
         mock_jwt.encode.return_value = "mock_token"
 
         data = {"sub": "123"}
-        auth_service.create_refresh_token(data)
+        mock_db = Mock(spec=Session)
+        with patch("app.services.auth_service.refresh_token_crud.create_refresh_token"):
+            with patch(
+                "app.services.auth_service.secrets.token_urlsafe",
+                return_value="fixed_jti",
+            ):
+                auth_service.create_refresh_token(data, db=mock_db)
 
         # Verify expiration time is set correctly
         expected_expire = mock_now + timedelta(
@@ -420,7 +465,10 @@ class TestEdgeCases:
         """Test refresh token decoding with empty payload."""
         mock_jwt.decode.return_value = {}
 
-        result = auth_service.decode_refresh_token("empty_payload_refresh_token")
+        mock_db = Mock(spec=Session)
+        result = auth_service.decode_refresh_token(
+            "empty_payload_refresh_token", mock_db
+        )
         assert result is None
 
     @patch("app.services.auth_service.verify_password")

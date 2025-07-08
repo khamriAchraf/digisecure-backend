@@ -1,0 +1,194 @@
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.main import app
+from tests.test_data import BASE_URL, SUPER_ADMIN, TEST_USERS
+
+MANUFACTURER_BASE = {
+    "name": "test_manufacturer",
+}
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_manufacturer_crud_as_super_admin():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as ac:
+        # Login as super-admin
+        login_data = {
+            "username": SUPER_ADMIN["email"],
+            "password": SUPER_ADMIN["password"],
+        }
+        login_resp = await ac.post("/auth/login", data=login_data)
+        assert login_resp.status_code == 200, f"Login failed: {login_resp.text}"
+        token = login_resp.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Create manufacturer
+        resp = await ac.post(
+            "/configuration/manufacturer/", json=MANUFACTURER_BASE, headers=headers
+        )
+        assert resp.status_code == 201, f"Failed to create manufacturer: {resp.text}"
+        manufacturer = resp.json()
+        manufacturer_id = manufacturer["id"]
+        assert manufacturer["name"] == MANUFACTURER_BASE["name"]
+
+        # Duplicate manufacturer name
+        resp = await ac.post(
+            "/configuration/manufacturer/", json=MANUFACTURER_BASE, headers=headers
+        )
+        assert resp.status_code == 409, "Should not allow duplicate manufacturer name"
+
+        # Missing required field
+        bad_manufacturer = {}
+        resp = await ac.post(
+            "/configuration/manufacturer/", json=bad_manufacturer, headers=headers
+        )
+        assert resp.status_code == 422
+
+        # List manufacturers
+        resp = await ac.get("/configuration/manufacturer/", headers=headers)
+        assert resp.status_code == 200
+        assert any(m["id"] == manufacturer_id for m in resp.json())
+
+        # Get manufacturer by id
+        resp = await ac.get(
+            f"/configuration/manufacturer/{manufacturer_id}", headers=headers
+        )
+        assert resp.status_code == 200
+        assert resp.json()["id"] == manufacturer_id
+
+        # Update manufacturer
+        update_data = {"name": "updated_manufacturer_name"}
+        resp = await ac.put(
+            f"/configuration/manufacturer/{manufacturer_id}",
+            json=update_data,
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "updated_manufacturer_name"
+
+        # Delete manufacturer
+        resp = await ac.delete(
+            f"/configuration/manufacturer/{manufacturer_id}", headers=headers
+        )
+        assert resp.status_code == 200 or resp.status_code == 204
+        # Confirm deletion
+        resp = await ac.get(
+            f"/configuration/manufacturer/{manufacturer_id}", headers=headers
+        )
+        assert resp.status_code == 404
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_manufacturer_permissions_for_non_admin():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as ac:
+        login_data = {
+            "username": TEST_USERS["observer"]["email"],
+            "password": TEST_USERS["observer"]["password"],
+        }
+        login_resp = await ac.post("/auth/login", data=login_data)
+        assert login_resp.status_code == 200, f"Login failed: {login_resp.text}"
+        token = login_resp.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Try to create manufacturer
+        resp = await ac.post(
+            "/configuration/manufacturer/", json=MANUFACTURER_BASE, headers=headers
+        )
+        assert resp.status_code == 403
+
+        # Try to update manufacturer (id 1)
+        resp = await ac.put(
+            "/configuration/manufacturer/1",
+            json={"name": "updated_name"},
+            headers=headers,
+        )
+        assert resp.status_code == 403 or resp.status_code == 404
+
+        # Try to delete manufacturer (id 1)
+        resp = await ac.delete("/configuration/manufacturer/1", headers=headers)
+        assert resp.status_code == 403 or resp.status_code == 404
+
+        # Try to list and get manufacturers
+        resp = await ac.get("/configuration/manufacturer/", headers=headers)
+        assert resp.status_code == 200
+        resp = await ac.get("/configuration/manufacturer/1", headers=headers)
+        assert resp.status_code in (200, 404)
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_manufacturer_pagination():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as ac:
+        # Login as super-admin
+        login_data = {
+            "username": SUPER_ADMIN["email"],
+            "password": SUPER_ADMIN["password"],
+        }
+        login_resp = await ac.post("/auth/login", data=login_data)
+        assert login_resp.status_code == 200, f"Login failed: {login_resp.text}"
+        token = login_resp.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Create multiple manufacturers
+        manufacturer_ids = []
+        for i in range(5):
+            manufacturer_data = {"name": f"test_manufacturer_{i}"}
+            resp = await ac.post(
+                "/configuration/manufacturer/", json=manufacturer_data, headers=headers
+            )
+            assert resp.status_code == 201
+            manufacturer_ids.append(resp.json()["id"])
+
+        # Test pagination with limit
+        resp = await ac.get("/configuration/manufacturer/?limit=3", headers=headers)
+        assert resp.status_code == 200
+        manufacturers = resp.json()
+        assert len(manufacturers) <= 3
+
+        # Test pagination with skip
+        resp = await ac.get(
+            "/configuration/manufacturer/?skip=2&limit=2", headers=headers
+        )
+        assert resp.status_code == 200
+        manufacturers = resp.json()
+        assert len(manufacturers) <= 2
+
+        # Clean up - delete created manufacturers
+        for manufacturer_id in manufacturer_ids:
+            resp = await ac.delete(
+                f"/configuration/manufacturer/{manufacturer_id}", headers=headers
+            )
+            assert resp.status_code in (200, 204)
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_manufacturer_not_found():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as ac:
+        # Login as super-admin
+        login_data = {
+            "username": SUPER_ADMIN["email"],
+            "password": SUPER_ADMIN["password"],
+        }
+        login_resp = await ac.post("/auth/login", data=login_data)
+        assert login_resp.status_code == 200, f"Login failed: {login_resp.text}"
+        token = login_resp.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Try to get non-existent manufacturer
+        resp = await ac.get("/configuration/manufacturer/99999", headers=headers)
+        assert resp.status_code == 404
+
+        # Try to update non-existent manufacturer
+        resp = await ac.put(
+            "/configuration/manufacturer/99999",
+            json={"name": "new_name"},
+            headers=headers,
+        )
+        assert resp.status_code == 404
+
+        # Try to delete non-existent manufacturer
+        resp = await ac.delete("/configuration/manufacturer/99999", headers=headers)
+        assert resp.status_code == 404

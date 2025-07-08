@@ -8,12 +8,11 @@ from app.core.config import settings
 from app.core.logger import logger
 from app.core.security import get_password_hash
 from app.db.base import Base
-from app.db.models.role import Permission, Role
-from app.db.models.user import User
+from app.db.models import Location, Manufacturer, Permission, Role, User
 from app.db.session import SessionLocal, engine
 
 sys.path.append(".")
-from tests.test_data import TEST_USERS
+from tests.test_data import TEST_LOCATIONS, TEST_MANUFACTURERS, TEST_USERS
 
 
 def parse_arguments():
@@ -449,6 +448,32 @@ def main():
             create_super_admin_user(
                 session, args.username, args.email, args.password, args.full_name
             )
+
+        # Create test locations
+        logger.info("Creating test locations if not exist...")
+        for location_key, location_data in TEST_LOCATIONS.items():
+            existing_location = (
+                session.query(Location).filter_by(name=location_data["name"]).first()
+            )
+            if not existing_location:
+                location = Location(**location_data)
+                session.add(location)
+        session.commit()
+        logger.info("Test locations created.")
+
+        # Create test manufacturers
+        logger.info("Creating test manufacturers if not exist...")
+        for manufacturer_key, manufacturer_data in TEST_MANUFACTURERS.items():
+            existing_manufacturer = (
+                session.query(Manufacturer)
+                .filter_by(name=manufacturer_data["name"])
+                .first()
+            )
+            if not existing_manufacturer:
+                manufacturer = Manufacturer(**manufacturer_data)
+                session.add(manufacturer)
+        session.commit()
+        logger.info("Test manufacturers created.")
 
         # Create a user for each role if the database name contains 'dev'
         if "dev" in settings.DB_NAME.lower():

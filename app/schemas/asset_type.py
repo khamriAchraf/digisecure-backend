@@ -22,3 +22,18 @@ class AssetTypeResponse(AssetTypeBase):
 
     class Config:
         from_attributes = True
+
+
+class AssetTypeInDBBase(AssetTypeBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class AssetTypeInDB(AssetTypeInDBBase):
+    pass
+
+
+class AssetType(AssetTypeInDBBase):
+    pass
