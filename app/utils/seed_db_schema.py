@@ -279,10 +279,40 @@ def main():
         },
     ]
 
+    # 6. Configuration management permissions
+    configuration_permissions = [
+        {
+            "action": "read",
+            "resource": "configuration",
+            "description": "View configuration information",
+        },
+        {
+            "action": "create",
+            "resource": "configuration",
+            "description": "Create new configurations",
+        },
+        {
+            "action": "update",
+            "resource": "configuration",
+            "description": "Update configuration information",
+        },
+        {
+            "action": "delete",
+            "resource": "configuration",
+            "description": "Delete configurations",
+        },
+        {
+            "action": "purge",
+            "resource": "configuration",
+            "description": "Permanently delete configurations",
+        },
+    ]
+
     ALL_PERMISSIONS = {
         "user": user_permissions,
         "role": role_permissions,
         "group": group_permissions,
+        "configuration": configuration_permissions,
     }
 
     # Role-permission mapping
@@ -291,21 +321,34 @@ def main():
             "user": ["read", "create", "update", "delete", "purge"],
             "role": ["read", "create", "update", "delete", "purge"],
             "group": ["read", "create", "update", "delete", "purge"],
+            "configuration": ["read", "create", "update", "delete", "purge"],
         },
         "Admin": {
             "user": ["read", "create", "update", "delete"],
             "role": [],
             "group": [],
+            "configuration": ["read", "create", "update", "delete", "purge"],
         },
         "Supervisor": {
             "user": ["read", "create", "update"],
             "role": [],
             "group": [],
+            "configuration": [],
         },
-        "Technician": {"user": ["read", "update"], "role": [], "group": []},
-        "Hotliner": {"user": ["read"], "role": [], "group": []},
-        "Observer": {"user": ["read"], "role": [], "group": ["read"]},
-        "Self-Service": {"user": [], "role": [], "group": []},
+        "Technician": {
+            "user": ["read", "update"],
+            "role": [],
+            "group": [],
+            "configuration": [],
+        },
+        "Hotliner": {"user": ["read"], "role": [], "group": [], "configuration": []},
+        "Observer": {
+            "user": ["read"],
+            "role": [],
+            "group": ["read"],
+            "configuration": ["read"],
+        },
+        "Self-Service": {"user": [], "role": [], "group": [], "configuration": []},
     }
 
     try:

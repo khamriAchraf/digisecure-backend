@@ -21,41 +21,43 @@ class LocationService:
 
     def get_location(self, location_id: int) -> Location:
         logger.info(
-            f"User {self.current_user.id} attempts to READ location {location_id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to READ configuration(location) {location_id} at {datetime.utcnow().isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "location"):
+        if not has_permission(self.current_user, "read", "configuration"):
             logger.warning(
-                f"User {self.current_user.id} denied READ access to location {location_id}"
+                f"User {self.current_user.id} denied READ access to configuration(location) {location_id}"
             )
-            raise PermissionError("Not allowed to read locations.")
+            raise PermissionError("Not allowed to read configuration(location).")
         location = location_crud.get_location(self.db, location_id)
         logger.info(
-            f"User {self.current_user.id} successfully READ location {location_id}"
+            f"User {self.current_user.id} successfully READ configuration(location) {location_id}"
         )
         return location
 
     def list_locations(self, skip: int = 0, limit: int = 100):
         logger.info(
-            f"User {self.current_user.id} attempts to LIST locations at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to LIST configuration(location) at {datetime.utcnow().isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "location"):
+        if not has_permission(self.current_user, "read", "configuration"):
             logger.warning(
-                f"User {self.current_user.id} denied LIST access to locations"
+                f"User {self.current_user.id} denied LIST access to configuration(location)"
             )
-            raise PermissionError("Not allowed to list locations.")
+            raise PermissionError("Not allowed to list configuration(location).")
         locations = location_crud.list_locations(self.db, skip=skip, limit=limit)
-        logger.info(f"User {self.current_user.id} successfully LISTED locations")
+        logger.info(
+            f"User {self.current_user.id} successfully LISTED configuration(location)"
+        )
         return locations
 
     def create_location(self, location_in: LocationCreate) -> Location:
         logger.info(
-            f"User {self.current_user.id} attempts to CREATE location {location_in.name} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to CREATE configuration(location) {location_in.name} at {datetime.utcnow().isoformat()}"
         )
-        if not has_permission(self.current_user, "create", "location"):
+        if not has_permission(self.current_user, "create", "configuration"):
             logger.warning(
-                f"User {self.current_user.id} denied CREATE access for location {location_in.name}"
+                f"User {self.current_user.id} denied CREATE access for configuration(location) {location_in.name}"
             )
-            raise PermissionError("Not allowed to create locations.")
+            raise PermissionError("Not allowed to create configuration(location).")
         try:
             location = location_crud.create_location(self.db, location_in)
         except ValueError as e:
@@ -63,7 +65,7 @@ class LocationService:
 
             raise HTTPException(status_code=409, detail=str(e))
         logger.info(
-            f"User {self.current_user.id} successfully CREATED location {location.id}"
+            f"User {self.current_user.id} successfully CREATED configuration(location) {location.id}"
         )
         return location
 
@@ -71,16 +73,16 @@ class LocationService:
         self, location: Location, location_in: LocationUpdate
     ) -> Location:
         logger.info(
-            f"User {self.current_user.id} attempts to UPDATE location {location.id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to UPDATE configuration(location) {location.id} at {datetime.utcnow().isoformat()}"
         )
-        if not has_permission(self.current_user, "update", "location"):
+        if not has_permission(self.current_user, "update", "configuration"):
             logger.warning(
-                f"User {self.current_user.id} denied UPDATE access for location {location.id}"
+                f"User {self.current_user.id} denied UPDATE access for configuration(location) {location.id}"
             )
-            raise PermissionError("Not allowed to update locations.")
+            raise PermissionError("Not allowed to update configuration(location).")
         updated_location = location_crud.update_location(self.db, location, location_in)
         logger.info(
-            f"User {self.current_user.id} successfully UPDATED location {location.id}"
+            f"User {self.current_user.id} successfully UPDATED configuration(location) {location.id}"
         )
         return updated_location
 
@@ -88,12 +90,12 @@ class LocationService:
         logger.info(
             f"User {self.current_user.id} attempts to DELETE location {location.id} at {datetime.utcnow().isoformat()}"
         )
-        if not has_permission(self.current_user, "delete", "location"):
+        if not has_permission(self.current_user, "delete", "configuration"):
             logger.warning(
-                f"User {self.current_user.id} denied DELETE access for location {location.id}"
+                f"User {self.current_user.id} denied DELETE access for configuration(location) {location.id}"
             )
-            raise PermissionError("Not allowed to delete locations.")
+            raise PermissionError("Not allowed to delete configuration(location).")
         location_crud.delete_location(self.db, location)
         logger.info(
-            f"User {self.current_user.id} successfully DELETED location {location.id}"
+            f"User {self.current_user.id} successfully DELETED configuration(location) {location.id}"
         )

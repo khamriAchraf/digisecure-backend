@@ -24,6 +24,10 @@ The following table details the permissions assigned to each role for the availa
 -   **Role**: Represents user roles and their associated permissions.
 -   **Group**: Represents user groups for organization or skill-based assignments.
 
+#### Configuration Resource
+
+Supporting entities such as **assetTypes**, **statuses**, **locations**, **manufacturers**, and similar types are all managed under a single resource type called **configuration**. Instead of assigning separate permissions for each of these entities, permissions are controlled collectively through the **configuration** resource. This simplifies permission management for all system configuration data.
+
 ### Actions
 
 -   **read**: View existing resources.

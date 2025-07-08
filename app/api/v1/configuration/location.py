@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_location_service
 from app.schemas.location import Location, LocationCreate, LocationUpdate
@@ -17,7 +17,7 @@ def list_locations(service: LocationService = Depends(get_location_service)):
         raise HTTPException(status_code=403, detail=str(e))
 
 
-@router.post("/", response_model=Location)
+@router.post("/", response_model=Location, status_code=status.HTTP_201_CREATED)
 def create_location(
     location_in: LocationCreate,
     service: LocationService = Depends(get_location_service),
