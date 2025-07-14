@@ -6,6 +6,7 @@ from app.db.models.location import Location
 from app.db.models.manufacturer import Manufacturer
 from app.db.models.refresh_token import RefreshToken
 from app.db.models.role import Permission, Role
+from app.db.models.table_config import TableConfig
 from app.db.models.user import User
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "Manufacturer",
     "AssetType",
     "Asset",
+    "TableConfig",
 ]

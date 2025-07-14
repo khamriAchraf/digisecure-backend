@@ -81,6 +81,7 @@ def login(
         ip_address=ip_address,
         user_agent=user_agent,
     )
+    print(f"Access token: {access_token}")
     return UserLogin(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -88,11 +89,20 @@ def login(
     )
 
 
+from pydantic import BaseModel
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
 @router.post("/refresh", response_model=TokenRefresh)
 @limiter.limit("10/minute")
-def refresh_token(request: Request, refresh_token: str, db: Session = Depends(get_db)):
+def refresh_token(
+    request: Request, body: RefreshTokenRequest, db: Session = Depends(get_db)
+):
     # Decode and validate refresh token
-    result = auth_service.decode_refresh_token(refresh_token, db)
+    result = auth_service.decode_refresh_token(body.refresh_token, db)
     if result is None:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 

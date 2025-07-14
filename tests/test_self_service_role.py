@@ -86,10 +86,8 @@ async def test_self_service_user_permissions():
         assert "Not allowed to read users" in delete_resp.json()["detail"]
 
         # 8. Test that self-service user is denied access to search users
-        search_resp = await ac.get(
-            "/users/search/?query=test", headers=self_service_headers
-        )
+        search_resp = await ac.get("/users/?search=test", headers=self_service_headers)
         assert (
             search_resp.status_code == 403
         ), f"Self-service user should be denied access to search users: {search_resp.text}"
-        assert "Not allowed to search users" in search_resp.json()["detail"]
+        assert "Not allowed to list users" in search_resp.json()["detail"]

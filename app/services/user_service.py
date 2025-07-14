@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List, Optional, Tuple
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -38,16 +39,26 @@ class UserService:
         logger.info(f"User {self.current_user.id} successfully READ user {user_id}")
         return user
 
-    def list_users(self, skip: int = 0, limit: int = 100):
+    def get_paginated_users(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        search: Optional[str] = None,
+        filters: Optional[dict] = None,
+    ) -> Tuple[List[User], int]:
         logger.info(
             f"User {self.current_user.id} attempts to LIST users at {datetime.utcnow().isoformat()}"
         )
         if not has_permission(self.current_user, "read", "user"):
             logger.warning(f"User {self.current_user.id} denied LIST access to users")
             raise PermissionError("Not allowed to list users.")
-        users = user_crud.list_users(self.db, skip=skip, limit=limit)
+        users, total = user_crud.get_paginated_users(
+            self.db, page, per_page, sort_by, sort_order, search, filters
+        )
         logger.info(f"User {self.current_user.id} successfully LISTED users")
-        return users
+        return users, total
 
     def create_user(self, user_in: UserCreate, hashed_password: str) -> User:
         logger.info(
@@ -92,17 +103,6 @@ class UserService:
         deleted_user = user_crud.soft_delete_user(self.db, user)
         logger.info(f"User {self.current_user.id} successfully DELETED user {user.id}")
         return deleted_user
-
-    def search_users(self, **kwargs):
-        logger.info(
-            f"User {self.current_user.id} attempts to SEARCH users at {datetime.utcnow().isoformat()} with filters {kwargs}"
-        )
-        if not has_permission(self.current_user, "read", "user"):
-            logger.warning(f"User {self.current_user.id} denied SEARCH access to users")
-            raise PermissionError("Not allowed to search users.")
-        users = user_crud.search_users(self.db, **kwargs)
-        logger.info(f"User {self.current_user.id} successfully SEARCHED users")
-        return users
 
     def get_user_permissions(self, user: User) -> list[dict]:
         """

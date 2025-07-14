@@ -6,6 +6,7 @@ from app.core.logger import logger
 
 
 class Settings(BaseSettings):
+    API_V1_STR: str = "/api/v1"
     DB_HOST: str
     DB_PORT: str
     DB_USER: str

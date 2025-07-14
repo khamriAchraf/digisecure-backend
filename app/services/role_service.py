@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -42,6 +42,27 @@ class RoleService:
         roles = role_crud.list_roles(self.db, skip=skip, limit=limit)
         logger.info(f"User {self.current_user.id} successfully LISTED roles")
         return roles
+
+    def get_paginated_roles(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        search: Optional[str] = None,
+        filters: Optional[dict] = None,
+    ) -> Tuple[List[Role], int]:
+        logger.info(
+            f"User {self.current_user.id} attempts to LIST roles at {datetime.utcnow().isoformat()}"
+        )
+        if not has_permission(self.current_user, "read", "role"):
+            logger.warning(f"User {self.current_user.id} denied LIST access to roles")
+            raise PermissionError("Not allowed to list roles.")
+        roles, total = role_crud.get_paginated_roles(
+            self.db, page, per_page, sort_by, sort_order, search, filters
+        )
+        logger.info(f"User {self.current_user.id} successfully LISTED roles")
+        return roles, total
 
     def create_role(
         self, name: str, description: Optional[str] = None, is_builtin: bool = False

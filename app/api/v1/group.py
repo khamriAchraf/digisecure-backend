@@ -1,13 +1,22 @@
-from typing import List
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.dependencies import get_group_service
 from app.schemas.group import (GroupCreate, GroupCreateWithUsers,
                                GroupResponse, GroupUpdate)
+from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.services.group_service import GroupService, PermissionError
 
 router = APIRouter(prefix="/groups", tags=["groups"])
+
+
+def get_query_filters(request: Request) -> dict:
+    filters = {}
+    for key, value in request.query_params.items():
+        if key not in ["page", "per_page", "sort_by", "sort_order", "search"]:
+            filters[key] = value
+    return filters
 
 
 @router.get("/{group_id}", response_model=GroupResponse)
@@ -24,14 +33,28 @@ def get_group(
         raise HTTPException(status_code=403, detail=str(e))
 
 
-@router.get("/", response_model=List[GroupResponse])
+@router.get("/", response_model=PaginatedResponse[GroupResponse])
 def list_groups(
-    skip: int = 0,
-    limit: int = 100,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", enum=["asc", "desc"]),
+    search: Optional[str] = Query(None),
     service: GroupService = Depends(get_group_service),
+    filters: dict = Depends(get_query_filters),
 ):
     try:
-        return service.list_groups(skip=skip, limit=limit)
+        groups, total = service.get_paginated_groups(
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search=search,
+            filters=filters,
+        )
+        return create_paginated_response(
+            data=groups, total=total, page=page, per_page=per_page
+        )
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

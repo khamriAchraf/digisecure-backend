@@ -73,7 +73,9 @@ async def test_create_and_list_users():
 
         list_resp = await ac.get("/users/", headers=headers)
         assert list_resp.status_code == 200, f"List users failed: {list_resp.text}"
-        users = list_resp.json()
+        users_response = list_resp.json()
+        assert "data" in users_response, "Response should be paginated"
+        users = users_response["data"]
         usernames = {u["username"] for u in users}
         for _, username, _ in roles:
             assert username in usernames, f"User {username} not found in user list!"

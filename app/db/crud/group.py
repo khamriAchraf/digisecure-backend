@@ -1,7 +1,8 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from app.db.models.group import Group
 from app.db.models.user import User
@@ -18,6 +19,52 @@ def get_group_by_name(db: Session, name: str) -> Optional[Group]:
 
 def list_groups(db: Session, skip: int = 0, limit: int = 100) -> List[Group]:
     return db.query(Group).offset(skip).limit(limit).all()
+
+
+def get_paginated_groups(
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> Tuple[List[Group], int]:
+    query: Query = db.query(Group)
+
+    # Apply filters
+    if filters:
+        for key, value in filters.items():
+            if hasattr(Group, key) and value is not None and value != "":
+                query = query.filter(getattr(Group, key) == value)
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Group.name.ilike(search_term),
+                Group.description.ilike(search_term),
+                Group.type.ilike(search_term),
+            )
+        )
+
+    total = query.count()
+
+    # Apply sorting
+    if sort_by and hasattr(Group, sort_by):
+        column = getattr(Group, sort_by)
+        if sort_order.lower() == "desc":
+            query = query.order_by(column.desc())
+        else:
+            query = query.order_by(column.asc())
+
+    # Apply pagination
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    groups = query.all()
+    return groups, total
 
 
 def create_group(db: Session, group_in: GroupCreate) -> Group:

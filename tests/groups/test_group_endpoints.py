@@ -47,7 +47,9 @@ async def test_group_crud_as_super_admin():
         # List groups
         resp = await ac.get("/groups/", headers=headers)
         assert resp.status_code == 200
-        assert any(g["id"] == group_id for g in resp.json())
+        groups_data = resp.json()
+        assert "data" in groups_data
+        assert any(g["id"] == group_id for g in groups_data["data"])
 
         # Get group by id
         resp = await ac.get(f"/groups/{group_id}", headers=headers)
@@ -112,6 +114,8 @@ async def test_group_permissions_for_non_admin():
 
         resp = await ac.get("/groups/", headers=headers)
         assert resp.status_code == 200
+        groups_data = resp.json()
+        assert "data" in groups_data
         resp = await ac.get("/groups/1", headers=headers)
         assert resp.status_code in (200, 404)
 
@@ -133,7 +137,9 @@ async def test_create_group_with_users():
         # Check if users exist first
         users_resp = await ac.get("/users/", headers=headers)
         assert users_resp.status_code == 200, f"Failed to get users: {users_resp.text}"
-        users = users_resp.json()
+        users_data = users_resp.json()
+        assert "data" in users_data
+        users = users_data["data"]
         print(f"Available users: {[(u['id'], u['username']) for u in users]}")
 
         # Check if user ID 2 exists

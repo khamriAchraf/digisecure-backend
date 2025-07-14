@@ -1,16 +1,26 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import (APIRouter, Depends, HTTPException, Path, Query, Request,
+                     status)
 from pydantic import BaseModel
 
 from app.api.dependencies import get_current_user, get_db
 from app.db.models.role import Permission
 from app.db.models.user import User
+from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.schemas.role import (PermissionResponse, RoleCreate, RoleResponse,
                               RoleUpdate)
 from app.services.role_service import PermissionError, RoleService
 
 router = APIRouter(prefix="/roles", tags=["roles"])
+
+
+def get_query_filters(request: Request) -> dict:
+    filters = {}
+    for key, value in request.query_params.items():
+        if key not in ["page", "per_page", "sort_by", "sort_order", "search"]:
+            filters[key] = value
+    return filters
 
 
 def get_role_service(
@@ -21,14 +31,32 @@ def get_role_service(
 
 @router.get(
     "/",
-    response_model=List[RoleResponse],
+    response_model=PaginatedResponse[RoleResponse],
     summary="List all roles",
-    description="Retrieve a list of all roles.",
+    description="Retrieve a paginated list of all roles with support for sorting, searching, and filtering.",
 )
-def list_roles(service: RoleService = Depends(get_role_service)):
-    """List all roles."""
+def list_roles(
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", enum=["asc", "desc"]),
+    search: Optional[str] = Query(None),
+    service: RoleService = Depends(get_role_service),
+    filters: dict = Depends(get_query_filters),
+):
+    """List all roles with pagination, sorting, search, and filtering."""
     try:
-        return service.list_roles()
+        roles, total = service.get_paginated_roles(
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search=search,
+            filters=filters,
+        )
+        return create_paginated_response(
+            data=roles, total=total, page=page, per_page=per_page
+        )
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

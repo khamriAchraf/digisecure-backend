@@ -8,7 +8,8 @@ from app.core.config import settings
 from app.core.logger import logger
 from app.core.security import get_password_hash
 from app.db.base import Base
-from app.db.models import Location, Manufacturer, Permission, Role, User
+from app.db.models import (Location, Manufacturer, Permission, Role,
+                           TableConfig, User)
 from app.db.session import SessionLocal, engine
 
 sys.path.append(".")
@@ -517,6 +518,52 @@ def main():
                     f"Created user for role '{role_name}': {username} / {email} (password: {password})"
                 )
             session.commit()
+
+        # Create example table configurations for user with ID=1
+        logger.info("Creating example table configurations for user ID=1...")
+        user_1 = session.query(User).filter_by(id=1).first()
+        if user_1:
+            # Create table config for users table
+            existing_user_config = (
+                session.query(TableConfig)
+                .filter_by(user_id=1, table_key="users")
+                .first()
+            )
+            if not existing_user_config:
+                user_table_config = TableConfig(
+                    user_id=1,
+                    table_key="users",
+                    columns=["id", "username", "email", "full_name"],
+                )
+                session.add(user_table_config)
+                logger.info("Created table config for 'users' table")
+
+            # Create table config for groups table
+            existing_group_config = (
+                session.query(TableConfig)
+                .filter_by(user_id=1, table_key="groups")
+                .first()
+            )
+            if not existing_group_config:
+                group_table_config = TableConfig(
+                    user_id=1,
+                    table_key="groups",
+                    columns=[
+                        "id",
+                        "name",
+                        "description",
+                        "type",
+                        "contain_users",
+                        "contain_items",
+                    ],
+                )
+                session.add(group_table_config)
+                logger.info("Created table config for 'groups' table")
+
+            session.commit()
+            logger.info("Example table configurations created successfully.")
+        else:
+            logger.warning("User with ID=1 not found, skipping table config creation.")
 
     except IntegrityError as e:
         session.rollback()

@@ -1,7 +1,8 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from app.db.models.role import Permission, Role
 
@@ -16,6 +17,51 @@ def get_role_by_name(db: Session, name: str) -> Optional[Role]:
 
 def list_roles(db: Session, skip: int = 0, limit: int = 100) -> List[Role]:
     return db.query(Role).offset(skip).limit(limit).all()
+
+
+def get_paginated_roles(
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> Tuple[List[Role], int]:
+    query: Query = db.query(Role)
+
+    # Apply filters
+    if filters:
+        for key, value in filters.items():
+            if hasattr(Role, key) and value is not None and value != "":
+                query = query.filter(getattr(Role, key) == value)
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Role.name.ilike(search_term),
+                Role.description.ilike(search_term),
+            )
+        )
+
+    total = query.count()
+
+    # Apply sorting
+    if sort_by and hasattr(Role, sort_by):
+        column = getattr(Role, sort_by)
+        if sort_order.lower() == "desc":
+            query = query.order_by(column.desc())
+        else:
+            query = query.order_by(column.asc())
+
+    # Apply pagination
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    roles = query.all()
+    return roles, total
 
 
 def create_role(

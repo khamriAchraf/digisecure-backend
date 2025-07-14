@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -42,6 +43,27 @@ class GroupService:
         groups = group_crud.list_groups(self.db, skip=skip, limit=limit)
         logger.info(f"User {self.current_user.id} successfully LISTED groups")
         return groups
+
+    def get_paginated_groups(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        search: Optional[str] = None,
+        filters: Optional[dict] = None,
+    ) -> Tuple[List[Group], int]:
+        logger.info(
+            f"User {self.current_user.id} attempts to LIST groups at {datetime.utcnow().isoformat()}"
+        )
+        if not has_permission(self.current_user, "read", "group"):
+            logger.warning(f"User {self.current_user.id} denied LIST access to groups")
+            raise PermissionError("Not allowed to list groups.")
+        groups, total = group_crud.get_paginated_groups(
+            self.db, page, per_page, sort_by, sort_order, search, filters
+        )
+        logger.info(f"User {self.current_user.id} successfully LISTED groups")
+        return groups, total
 
     def create_group(self, group_in: GroupCreate) -> Group:
         logger.info(

@@ -1,8 +1,8 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, or_
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from app.db.models.role import Role
 from app.db.models.user import User, UserStatus
@@ -33,14 +33,50 @@ def get_user_by_username(db: Session, username: str) -> Optional[User]:
     )
 
 
-def list_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
-    return (
-        db.query(User)
-        .filter(User.status != UserStatus.deleted)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+def get_paginated_users(
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> Tuple[List[User], int]:
+    query: Query = db.query(User).filter(User.status != UserStatus.deleted)
+
+    # Apply filters
+    if filters:
+        for key, value in filters.items():
+            if hasattr(User, key) and value is not None and value != "":
+                query = query.filter(getattr(User, key) == value)
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                User.full_name.ilike(search_term),
+                User.email.ilike(search_term),
+                User.username.ilike(search_term),
+            )
+        )
+
+    total = query.count()
+
+    # Apply sorting
+    if sort_by and hasattr(User, sort_by):
+        column = getattr(User, sort_by)
+        if sort_order.lower() == "desc":
+            query = query.order_by(column.desc())
+        else:
+            query = query.order_by(column.asc())
+
+    # Apply pagination
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    users = query.all()
+    return users, total
 
 
 def create_user(db: Session, user_in: UserCreate, hashed_password: str) -> User:
@@ -99,31 +135,3 @@ def soft_delete_user(db: Session, user: User) -> User:
     db.commit()
     db.refresh(user)
     return user
-
-
-def search_users(
-    db: Session,
-    profile: Optional[str] = None,
-    status: Optional[UserStatus] = None,
-    department: Optional[str] = None,
-    query: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 100,
-) -> List[User]:
-    filters = [User.status != UserStatus.deleted]
-    if profile is not None:
-        filters.append(User.profile == profile)
-    if status is not None:
-        filters.append(User.status == status)
-    if department is not None and hasattr(User, "department"):
-        filters.append(User.department == department)
-    if query:
-        search = f"%{query}%"
-        filters.append(
-            or_(
-                User.full_name.ilike(search),
-                User.email.ilike(search),
-                User.username.ilike(search),
-            )
-        )
-    return db.query(User).filter(and_(*filters)).offset(skip).limit(limit).all()

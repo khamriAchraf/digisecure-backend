@@ -37,8 +37,12 @@ async def test_technician_user_permissions():
         assert (
             list_resp.status_code == 200
         ), f"Technician user should be able to list users: {list_resp.text}"
-        users = list_resp.json()
-        assert isinstance(users, list), "Response should be a list of users"
+        users_response = list_resp.json()
+        assert (
+            isinstance(users_response, dict) and "data" in users_response
+        ), "Response should be a paginated dictionary"
+        users = users_response["data"]
+        assert isinstance(users, list), "Response should contain a list of users"
 
         other_user = None
         for user in users:
@@ -56,14 +60,17 @@ async def test_technician_user_permissions():
         user_data = get_user_resp.json()
         assert user_data["id"] == other_user["id"]
 
-        search_resp = await ac.get(
-            "/users/search/?query=test", headers=technician_headers
-        )
+        search_resp = await ac.get("/users/?search=test", headers=technician_headers)
         assert (
             search_resp.status_code == 200
         ), f"Technician user should be able to search users: {search_resp.text}"
         search_results = search_resp.json()
-        assert isinstance(search_results, list), "Search response should be a list"
+        assert (
+            isinstance(search_results, dict) and "data" in search_results
+        ), "Search response should be a paginated dictionary"
+        assert isinstance(
+            search_results["data"], list
+        ), "Search response should contain a list"
 
         # Test that technician can update users (update permission)
         update_data = {"full_name": "Updated Technician Name"}
