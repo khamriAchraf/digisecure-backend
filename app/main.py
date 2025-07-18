@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api.v1 import asset, auth, group, role, table_config, user
+from app.api.v1 import asset, auth, group, role, schema, table_config, user
 from app.api.v1.configuration import router as configuration_router
 from app.core.config import settings
 from app.core.logger import (clear_log_context, logger, set_request_id,
@@ -34,6 +34,7 @@ app.include_router(user.router, prefix="/api/v1")
 app.include_router(role.router, prefix="/api/v1")
 app.include_router(group.router, prefix="/api/v1")
 app.include_router(asset.router, prefix="/api/v1")
+app.include_router(schema.router, prefix="/api/v1")
 app.include_router(table_config.router, prefix="/api/v1")
 app.include_router(configuration_router, prefix="/api/v1")
 

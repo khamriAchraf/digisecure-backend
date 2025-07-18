@@ -1,16 +1,30 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class GroupBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    type: Optional[str] = None  # e.g., 'skill', 'org', 'notification'
-    contain_users: Optional[bool] = True
-    contain_items: Optional[bool] = True
-    comment: Optional[str] = None
-    parent_id: Optional[int] = None
+    name: str = Field(
+        ..., min_length=1, max_length=100, description="Group name (must be unique)"
+    )
+    description: Optional[str] = Field(
+        None, max_length=500, description="Optional description of the group"
+    )
+    type: Optional[str] = Field(
+        None, description="Type of group (e.g., 'skill', 'org', 'notification')"
+    )
+    contain_users: Optional[bool] = Field(
+        True, description="Whether this group can contain user members"
+    )
+    contain_items: Optional[bool] = Field(
+        True, description="Whether this group can contain asset items"
+    )
+    comment: Optional[str] = Field(
+        None, max_length=1000, description="Optional comments about the group"
+    )
+    parent_id: Optional[int] = Field(
+        None, description="Parent group ID if this is a subgroup"
+    )
 
 
 class GroupCreate(GroupBase):

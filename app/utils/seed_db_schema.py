@@ -1,5 +1,6 @@
 import argparse
 import sys
+from datetime import date, datetime
 
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +11,8 @@ from app.core.security import get_password_hash
 from app.db.base import Base
 from app.db.models import (Location, Manufacturer, Permission, Role,
                            TableConfig, User)
+from app.db.models.asset import (Cable, Computer, Consumable, NetworkDevice,
+                                 Peripheral, Phone, Printer, Rack, SimCardItem)
 from app.db.session import SessionLocal, engine
 
 sys.path.append(".")
@@ -162,6 +165,420 @@ def create_user_audit_table_and_trigger(session):
     session.commit()
 
 
+def create_sample_assets(session):
+    """Create sample assets for each type"""
+    logger.info("Creating sample assets...")
+
+    # Get some locations and manufacturers for reference
+    locations = session.query(Location).all()
+    manufacturers = session.query(Manufacturer).all()
+    users = session.query(User).all()
+
+    if not locations:
+        logger.warning(
+            "No locations found, creating assets without location assignment"
+        )
+    if not manufacturers:
+        logger.warning(
+            "No manufacturers found, creating assets without manufacturer assignment"
+        )
+    if not users:
+        logger.warning("No users found, creating assets without user assignment")
+
+    now = datetime.utcnow()
+
+    # Sample Computers
+    computers_data = [
+        {
+            "name": "Workstation-001",
+            "serial_number": "WS001-2024-001",
+            "inventory_number": "INV-COMP-001",
+            "manufacturer_id": manufacturers[0].id if manufacturers else None,
+            "status": "active",
+            "purchase_date": date(2024, 1, 15),
+            "warranty_expiry": date(2027, 1, 15),
+            "location_id": locations[0].id if locations else None,
+            "assigned_to": users[0].id if users else None,
+            "type": "computer",
+            "created_at": now,
+            "updated_at": now,
+            "cpu": "Intel Core i7-12700K",
+            "ram": "32GB DDR4",
+            "storage": "1TB NVMe SSD",
+            "os": "Windows 11 Pro",
+            "mac_address": "00:1B:44:11:3A:B7",
+            "ip_address": "192.168.1.100",
+            "model": "Dell OptiPlex 7090",
+            "hostname": "WS001",
+        },
+        {
+            "name": "Laptop-001",
+            "serial_number": "LP001-2024-002",
+            "inventory_number": "INV-COMP-002",
+            "manufacturer_id": (
+                manufacturers[1].id
+                if len(manufacturers) > 1
+                else manufacturers[0].id if manufacturers else None
+            ),
+            "status": "active",
+            "purchase_date": date(2024, 2, 20),
+            "warranty_expiry": date(2027, 2, 20),
+            "location_id": (
+                locations[1].id
+                if len(locations) > 1
+                else locations[0].id if locations else None
+            ),
+            "assigned_to": (
+                users[1].id if len(users) > 1 else users[0].id if users else None
+            ),
+            "type": "computer",
+            "created_at": now,
+            "updated_at": now,
+            "cpu": "AMD Ryzen 7 5800H",
+            "ram": "16GB DDR4",
+            "storage": "512GB NVMe SSD",
+            "os": "Ubuntu 22.04 LTS",
+            "mac_address": "00:1B:44:11:3A:B8",
+            "ip_address": "192.168.1.101",
+            "model": "Lenovo ThinkPad T14",
+            "hostname": "LP001",
+        },
+    ]
+
+    # Sample Printers
+    printers_data = [
+        {
+            "name": "Office-Printer-01",
+            "serial_number": "PR001-2023-001",
+            "inventory_number": "INV-PRT-001",
+            "manufacturer_id": manufacturers[0].id if manufacturers else None,
+            "status": "active",
+            "purchase_date": date(2023, 6, 10),
+            "warranty_expiry": date(2026, 6, 10),
+            "location_id": locations[0].id if locations else None,
+            "type": "printer",
+            "created_at": now,
+            "updated_at": now,
+            "model": "HP LaserJet Pro M404n",
+            "ip_address": "192.168.1.200",
+            "mac_address": "00:1B:44:11:3A:C1",
+            "connection_type": "Network",
+            "print_technology": "Laser",
+            "max_resolution": "600x600 dpi",
+            "color_support": "Monochrome",
+            "duplex_support": "Yes",
+        }
+    ]
+
+    # Sample Network Devices
+    network_devices_data = [
+        {
+            "name": "Core-Switch-01",
+            "serial_number": "SW001-2023-001",
+            "inventory_number": "INV-NET-001",
+            "manufacturer_id": (
+                manufacturers[2].id
+                if len(manufacturers) > 2
+                else manufacturers[0].id if manufacturers else None
+            ),
+            "status": "active",
+            "purchase_date": date(2023, 3, 15),
+            "warranty_expiry": date(2028, 3, 15),
+            "location_id": locations[0].id if locations else None,
+            "type": "network_device",
+            "created_at": now,
+            "updated_at": now,
+            "device_type": "Switch",
+            "model": "Cisco Catalyst 2960-X",
+            "ip_address": "192.168.1.1",
+            "mac_address": "00:1B:44:11:3A:D1",
+            "port_count": 48,
+            "connection_type": "Ethernet",
+            "management_ip": "192.168.1.1",
+            "firmware_version": "15.2(4)E7",
+        }
+    ]
+
+    # Sample Phones
+    phones_data = [
+        {
+            "name": "Desk-Phone-01",
+            "serial_number": "PH001-2024-001",
+            "inventory_number": "INV-PHN-001",
+            "manufacturer_id": (
+                manufacturers[3].id
+                if len(manufacturers) > 3
+                else manufacturers[0].id if manufacturers else None
+            ),
+            "status": "active",
+            "purchase_date": date(2024, 1, 10),
+            "warranty_expiry": date(2027, 1, 10),
+            "location_id": locations[0].id if locations else None,
+            "assigned_to": users[0].id if users else None,
+            "type": "phone",
+            "created_at": now,
+            "updated_at": now,
+            "model": "Cisco IP Phone 8845",
+            "phone_type": "Desk Phone",
+            "extension": "1001",
+            "ip_address": "192.168.1.150",
+            "mac_address": "00:1B:44:11:3A:E1",
+            "phone_system": "Cisco Unified Communications",
+            "line_count": 2,
+        }
+    ]
+
+    # Sample Peripherals
+    peripherals_data = [
+        {
+            "name": "Wireless-Mouse-01",
+            "serial_number": "PR001-2024-001",
+            "inventory_number": "INV-PER-001",
+            "manufacturer_id": (
+                manufacturers[4].id
+                if len(manufacturers) > 4
+                else manufacturers[0].id if manufacturers else None
+            ),
+            "status": "active",
+            "purchase_date": date(2024, 3, 5),
+            "warranty_expiry": date(2027, 3, 5),
+            "location_id": locations[0].id if locations else None,
+            "assigned_to": users[0].id if users else None,
+            "type": "peripheral",
+            "created_at": now,
+            "updated_at": now,
+            "peripheral_type": "Mouse",
+            "model": "Logitech MX Master 3",
+            "connection_type": "Wireless",
+            "compatibility": "Windows, Mac, Linux",
+            "special_features": "Wireless, Ergonomic",
+        }
+    ]
+
+    # Sample Consumables
+    consumables_data = [
+        {
+            "name": "HP-Toner-Cartridge",
+            "serial_number": "TC001-2024-001",
+            "inventory_number": "INV-CON-001",
+            "manufacturer_id": manufacturers[0].id if manufacturers else None,
+            "status": "active",
+            "purchase_date": date(2024, 4, 1),
+            "warranty_expiry": date(2025, 4, 1),
+            "location_id": locations[0].id if locations else None,
+            "type": "consumable",
+            "created_at": now,
+            "updated_at": now,
+            "consumable_type": "Toner",
+            "model": "HP 26A Black Toner Cartridge",
+            "quantity": 5,
+            "unit": "cartridges",
+            "expiry_date": date(2026, 4, 1),
+            "compatible_with": "HP LaserJet Pro M404n",
+        }
+    ]
+
+    # Sample Racks
+    racks_data = [
+        {
+            "name": "Server-Rack-01",
+            "serial_number": "RK001-2023-001",
+            "inventory_number": "INV-RCK-001",
+            "manufacturer_id": (
+                manufacturers[5].id
+                if len(manufacturers) > 5
+                else manufacturers[0].id if manufacturers else None
+            ),
+            "status": "active",
+            "purchase_date": date(2023, 8, 20),
+            "warranty_expiry": date(2028, 8, 20),
+            "location_id": locations[0].id if locations else None,
+            "type": "rack",
+            "created_at": now,
+            "updated_at": now,
+            "rack_type": "Server Rack",
+            "model": "APC AR3100",
+            "height_units": 42,
+            "width": '19"',
+            "depth": '36"',
+            "max_weight_capacity": "2000 lbs",
+            "location_details": "Data Center - Row A",
+        }
+    ]
+
+    # Sample Cables
+    cables_data = [
+        {
+            "name": "Ethernet-Cable-01",
+            "serial_number": "CB001-2024-001",
+            "inventory_number": "INV-CBL-001",
+            "manufacturer_id": (
+                manufacturers[6].id
+                if len(manufacturers) > 6
+                else manufacturers[0].id if manufacturers else None
+            ),
+            "status": "active",
+            "purchase_date": date(2024, 2, 15),
+            "warranty_expiry": date(2029, 2, 15),
+            "location_id": locations[0].id if locations else None,
+            "type": "cable",
+            "created_at": now,
+            "updated_at": now,
+            "cable_type": "Ethernet",
+            "model": "Cat6 UTP Cable",
+            "length": "100m",
+            "connector_type": "RJ45",
+            "category": "Cat6",
+            "color": "Blue",
+            "max_bandwidth": "1 Gbps",
+        }
+    ]
+
+    # Sample SIM Cards
+    sim_cards_data = [
+        {
+            "name": "Data-SIM-01",
+            "serial_number": "SC001-2024-001",
+            "inventory_number": "INV-SIM-001",
+            "manufacturer_id": (
+                manufacturers[7].id
+                if len(manufacturers) > 7
+                else manufacturers[0].id if manufacturers else None
+            ),
+            "status": "active",
+            "purchase_date": date(2024, 1, 20),
+            "warranty_expiry": date(2027, 1, 20),
+            "location_id": locations[0].id if locations else None,
+            "assigned_to": users[0].id if users else None,
+            "type": "sim_card_item",
+            "created_at": now,
+            "updated_at": now,
+            "sim_type": "Nano",
+            "iccid": "89014103211118510720",
+            "imsi": "310260123456789",
+            "carrier": "AT&T",
+            "phone_number": "+1-555-0123",
+            "data_plan": "Unlimited Data",
+            "activation_date": date(2024, 1, 25),
+            "expiry_date": date(2025, 1, 25),
+        }
+    ]
+
+    # Create assets
+    assets_created = 0
+
+    # Create computers
+    for comp_data in computers_data:
+        existing = (
+            session.query(Computer)
+            .filter_by(serial_number=comp_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            computer = Computer(**comp_data)
+            session.add(computer)
+            assets_created += 1
+
+    # Create printers
+    for prt_data in printers_data:
+        existing = (
+            session.query(Printer)
+            .filter_by(serial_number=prt_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            printer = Printer(**prt_data)
+            session.add(printer)
+            assets_created += 1
+
+    # Create network devices
+    for net_data in network_devices_data:
+        existing = (
+            session.query(NetworkDevice)
+            .filter_by(serial_number=net_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            network_device = NetworkDevice(**net_data)
+            session.add(network_device)
+            assets_created += 1
+
+    # Create phones
+    for phn_data in phones_data:
+        existing = (
+            session.query(Phone)
+            .filter_by(serial_number=phn_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            phone = Phone(**phn_data)
+            session.add(phone)
+            assets_created += 1
+
+    # Create peripherals
+    for per_data in peripherals_data:
+        existing = (
+            session.query(Peripheral)
+            .filter_by(serial_number=per_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            peripheral = Peripheral(**per_data)
+            session.add(peripheral)
+            assets_created += 1
+
+    # Create consumables
+    for con_data in consumables_data:
+        existing = (
+            session.query(Consumable)
+            .filter_by(serial_number=con_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            consumable = Consumable(**con_data)
+            session.add(consumable)
+            assets_created += 1
+
+    # Create racks
+    for rck_data in racks_data:
+        existing = (
+            session.query(Rack)
+            .filter_by(serial_number=rck_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            rack = Rack(**rck_data)
+            session.add(rack)
+            assets_created += 1
+
+    # Create cables
+    for cbl_data in cables_data:
+        existing = (
+            session.query(Cable)
+            .filter_by(serial_number=cbl_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            cable = Cable(**cbl_data)
+            session.add(cable)
+            assets_created += 1
+
+    # Create SIM cards
+    for sim_data in sim_cards_data:
+        existing = (
+            session.query(SimCardItem)
+            .filter_by(serial_number=sim_data["serial_number"])
+            .first()
+        )
+        if not existing:
+            sim_card = SimCardItem(**sim_data)
+            session.add(sim_card)
+            assets_created += 1
+
+    session.commit()
+    logger.info(f"Created {assets_created} sample assets")
+
+
 def main():
     args = parse_arguments()
 
@@ -308,11 +725,33 @@ def main():
         },
     ]
 
+    # 7. Asset management permissions
+    asset_permissions = [
+        {
+            "action": "read",
+            "resource": "asset",
+            "description": "View asset information",
+        },
+        {"action": "create", "resource": "asset", "description": "Create new assets"},
+        {
+            "action": "update",
+            "resource": "asset",
+            "description": "Update asset information",
+        },
+        {"action": "delete", "resource": "asset", "description": "Delete assets"},
+        {
+            "action": "purge",
+            "resource": "asset",
+            "description": "Permanently delete assets",
+        },
+    ]
+
     ALL_PERMISSIONS = {
         "user": user_permissions,
         "role": role_permissions,
         "group": group_permissions,
         "configuration": configuration_permissions,
+        "asset": asset_permissions,
     }
 
     # Role-permission mapping
@@ -322,33 +761,50 @@ def main():
             "role": ["read", "create", "update", "delete", "purge"],
             "group": ["read", "create", "update", "delete", "purge"],
             "configuration": ["read", "create", "update", "delete", "purge"],
+            "asset": ["read", "create", "update", "delete", "purge"],
         },
         "Admin": {
             "user": ["read", "create", "update", "delete"],
             "role": [],
             "group": [],
             "configuration": ["read", "create", "update", "delete", "purge"],
+            "asset": ["read", "create", "update", "delete"],
         },
         "Supervisor": {
             "user": ["read", "create", "update"],
             "role": [],
             "group": [],
             "configuration": [],
+            "asset": ["read", "create", "update"],
         },
         "Technician": {
             "user": ["read", "update"],
             "role": [],
             "group": [],
             "configuration": [],
+            "asset": ["read", "create", "update"],
         },
-        "Hotliner": {"user": ["read"], "role": [], "group": [], "configuration": []},
+        "Hotliner": {
+            "user": ["read"],
+            "role": [],
+            "group": [],
+            "configuration": [],
+            "asset": ["read"],
+        },
         "Observer": {
             "user": ["read"],
             "role": [],
             "group": ["read"],
             "configuration": ["read"],
+            "asset": ["read"],
         },
-        "Self-Service": {"user": [], "role": [], "group": [], "configuration": []},
+        "Self-Service": {
+            "user": [],
+            "role": [],
+            "group": [],
+            "configuration": [],
+            "asset": ["read"],
+        },
     }
 
     try:
@@ -476,6 +932,9 @@ def main():
         session.commit()
         logger.info("Test manufacturers created.")
 
+        # Create sample assets
+        create_sample_assets(session)
+
         # Create a user for each role if the database name contains 'dev'
         if "dev" in settings.DB_NAME.lower():
             logger.info(
@@ -559,6 +1018,30 @@ def main():
                 )
                 session.add(group_table_config)
                 logger.info("Created table config for 'groups' table")
+
+            # Create table config for assets table
+            existing_asset_config = (
+                session.query(TableConfig)
+                .filter_by(user_id=1, table_key="assets")
+                .first()
+            )
+            if not existing_asset_config:
+                asset_table_config = TableConfig(
+                    user_id=1,
+                    table_key="assets",
+                    columns=[
+                        "id",
+                        "name",
+                        "type",
+                        "status",
+                        "serial_number",
+                        "inventory_number",
+                        "location_id",
+                        "assigned_to",
+                    ],
+                )
+                session.add(asset_table_config)
+                logger.info("Created table config for 'assets' table")
 
             session.commit()
             logger.info("Example table configurations created successfully.")

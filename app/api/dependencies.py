@@ -10,6 +10,7 @@ from app.services.asset_service import AssetService
 from app.services.auth_service import decode_access_token, get_user_by_id
 from app.services.configuration_service import ConfigurationService
 from app.services.group_service import GroupService
+from app.services.schema_service import SchemaService
 from app.services.table_config_service import TableConfigService
 from app.services.user_service import UserService
 
@@ -69,3 +70,10 @@ def get_table_config_service(
     current_user: User = Depends(get_current_user),
 ) -> TableConfigService:
     return TableConfigService(db, current_user)
+
+
+def get_schema_service(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SchemaService:
+    return SchemaService(db, current_user)
