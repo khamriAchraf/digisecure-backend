@@ -20,23 +20,6 @@ role_permissions = Table(
     ),
 )
 
-user_roles = Table(
-    "user_roles",
-    Base.metadata,
-    Column(
-        "user_id",
-        Integer,
-        ForeignKey(f"users.id"),
-        primary_key=True,
-    ),
-    Column(
-        "role_id",
-        Integer,
-        ForeignKey(f"roles.id"),
-        primary_key=True,
-    ),
-)
-
 
 class Role(Base):
     __tablename__ = "roles"
@@ -47,7 +30,7 @@ class Role(Base):
     permissions = relationship(
         "Permission", secondary=role_permissions, back_populates="roles"
     )
-    users = relationship("User", secondary=user_roles, back_populates="roles")
+    users = relationship("User", back_populates="role")
 
 
 class Permission(Base):

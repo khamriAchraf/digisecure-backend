@@ -70,7 +70,7 @@ async def test_role_deletion_orphaned_users():
             "username": "orphaned_user",
             "email": new_user_email,
             "password": TEST_PASSWORD,
-            "roles": [role_id],
+            "role_id": role_id,
         }
         user_resp = await ac.post("/users/", json=new_user_data, headers=super_headers)
         assert user_resp.status_code == 201, f"Failed to create user: {user_resp.text}"
@@ -120,12 +120,12 @@ async def test_role_deletion_orphaned_users():
             users_resp.status_code == 403
         ), f"User should not be able to list users after role deletion: {users_resp.text}"
 
-        # 11. Optionally, check the user's roles list is empty or updated
+        # 11. Optionally, check the user's role is null or updated
         me_resp = await ac.get("/users/me", headers=user_headers)
         assert (
             me_resp.status_code == 200
         ), f"Failed to fetch user profile: {me_resp.text}"
-        roles = me_resp.json().get("roles", [])
+        role = me_resp.json().get("role")
         assert (
-            not roles
-        ), f"User's roles should be empty after role deletion, got: {roles}"
+            role is None
+        ), f"User's role should be null after role deletion, got: {role}"

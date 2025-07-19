@@ -47,7 +47,7 @@ def register(request: Request, user_create: UserCreate, db: Session = Depends(ge
         valid_from=user_create.valid_from,
         valid_until=user_create.valid_until,
         administartive_number=user_create.administartive_number,
-        roles=[super_admin_role],
+        role=super_admin_role,
     )
     db.add(new_user)
     db.commit()
@@ -72,11 +72,16 @@ def login(
     ip_address = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
 
-    access_token = auth_service.create_access_token(
-        data={"sub": str(user.id), "email": user.email}
-    )
+    token_data = {
+        "sub": str(user.id),
+        "email": user.email,
+        "role_id": user.role.id if user.role else None,
+        "permissions": auth_service._get_user_permissions(user),
+    }
+
+    access_token = auth_service.create_access_token(data=token_data)
     refresh_token = auth_service.create_refresh_token(
-        data={"sub": str(user.id), "email": user.email},
+        data=token_data,
         db=db,
         ip_address=ip_address,
         user_agent=user_agent,
@@ -118,12 +123,18 @@ def refresh_token(
     ip_address = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
 
+    # Prepare token data with role_id and permissions
+    token_data = {
+        "sub": str(user.id),
+        "email": user.email,
+        "role_id": user.role.id if user.role else None,
+        "permissions": auth_service._get_user_permissions(user),
+    }
+
     # Create new tokens (rotation)
-    access_token = auth_service.create_access_token(
-        data={"sub": str(user.id), "email": user.email}
-    )
+    access_token = auth_service.create_access_token(data=token_data)
     new_refresh_token = auth_service.create_refresh_token(
-        data={"sub": str(user.id), "email": user.email},
+        data=token_data,
         db=db,
         ip_address=ip_address,
         user_agent=user_agent,

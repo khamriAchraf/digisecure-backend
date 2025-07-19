@@ -83,11 +83,8 @@ def create_user(
     user_in: UserCreate,
     service: UserService = Depends(get_user_service),
 ):
-    from app.core.security import get_password_hash
-
     try:
-        hashed_password = get_password_hash(user_in.password)
-        return service.create_user(user_in, hashed_password)
+        return service.create_user(user_in)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

@@ -4,6 +4,9 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr
 
+from app.schemas.group import GroupResponse as Group
+from app.schemas.role import RoleResponse as Role
+
 
 class UserStatus(str, enum.Enum):
     active = "active"
@@ -52,7 +55,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-    roles: Optional[List[int]] = None
+    role_id: Optional[int] = None
 
 
 class UserUpdate(BaseModel):
@@ -69,7 +72,22 @@ class UserUpdate(BaseModel):
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     administartive_number: Optional[str] = None
-    roles: Optional[List[int]] = None
+    role_id: Optional[int] = None
+
+
+class UserInDBBase(UserBase):
+    id: int
+    valid_until: Optional[datetime] = None
+    administartive_number: Optional[str] = None
+    role: Optional[Role] = None
+    groups: List[Group] = []
+
+    class Config:
+        from_attributes = True
+
+
+class UserResponse(UserInDBBase):
+    pass
 
 
 class UserLogin(BaseModel):
@@ -86,11 +104,3 @@ class TokenRefresh(BaseModel):
 
 class LogoutResponse(BaseModel):
     message: str
-
-
-class UserResponse(UserBase):
-    id: int
-    roles: List[RoleResponse] = []
-
-    class Config:
-        from_attributes = True

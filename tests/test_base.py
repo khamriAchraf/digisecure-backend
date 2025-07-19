@@ -3,7 +3,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 
 from app.core.config import settings
-from app.db.models.role import Permission, Role, role_permissions, user_roles
+from app.db.models.role import Permission, Role, role_permissions
 from app.db.models.user import User
 from app.db.session import SessionLocal
 from app.main import app
@@ -63,10 +63,14 @@ def test_db_seeded_correctly():
         )
         assert perm_count > 0, "Permissions table is empty!"
 
-        user_roles_count = (
-            session.execute(select(func.count()).select_from(user_roles)).scalar() or 0
+        # Check that users have roles assigned (role_id is not null)
+        users_with_roles = (
+            session.execute(
+                select(func.count()).select_from(User).where(User.role_id.isnot(None))
+            ).scalar()
+            or 0
         )
-        assert user_roles_count > 0, "user_roles table is empty!"
+        assert users_with_roles > 0, "No users have roles assigned!"
 
         role_permissions_count = (
             session.execute(select(func.count()).select_from(role_permissions)).scalar()

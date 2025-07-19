@@ -80,14 +80,14 @@ def get_paginated_users(
 
 
 def create_user(db: Session, user_in: UserCreate, hashed_password: str) -> User:
-    roles = []
-    if user_in.roles:
-        roles = db.query(Role).filter(Role.id.in_(user_in.roles)).all()
+    role = None
+    if user_in.role_id:
+        role = db.query(Role).filter(Role.id == user_in.role_id).first()
     user = User(
         email=user_in.email,
         username=user_in.username,
         full_name=user_in.full_name,
-        roles=roles,
+        role=role,
         language=user_in.language,
         theme=user_in.theme,
         status=user_in.status or UserStatus.active,
@@ -123,8 +123,19 @@ def create_user(db: Session, user_in: UserCreate, hashed_password: str) -> User:
 
 
 def update_user(db: Session, user: User, user_in: UserUpdate) -> User:
-    for field, value in user_in.dict(exclude_unset=True).items():
+    update_data = user_in.dict(exclude_unset=True)
+
+    if "role_id" in update_data:
+        role_id = update_data.pop("role_id")
+        if role_id is not None:
+            role = db.query(Role).filter(Role.id == role_id).first()
+            user.role = role
+        else:
+            user.role = None
+
+    for field, value in update_data.items():
         setattr(user, field, value)
+
     db.commit()
     db.refresh(user)
     return user

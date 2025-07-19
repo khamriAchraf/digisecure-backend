@@ -76,7 +76,7 @@ async def test_hotliner_user_permissions():
             "username": "newuser",
             "email": "newuser@example.com",
             "password": "password123",
-            "roles": [5],  # Hotliner role
+            "role_id": 5,  # Hotliner role
         }
         create_user_resp = await ac.post(
             "/users/", json=new_user_data, headers=hotliner_headers

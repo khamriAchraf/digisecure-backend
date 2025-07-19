@@ -5,7 +5,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.logger import logger
-from app.core.security import has_permission
+from app.core.security import get_password_hash, has_permission
 from app.db.crud import user as user_crud
 from app.db.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
@@ -60,7 +60,7 @@ class UserService:
         logger.info(f"User {self.current_user.id} successfully LISTED users")
         return users, total
 
-    def create_user(self, user_in: UserCreate, hashed_password: str) -> User:
+    def create_user(self, user_in: UserCreate) -> User:
         logger.info(
             f"User {self.current_user.id} attempts to CREATE user {user_in.email} at {datetime.utcnow().isoformat()}"
         )
@@ -70,6 +70,7 @@ class UserService:
             )
             raise PermissionError("Not allowed to create users.")
         try:
+            hashed_password = get_password_hash(user_in.password)
             user = user_crud.create_user(self.db, user_in, hashed_password)
         except ValueError as e:
             from fastapi import HTTPException

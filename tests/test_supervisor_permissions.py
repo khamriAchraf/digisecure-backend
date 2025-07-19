@@ -77,7 +77,7 @@ async def test_supervisor_user_permissions():
             "username": "new_supervisor_user",
             "email": "new_supervisor_user@example.com",
             "password": "password123",
-            "roles": [6],  # Observer role
+            "role_id": 6,  # Observer role
         }
         create_user_resp = await ac.post(
             "/users/", json=new_user_data, headers=supervisor_headers
@@ -88,7 +88,7 @@ async def test_supervisor_user_permissions():
         created_user = create_user_resp.json()
         assert created_user["username"] == "new_supervisor_user"
         assert created_user["email"] == "new_supervisor_user@example.com"
-        assert any(r["id"] == 6 for r in created_user["roles"])
+        assert created_user["role"]["id"] == 6
 
         # Test that supervisor can update users (update permission)
         update_data = {"full_name": "Updated Supervisor Name"}

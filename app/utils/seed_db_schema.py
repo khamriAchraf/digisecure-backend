@@ -75,7 +75,7 @@ def create_super_admin_user(session, username, email, password, full_name):
         status="active",
     )
 
-    user.roles.append(super_admin_role)
+    user.role = super_admin_role
 
     session.add(user)
     session.commit()
@@ -971,7 +971,7 @@ def main():
                     hashed_password=hashed_password,
                     status="active",
                 )
-                user.roles.append(role)
+                user.role = role
                 session.add(user)
                 logger.info(
                     f"Created user for role '{role_name}': {username} / {email} (password: {password})"

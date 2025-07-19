@@ -21,6 +21,15 @@ REFRESH_TOKEN_EXPIRE_DAYS = settings.JWT_REFRESH_EXPIRATION_DAYS
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
+def _get_user_permissions(user: User) -> list[str]:
+    """Extract user permissions in the format 'resource:action'"""
+    permissions = []
+    if user.role:
+        for perm in user.role.permissions:
+            permissions.append(f"{perm.resource}:{perm.action}")
+    return permissions
+
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (
@@ -89,6 +98,19 @@ def decode_access_token(token: str):
         if user_id is None:
             return None
         return user_id
+    except JWTError as e:
+        logger.warning(f"Access token verification failed: {str(e)}")
+        return None
+
+
+def decode_access_token_payload(token: str) -> Optional[dict]:
+    """Decode access token and return full payload including role_id and permissions"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "access":
+            logger.warning("Token type is not 'access'")
+            return None
+        return payload
     except JWTError as e:
         logger.warning(f"Access token verification failed: {str(e)}")
         return None

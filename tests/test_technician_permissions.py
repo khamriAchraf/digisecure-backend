@@ -101,7 +101,7 @@ async def test_technician_user_permissions():
             "username": "newuser",
             "email": "newuser@example.com",
             "password": "password123",
-            "roles": [4],
+            "role_id": 4,
         }
         create_user_resp = await ac.post(
             "/users/", json=new_user_data, headers=technician_headers

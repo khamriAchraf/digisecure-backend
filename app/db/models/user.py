@@ -1,11 +1,10 @@
 import enum
 
-from sqlalchemy import Column, DateTime, Enum, Integer, String
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
 from app.db.models.group import user_groups
-from app.db.models.role import user_roles
 
 
 class UserStatus(enum.Enum):
@@ -41,8 +40,9 @@ class User(Base):
     status = Column(Enum(UserStatus), default=UserStatus.active, nullable=False)
     valid_until = Column(DateTime, nullable=True)
     valid_from = Column(DateTime, nullable=True)
+    role_id = Column(Integer, ForeignKey("roles.id"))
 
-    roles = relationship("Role", secondary=user_roles, back_populates="users")
+    role = relationship("Role", back_populates="users")
     groups = relationship("Group", secondary=user_groups, back_populates="users")
     refresh_tokens = relationship(
         "RefreshToken", back_populates="user", cascade="all, delete-orphan"
@@ -58,7 +58,7 @@ class User(Base):
                     "email": "user@example.com",
                     "username": "john_doe",
                     "full_name": "John Doe",
-                    "roles": ["user"],
+                    "role": "user",
                     "groups": ["group1", "group2"],
                     "status": "active",
                     "valid_until": "2025-01-01T00:00:00Z",

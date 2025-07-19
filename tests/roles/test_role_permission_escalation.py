@@ -78,7 +78,7 @@ async def test_role_permission_escalation():
             "username": "escalation_user",
             "email": new_user_email,
             "password": TEST_PASSWORD,
-            "roles": [role_id],
+            "role_id": role_id,
         }
         user_resp = await ac.post("/users/", json=new_user_data, headers=super_headers)
         assert user_resp.status_code == 201, f"Failed to create user: {user_resp.text}"

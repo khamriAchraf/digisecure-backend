@@ -59,7 +59,7 @@ async def test_create_and_list_users():
                 "username": username,
                 "email": email,
                 "password": password,
-                "roles": [role_id],
+                "role_id": role_id,
             }
             resp = await ac.post("/users/", json=user_data, headers=headers)
             assert (
@@ -69,7 +69,7 @@ async def test_create_and_list_users():
             created_user_ids.append(user["id"])
             assert user["username"] == username
             assert user["email"] == email
-            assert any(r["id"] == role_id for r in user["roles"])
+            assert user["role"]["id"] == role_id
 
         list_resp = await ac.get("/users/", headers=headers)
         assert list_resp.status_code == 200, f"List users failed: {list_resp.text}"

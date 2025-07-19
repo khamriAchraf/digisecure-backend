@@ -76,7 +76,7 @@ async def test_observer_user_permissions():
             "username": "newuser",
             "email": "newuser@example.com",
             "password": "password123",
-            "roles": [6],
+            "role_id": 6,
         }
         create_user_resp = await ac.post(
             "/users/", json=new_user_data, headers=observer_headers

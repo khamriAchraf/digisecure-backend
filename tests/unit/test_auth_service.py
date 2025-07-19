@@ -7,8 +7,181 @@ from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.db.models.role import Permission, Role
 from app.db.models.user import User
 from app.services import auth_service
+
+
+@pytest.mark.unit
+class TestTokenWithRoleAndPermissions:
+    """Unit tests for JWT token creation with role_id and permissions."""
+
+    @patch("app.services.auth_service.datetime")
+    @patch("app.services.auth_service.jwt")
+    def test_create_access_token_with_role_and_permissions(
+        self, mock_jwt, mock_datetime
+    ):
+        """Test access token creation with role_id and permissions."""
+        mock_now = datetime(2023, 1, 1, 12, 0, 0)
+        mock_datetime.utcnow.return_value = mock_now
+
+        mock_jwt.encode.return_value = "mock_access_token"
+
+        data = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:read", "user:create", "role:read"],
+        }
+        result = auth_service.create_access_token(data)
+
+        expected_expire = mock_now + timedelta(
+            minutes=auth_service.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+        expected_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:read", "user:create", "role:read"],
+            "exp": expected_expire,
+            "iat": mock_now,
+            "type": "access",
+        }
+        mock_jwt.encode.assert_called_once_with(
+            expected_payload, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM
+        )
+        assert result == "mock_access_token"
+
+    @patch("app.services.auth_service.datetime")
+    @patch("app.services.auth_service.jwt")
+    def test_create_refresh_token_with_role_and_permissions(
+        self, mock_jwt, mock_datetime
+    ):
+        """Test refresh token creation with role_id and permissions."""
+        mock_now = datetime(2023, 1, 1, 12, 0, 0)
+        mock_datetime.utcnow.return_value = mock_now
+
+        mock_jwt.encode.return_value = "mock_refresh_token"
+
+        data = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:read", "user:create", "role:read"],
+        }
+
+        mock_db = Mock(spec=Session)
+        with patch("app.services.auth_service.refresh_token_crud.create_refresh_token"):
+            with patch(
+                "app.services.auth_service.secrets.token_urlsafe",
+                return_value="fixed_jti",
+            ):
+                result = auth_service.create_refresh_token(data, db=mock_db)
+
+        expected_expire = mock_now + timedelta(
+            days=auth_service.REFRESH_TOKEN_EXPIRE_DAYS
+        )
+        expected_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:read", "user:create", "role:read"],
+            "exp": expected_expire,
+            "iat": mock_now,
+            "jti": "fixed_jti",
+            "type": "refresh",
+        }
+        mock_jwt.encode.assert_called_once_with(
+            expected_payload, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM
+        )
+        assert result == "mock_refresh_token"
+
+    def test_get_user_permissions_with_role(self):
+        """Test _get_user_permissions function with user having role and permissions."""
+        # Create mock permission objects
+        perm1 = Mock(spec=Permission)
+        perm1.resource = "user"
+        perm1.action = "read"
+
+        perm2 = Mock(spec=Permission)
+        perm2.resource = "user"
+        perm2.action = "create"
+
+        perm3 = Mock(spec=Permission)
+        perm3.resource = "role"
+        perm3.action = "read"
+
+        # Create mock role with permissions
+        mock_role = Mock(spec=Role)
+        mock_role.permissions = [perm1, perm2, perm3]
+
+        # Create mock user with role
+        mock_user = Mock(spec=User)
+        mock_user.role = mock_role
+
+        result = auth_service._get_user_permissions(mock_user)
+
+        expected_permissions = ["user:read", "user:create", "role:read"]
+        assert result == expected_permissions
+
+    def test_get_user_permissions_without_role(self):
+        """Test _get_user_permissions function with user having no role."""
+        mock_user = Mock(spec=User)
+        mock_user.role = None
+
+        result = auth_service._get_user_permissions(mock_user)
+
+        assert result == []
+
+    def test_get_user_permissions_with_empty_permissions(self):
+        """Test _get_user_permissions function with role but no permissions."""
+        mock_role = Mock(spec=Role)
+        mock_role.permissions = []
+
+        mock_user = Mock(spec=User)
+        mock_user.role = mock_role
+
+        result = auth_service._get_user_permissions(mock_user)
+
+        assert result == []
+
+    @patch("app.services.auth_service.jwt")
+    def test_decode_access_token_payload_success(self, mock_jwt):
+        """Test successful access token payload decoding."""
+        mock_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "type": "access",
+            "role_id": 1,
+            "permissions": ["user:read", "user:create"],
+        }
+        mock_jwt.decode.return_value = mock_payload
+
+        result = auth_service.decode_access_token_payload("valid_token")
+
+        mock_jwt.decode.assert_called_once_with(
+            "valid_token", auth_service.SECRET_KEY, algorithms=[auth_service.ALGORITHM]
+        )
+        assert result == mock_payload
+
+    @patch("app.services.auth_service.jwt")
+    def test_decode_access_token_payload_wrong_type(self, mock_jwt):
+        """Test access token payload decoding with wrong token type."""
+        mock_payload = {"sub": "123", "type": "refresh"}  # Wrong type
+        mock_jwt.decode.return_value = mock_payload
+
+        result = auth_service.decode_access_token_payload("invalid_token")
+
+        assert result is None
+
+    @patch("app.services.auth_service.jwt")
+    def test_decode_access_token_payload_jwt_error(self, mock_jwt):
+        """Test access token payload decoding with JWT error."""
+        mock_jwt.decode.side_effect = JWTError("Invalid token")
+
+        result = auth_service.decode_access_token_payload("invalid_token")
+
+        assert result is None
 
 
 @pytest.mark.unit

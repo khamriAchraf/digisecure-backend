@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from app.core.security import (get_password_hash, has_permission,
-                               verify_password)
+                               has_permission_from_token, verify_password)
 
 
 @pytest.mark.unit
@@ -63,7 +63,7 @@ class TestHasPermission:
         mock_role.permissions = [mock_permission]
 
         mock_user = Mock()
-        mock_user.roles = [mock_role]
+        mock_user.role = mock_role
 
         result = has_permission(mock_user, "read", "user")
         assert result is True
@@ -78,13 +78,13 @@ class TestHasPermission:
         mock_role.permissions = [mock_permission]
 
         mock_user = Mock()
-        mock_user.roles = [mock_role]
+        mock_user.role = mock_role
 
         result = has_permission(mock_user, "read", "user")
         assert result is False
 
-    def test_has_permission_multiple_roles(self):
-        """Test that has_permission works with multiple roles."""
+    def test_has_permission_single_role(self):
+        """Test that has_permission works with a single role."""
         mock_permission1 = Mock()
         mock_permission1.action = "read"
         mock_permission1.resource = "user"
@@ -93,23 +93,20 @@ class TestHasPermission:
         mock_permission2.action = "write"
         mock_permission2.resource = "user"
 
-        mock_role1 = Mock()
-        mock_role1.permissions = [mock_permission1]
-
-        mock_role2 = Mock()
-        mock_role2.permissions = [mock_permission2]
+        mock_role = Mock()
+        mock_role.permissions = [mock_permission1, mock_permission2]
 
         mock_user = Mock()
-        mock_user.roles = [mock_role1, mock_role2]
+        mock_user.role = mock_role
 
         assert has_permission(mock_user, "read", "user") is True
         assert has_permission(mock_user, "write", "user") is True
         assert has_permission(mock_user, "delete", "user") is False
 
-    def test_has_permission_no_roles(self):
-        """Test that has_permission returns False when user has no roles."""
+    def test_has_permission_no_role(self):
+        """Test that has_permission returns False when user has no role."""
         mock_user = Mock()
-        mock_user.roles = []
+        mock_user.role = None
 
         result = has_permission(mock_user, "read", "user")
         assert result is False
@@ -120,7 +117,7 @@ class TestHasPermission:
         mock_role.permissions = []
 
         mock_user = Mock()
-        mock_user.roles = [mock_role]
+        mock_user.role = mock_role
 
         result = has_permission(mock_user, "read", "user")
         assert result is False
@@ -135,7 +132,7 @@ class TestHasPermission:
         mock_role.permissions = [mock_permission]
 
         mock_user = Mock()
-        mock_user.roles = [mock_role]
+        mock_user.role = mock_role
 
         assert has_permission(mock_user, "read", "ticket") is True
         assert has_permission(mock_user, "read", "user") is False
@@ -150,7 +147,7 @@ class TestHasPermission:
         mock_role.permissions = [mock_permission]
 
         mock_user = Mock()
-        mock_user.roles = [mock_role]
+        mock_user.role = mock_role
 
         assert has_permission(mock_user, "create", "user") is True
         assert has_permission(mock_user, "read", "user") is False
@@ -165,8 +162,109 @@ class TestHasPermission:
         mock_role.permissions = [mock_permission]
 
         mock_user = Mock()
-        mock_user.roles = [mock_role]
+        mock_user.role = mock_role
 
         assert has_permission(mock_user, "Read", "User") is True
         assert has_permission(mock_user, "read", "user") is False
         assert has_permission(mock_user, "READ", "USER") is False
+
+
+@pytest.mark.unit
+class TestHasPermissionFromToken:
+    """Unit tests for the has_permission_from_token function."""
+
+    def test_has_permission_from_token_with_matching_permission(self):
+        """Test that has_permission_from_token returns True when token has matching permission."""
+        token_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:read", "user:create", "role:read"],
+        }
+
+        result = has_permission_from_token(token_payload, "read", "user")
+        assert result is True
+
+    def test_has_permission_from_token_without_matching_permission(self):
+        """Test that has_permission_from_token returns False when token lacks permission."""
+        token_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:write", "user:create", "role:read"],
+        }
+
+        result = has_permission_from_token(token_payload, "read", "user")
+        assert result is False
+
+    def test_has_permission_from_token_multiple_permissions(self):
+        """Test that has_permission_from_token works with multiple permissions."""
+        token_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:read", "user:create", "user:update", "role:read"],
+        }
+
+        assert has_permission_from_token(token_payload, "read", "user") is True
+        assert has_permission_from_token(token_payload, "create", "user") is True
+        assert has_permission_from_token(token_payload, "update", "user") is True
+        assert has_permission_from_token(token_payload, "delete", "user") is False
+
+    def test_has_permission_from_token_no_permissions(self):
+        """Test that has_permission_from_token returns False when token has no permissions."""
+        token_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": [],
+        }
+
+        result = has_permission_from_token(token_payload, "read", "user")
+        assert result is False
+
+    def test_has_permission_from_token_missing_permissions_key(self):
+        """Test that has_permission_from_token returns False when permissions key is missing."""
+        token_payload = {"sub": "123", "email": "test@example.com", "role_id": 1}
+
+        result = has_permission_from_token(token_payload, "read", "user")
+        assert result is False
+
+    def test_has_permission_from_token_different_resource(self):
+        """Test that has_permission_from_token correctly handles different resources."""
+        token_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:read", "ticket:create"],
+        }
+
+        assert has_permission_from_token(token_payload, "read", "user") is True
+        assert has_permission_from_token(token_payload, "create", "ticket") is True
+        assert has_permission_from_token(token_payload, "read", "ticket") is False
+
+    def test_has_permission_from_token_different_action(self):
+        """Test that has_permission_from_token correctly handles different actions."""
+        token_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["user:create", "user:update"],
+        }
+
+        assert has_permission_from_token(token_payload, "create", "user") is True
+        assert has_permission_from_token(token_payload, "update", "user") is True
+        assert has_permission_from_token(token_payload, "read", "user") is False
+
+    def test_has_permission_from_token_case_sensitive(self):
+        """Test that has_permission_from_token is case sensitive."""
+        token_payload = {
+            "sub": "123",
+            "email": "test@example.com",
+            "role_id": 1,
+            "permissions": ["User:Read", "Role:Create"],
+        }
+
+        assert has_permission_from_token(token_payload, "Read", "User") is True
+        assert has_permission_from_token(token_payload, "read", "user") is False
+        assert has_permission_from_token(token_payload, "READ", "USER") is False

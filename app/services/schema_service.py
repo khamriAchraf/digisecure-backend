@@ -7,6 +7,7 @@ from app.core.logger import logger
 from app.core.security import has_permission
 from app.db.models.user import User
 from app.schemas.group import GroupCreate
+from app.schemas.role import RoleCreate
 from app.schemas.user import UserCreate
 
 
@@ -49,6 +50,7 @@ class SchemaService:
         schemas = {
             "group": self._get_group_schema(),
             "user": self._get_user_schema(),
+            "role": self._get_role_schema(),
             # Add other resource types here as they're implemented
         }
 
@@ -419,13 +421,13 @@ class SchemaService:
                         "order": 14,
                         "validation": {"required": False},
                     },
-                    "roles": {
+                    "role_id": {
                         "widget": "select",
                         "options": available_roles,
                         "quick_create_resource": "role",
-                        "placeholder_key": "forms.user.fields.roles.placeholder",
-                        "help_text_key": "forms.user.fields.roles.help_text",
-                        "label_key": "forms.user.fields.roles.label",
+                        "placeholder_key": "forms.user.fields.role_id.placeholder",
+                        "help_text_key": "forms.user.fields.role_id.help_text",
+                        "label_key": "forms.user.fields.role_id.label",
                         "order": 15,
                         "validation": {"required": False},
                     },
@@ -435,9 +437,62 @@ class SchemaService:
 
         return enhanced_schema
 
+    def _get_role_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON schema for role resource.
+        """
+        # Get the base schema from Pydantic
+        base_schema = RoleCreate.model_json_schema()
+
+        # Enhance the schema with additional metadata
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "role",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.role.create.title",
+                "description_key": "forms.role.create.description",
+                "fields": {
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.role.fields.name.placeholder",
+                        "help_text_key": "forms.role.fields.name.help_text",
+                        "label_key": "forms.role.fields.name.label",
+                        "order": 1,
+                        "validation": {
+                            "required": True,
+                            "min_length": 1,
+                            "max_length": 100,
+                            "error_messages": {
+                                "required": "forms.role.fields.name.errors.required",
+                                "min_length": "forms.role.fields.name.errors.min_length",
+                                "max_length": "forms.role.fields.name.errors.max_length",
+                            },
+                        },
+                    },
+                    "description": {
+                        "widget": "textarea",
+                        "placeholder_key": "forms.role.fields.description.placeholder",
+                        "help_text_key": "forms.role.fields.description.help_text",
+                        "label_key": "forms.role.fields.description.label",
+                        "order": 2,
+                        "validation": {
+                            "required": False,
+                            "max_length": 500,
+                            "error_messages": {
+                                "max_length": "forms.role.fields.description.errors.max_length"
+                            },
+                        },
+                    },
+                },
+            },
+        }
+
+        return enhanced_schema
+
     def _get_role_options(self) -> List[Dict[str, Any]]:
         """
-        Get available roles for the multi-select dropdown.
+        Get available roles for the single role select dropdown.
         """
         try:
             from app.db.crud.role import list_roles
@@ -449,7 +504,7 @@ class SchemaService:
                 options.append(
                     {
                         "value": str(role.id),
-                        "label_key": "forms.user.fields.roles.options.role_name",
+                        "label_key": "forms.user.fields.role_id.options.role_name",
                         "label_params": {
                             "name": role.name,
                             "description": role.description or "",

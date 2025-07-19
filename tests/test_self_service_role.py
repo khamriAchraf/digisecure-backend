@@ -57,7 +57,7 @@ async def test_self_service_user_permissions():
             "username": "newuser",
             "email": "newuser@example.com",
             "password": "password123",
-            "roles": [6],  # Observer role
+            "role_id": 6,  # Observer role
         }
         create_user_resp = await ac.post(
             "/users/", json=new_user_data, headers=self_service_headers
