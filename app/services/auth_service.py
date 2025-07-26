@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi.security import OAuth2PasswordBearer
@@ -32,10 +32,12 @@ def _get_user_permissions(user: User) -> list[str]:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (
+    expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    to_encode.update({"exp": expire, "iat": datetime.utcnow(), "type": "access"})
+    to_encode.update(
+        {"exp": expire, "iat": datetime.now(timezone.utc), "type": "access"}
+    )
     logger.debug(f"Creating access token for user {data.get('sub')}, expires={expire}")
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -49,14 +51,19 @@ def create_refresh_token(
     user_agent: Optional[str] = None,
 ):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (
+    expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     )
 
     token_id = secrets.token_urlsafe(32)
 
     to_encode.update(
-        {"exp": expire, "iat": datetime.utcnow(), "jti": token_id, "type": "refresh"}
+        {
+            "exp": expire,
+            "iat": datetime.now(timezone.utc),
+            "jti": token_id,
+            "type": "refresh",
+        }
     )
 
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)

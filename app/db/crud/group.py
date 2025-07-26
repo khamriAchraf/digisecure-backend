@@ -1,16 +1,23 @@
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Query, Session
+from sqlalchemy.orm import Query, Session, joinedload
 
+from app.db.models.asset import Asset
 from app.db.models.group import Group
 from app.db.models.user import User
 from app.schemas.group import GroupCreate, GroupUpdate
 
 
 def get_group(db: Session, group_id: int) -> Optional[Group]:
-    return db.query(Group).filter(Group.id == group_id).first()
+    return (
+        db.query(Group)
+        .options(joinedload(Group.users), joinedload(Group.assets))
+        .filter(Group.id == group_id)
+        .first()
+    )
 
 
 def get_group_by_name(db: Session, name: str) -> Optional[Group]:
@@ -76,6 +83,8 @@ def create_group(db: Session, group_in: GroupCreate) -> Group:
         contain_items=group_in.contain_items,
         comment=group_in.comment,
         parent_id=group_in.parent_id,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
     )
     db.add(group)
     try:
@@ -93,6 +102,7 @@ def create_group(db: Session, group_in: GroupCreate) -> Group:
 def update_group(db: Session, group: Group, group_in: GroupUpdate) -> Group:
     for field, value in group_in.dict(exclude_unset=True).items():
         setattr(group, field, value)
+    group.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(group)
     return group
@@ -106,6 +116,7 @@ def delete_group(db: Session, group: Group) -> None:
 def add_user_to_group(db: Session, group: Group, user: User) -> Group:
     if user not in group.users:
         group.users.append(user)
+        group.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(group)
     return group
@@ -114,6 +125,25 @@ def add_user_to_group(db: Session, group: Group, user: User) -> Group:
 def remove_user_from_group(db: Session, group: Group, user: User) -> Group:
     if user in group.users:
         group.users.remove(user)
+        group.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(group)
+    return group
+
+
+def add_asset_to_group(db: Session, group: Group, asset: Asset) -> Group:
+    if asset not in group.assets:
+        group.assets.append(asset)
+        group.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(group)
+    return group
+
+
+def remove_asset_from_group(db: Session, group: Group, asset: Asset) -> Group:
+    if asset in group.assets:
+        group.assets.remove(asset)
+        group.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(group)
     return group

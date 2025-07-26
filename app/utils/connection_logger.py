@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.logger import logger
 from app.utils.geolocation import geolocation_service
@@ -19,7 +19,7 @@ def log_login_attempt(
         "login_attempt",
         extra={
             "log_type": "auth",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
             "email": email,
             "ip": ip_address,
             "location": location,

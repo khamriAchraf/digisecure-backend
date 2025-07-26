@@ -192,7 +192,7 @@ class TestTokenCreation:
     @patch("app.services.auth_service.jwt")
     def test_create_access_token_success(self, mock_jwt, mock_datetime):
         """Test successful access token creation."""
-        # Mock datetime.utcnow() to return a fixed time
+        # Mock datetime.now(timezone.utc) to return a fixed time
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
         mock_datetime.utcnow.return_value = mock_now
 

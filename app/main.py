@@ -4,9 +4,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
 
-from app.api.v1 import asset, auth, group, role, schema, table_config, user
-from app.api.v1.configuration import router as configuration_router
+from app.api.v1 import auth, group, role, schema, table_config, user
+from app.api.v1.asset import router as asset_router
+from app.api.v1.reference_data import router as reference_data_router
 from app.core.config import settings
 from app.core.logger import (clear_log_context, logger, set_request_id,
                              set_user_id)
@@ -33,10 +35,10 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(user.router, prefix="/api/v1")
 app.include_router(role.router, prefix="/api/v1")
 app.include_router(group.router, prefix="/api/v1")
-app.include_router(asset.router, prefix="/api/v1")
+app.include_router(asset_router, prefix="/api/v1")
 app.include_router(schema.router, prefix="/api/v1")
 app.include_router(table_config.router, prefix="/api/v1")
-app.include_router(configuration_router, prefix="/api/v1")
+app.include_router(reference_data_router, prefix="/api/v1")
 
 permissions_cache = []
 
@@ -51,7 +53,12 @@ def load_permissions_cache():
 @app.get("/health")
 @limiter.limit("10/minute")
 def read_root(request: Request):
-    return {"message": "API is alive"}
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+    except Exception as e:
+        return {"status": "error", "detail": f"Database connection failed: {str(e)}"}
+    return {"status": "ok"}
 
 
 @app.middleware("http")

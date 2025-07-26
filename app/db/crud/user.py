@@ -79,6 +79,69 @@ def get_paginated_users(
     return users, total
 
 
+# New cursor-based pagination helper
+def get_cursor_users(
+    db: Session,
+    cursor: Optional[int] = None,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> Tuple[List[User], int]:
+    """Return users for infinite scrolling based on an integer cursor.
+
+    If a cursor is provided, the query will fetch items *after* the cursor for
+    ascending order and *before* the cursor for descending order. The function
+    mimics the structure of ``get_paginated_users`` to keep logic consistent.
+    """
+
+    query: Query = db.query(User).filter(User.status != UserStatus.deleted)
+
+    # Apply filters (reuse logic from get_paginated_users)
+    if filters:
+        for key, value in filters.items():
+            if hasattr(User, key) and value is not None and value != "":
+                query = query.filter(getattr(User, key) == value)
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                User.full_name.ilike(search_term),
+                User.email.ilike(search_term),
+                User.username.ilike(search_term),
+            )
+        )
+
+    # Apply cursor filtering BEFORE counting total to ensure total reflects remaining items
+    if cursor is not None:
+        if sort_order.lower() == "desc":
+            query = query.filter(User.id < cursor)
+        else:
+            query = query.filter(User.id > cursor)
+
+    total = query.count()
+
+    # Apply sorting (fallback to id)
+    if sort_by and hasattr(User, sort_by):
+        column = getattr(User, sort_by)
+    else:
+        column = User.id
+
+    if sort_order.lower() == "desc":
+        query = query.order_by(column.desc())
+    else:
+        query = query.order_by(column.asc())
+
+    # Limit results for infinite scroll
+    query = query.limit(per_page)
+
+    users = query.all()
+    return users, total
+
+
 def create_user(db: Session, user_in: UserCreate, hashed_password: str) -> User:
     role = None
     if user_in.role_id:

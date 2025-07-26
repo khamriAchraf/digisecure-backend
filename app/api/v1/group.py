@@ -145,3 +145,37 @@ def create_group_with_users(
         return service.create_group_with_users(group_in)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/{group_id}/assets/{asset_id}", response_model=GroupResponse)
+def add_asset_to_group(
+    group_id: int,
+    asset_id: int,
+    service: GroupService = Depends(get_group_service),
+):
+    from app.db.crud.asset import get_asset
+
+    asset = get_asset(service.db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    try:
+        return service.add_asset_to_group(group_id, asset)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.delete("/{group_id}/assets/{asset_id}", response_model=GroupResponse)
+def remove_asset_from_group(
+    group_id: int,
+    asset_id: int,
+    service: GroupService = Depends(get_group_service),
+):
+    from app.db.crud.asset import get_asset
+
+    asset = get_asset(service.db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    try:
+        return service.remove_asset_from_group(group_id, asset)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))

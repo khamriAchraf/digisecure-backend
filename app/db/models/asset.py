@@ -1,7 +1,9 @@
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String
+from sqlalchemy import (CheckConstraint, Column, Date, DateTime, ForeignKey,
+                        Integer, String)
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.db.models.group import asset_groups
 
 
 class Asset(Base):
@@ -15,10 +17,14 @@ class Asset(Base):
     purchase_date = Column(Date, nullable=True)
     warranty_expiry = Column(Date, nullable=True)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
-    group_id = Column(Integer, ForeignKey("groups.id"), nullable=True)
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
+
+    # Security classification fields
+    confidentiality_level = Column(String, nullable=True, default="Internal")
+    integrity_level = Column(String, nullable=True, default="Medium")
+    availability_level = Column(String, nullable=True, default="Medium")
 
     # Discriminator column for polymorphic inheritance
     type = Column(String(50), nullable=False)
@@ -26,11 +32,26 @@ class Asset(Base):
     # Relationships
     manufacturer = relationship("Manufacturer")
     location = relationship("Location")
-    group = relationship("Group")
+    groups = relationship("Group", secondary=asset_groups, back_populates="assets")
     assigned_user = relationship("User")
 
     # Polymorphic configuration
     __mapper_args__ = {"polymorphic_on": type, "polymorphic_identity": "asset"}
+
+    # Database-level constraints for security classification fields
+    __table_args__ = (
+        CheckConstraint(
+            confidentiality_level.in_(["Public", "Internal", "Confidential", "Secret"]),
+            name="valid_confidentiality_level",
+        ),
+        CheckConstraint(
+            integrity_level.in_(["High", "Medium", "Low"]), name="valid_integrity_level"
+        ),
+        CheckConstraint(
+            availability_level.in_(["High", "Medium", "Low"]),
+            name="valid_availability_level",
+        ),
+    )
 
 
 class Computer(Asset):
@@ -169,3 +190,95 @@ class SimCardItem(Asset):
     expiry_date = Column(Date, nullable=True)
 
     __mapper_args__ = {"polymorphic_identity": "sim_card_item"}
+
+
+class VirtualMachine(Asset):
+    __tablename__ = "virtual_machines"
+
+    id = Column(Integer, ForeignKey("assets.id"), primary_key=True)
+
+    # Virtualization platform details
+    hypervisor_type = Column(
+        String, nullable=True
+    )  # VMware, Hyper-V, KVM, Xen, VirtualBox
+    hypervisor_version = Column(String, nullable=True)
+    vm_platform = Column(String, nullable=True)  # vSphere, ESXi, Hyper-V Server, etc.
+
+    # VM specifications
+    cpu_cores = Column(Integer, nullable=True)
+    memory_mb = Column(Integer, nullable=True)
+    storage_gb = Column(Integer, nullable=True)
+    os_type = Column(String, nullable=True)  # Windows, Linux, macOS
+    os_version = Column(String, nullable=True)
+    os_architecture = Column(String, nullable=True)  # x86_64, ARM64, etc.
+
+    # Network configuration
+    ip_address = Column(String, nullable=True)
+    mac_address = Column(String, nullable=True)
+    network_segment = Column(String, nullable=True)  # DMZ, Internal, PCI, etc.
+    vlan_id = Column(String, nullable=True)
+
+    # Security and compliance fields
+    pci_scope = Column(
+        String, nullable=True, default="Out of Scope"
+    )  # In Scope, Out of Scope
+    cardholder_data_environment = Column(
+        String, nullable=True
+    )  # CDE, Connected-to, Out-of-Scope
+    encryption_status = Column(
+        String, nullable=True
+    )  # Encrypted, Not Encrypted, Partial
+    encryption_type = Column(String, nullable=True)  # AES-256, AES-128, etc.
+    backup_encryption = Column(String, nullable=True)  # Yes, No, N/A
+
+    # Access control and monitoring
+    admin_access_restricted = Column(String, nullable=True)  # Yes, No
+    multi_factor_auth_enabled = Column(String, nullable=True)  # Yes, No
+    logging_enabled = Column(String, nullable=True)  # Yes, No
+    monitoring_tool = Column(String, nullable=True)  # SIEM, IDS/IPS, etc.
+
+    # Patch and vulnerability management
+    last_patch_date = Column(Date, nullable=True)
+    patch_level = Column(String, nullable=True)
+    vulnerability_scan_date = Column(Date, nullable=True)
+    vulnerability_status = Column(
+        String, nullable=True
+    )  # Compliant, Non-Compliant, Pending
+
+    # Backup and disaster recovery
+    backup_frequency = Column(String, nullable=True)  # Daily, Weekly, Monthly
+    last_backup_date = Column(Date, nullable=True)
+    backup_retention_days = Column(Integer, nullable=True)
+    disaster_recovery_plan = Column(String, nullable=True)  # Yes, No, N/A
+
+    # Virtualization security
+    isolation_level = Column(String, nullable=True)  # High, Medium, Low
+    resource_isolation = Column(String, nullable=True)  # Yes, No
+    network_isolation = Column(String, nullable=True)  # Yes, No
+    storage_isolation = Column(String, nullable=True)  # Yes, No
+
+    # Compliance tracking
+    pci_assessment_date = Column(Date, nullable=True)
+    pci_compliance_status = Column(
+        String, nullable=True
+    )  # Compliant, Non-Compliant, In Progress
+    next_assessment_date = Column(Date, nullable=True)
+    compliance_notes = Column(String, nullable=True)
+
+    # VM lifecycle
+    power_state = Column(String, nullable=True)  # Running, Stopped, Suspended
+    creation_date = Column(Date, nullable=True)
+    last_modified = Column(DateTime, nullable=True)
+    scheduled_decommission_date = Column(Date, nullable=True)
+
+    # Resource allocation
+    cpu_allocation_percent = Column(Integer, nullable=True)
+    memory_allocation_percent = Column(Integer, nullable=True)
+    storage_allocation_percent = Column(Integer, nullable=True)
+
+    # High availability and redundancy
+    ha_enabled = Column(String, nullable=True)  # Yes, No
+    redundancy_level = Column(String, nullable=True)  # None, N+1, N+2
+    failover_capability = Column(String, nullable=True)  # Yes, No
+
+    __mapper_args__ = {"polymorphic_identity": "virtual_machine"}

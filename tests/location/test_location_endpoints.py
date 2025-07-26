@@ -37,7 +37,7 @@ async def test_location_crud_as_super_admin():
 
         # Create location
         resp = await ac.post(
-            "/configuration/location/", json=LOCATION_BASE, headers=headers
+            "/reference_data/locations/", json=LOCATION_BASE, headers=headers
         )
         assert resp.status_code == 201, f"Failed to create location: {resp.text}"
         location = resp.json()
@@ -46,42 +46,44 @@ async def test_location_crud_as_super_admin():
 
         # Duplicate location name
         resp = await ac.post(
-            "/configuration/location/", json=LOCATION_BASE, headers=headers
+            "/reference_data/locations/", json=LOCATION_BASE, headers=headers
         )
         assert resp.status_code == 409, "Should not allow duplicate location name"
 
         # Missing required field
         bad_location = {"postal_code": "00000"}
         resp = await ac.post(
-            "/configuration/location/", json=bad_location, headers=headers
+            "/reference_data/locations/", json=bad_location, headers=headers
         )
         assert resp.status_code == 422
 
         # List locations
-        resp = await ac.get("/configuration/location/", headers=headers)
+        resp = await ac.get("/reference_data/locations/", headers=headers)
         assert resp.status_code == 200
         assert any(l["id"] == location_id for l in resp.json())
 
         # Get location by id
-        resp = await ac.get(f"/configuration/location/{location_id}", headers=headers)
+        resp = await ac.get(f"/reference_data/locations/{location_id}", headers=headers)
         assert resp.status_code == 200
         assert resp.json()["id"] == location_id
 
         # Update location
         update_data = {"comment": "Updated comment"}
         resp = await ac.put(
-            f"/configuration/location/{location_id}", json=update_data, headers=headers
+            f"/reference_data/locations/{location_id}",
+            json=update_data,
+            headers=headers,
         )
         assert resp.status_code == 200
         assert resp.json()["comment"] == "Updated comment"
 
         # Delete location
         resp = await ac.delete(
-            f"/configuration/location/{location_id}", headers=headers
+            f"/reference_data/locations/{location_id}", headers=headers
         )
         assert resp.status_code == 200 or resp.status_code == 204
         # Confirm deletion
-        resp = await ac.get(f"/configuration/location/{location_id}", headers=headers)
+        resp = await ac.get(f"/reference_data/locations/{location_id}", headers=headers)
         assert resp.status_code == 404
 
 
@@ -100,22 +102,22 @@ async def test_location_permissions_for_non_admin():
 
         # Try to create location
         resp = await ac.post(
-            "/configuration/location/", json=LOCATION_BASE, headers=headers
+            "/reference_data/locations/", json=LOCATION_BASE, headers=headers
         )
         assert resp.status_code == 403
 
         # Try to update location (id 1)
         resp = await ac.put(
-            "/configuration/location/1", json={"comment": "desc"}, headers=headers
+            "/reference_data/locations/1", json={"comment": "desc"}, headers=headers
         )
         assert resp.status_code == 403 or resp.status_code == 404
 
         # Try to delete location (id 1)
-        resp = await ac.delete("/configuration/location/1", headers=headers)
+        resp = await ac.delete("/reference_data/locations/1", headers=headers)
         assert resp.status_code == 403 or resp.status_code == 404
 
         # Try to list and get locations
-        resp = await ac.get("/configuration/location/", headers=headers)
+        resp = await ac.get("/reference_data/locations/", headers=headers)
         assert resp.status_code == 200
-        resp = await ac.get("/configuration/location/1", headers=headers)
+        resp = await ac.get("/reference_data/locations/1", headers=headers)
         assert resp.status_code in (200, 404)

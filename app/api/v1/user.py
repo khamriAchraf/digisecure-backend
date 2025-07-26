@@ -14,7 +14,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 def get_query_filters(request: Request) -> dict:
     filters = {}
     for key, value in request.query_params.items():
-        if key not in ["page", "per_page", "sort_by", "sort_order", "search"]:
+        if key not in ["page", "per_page", "sort_by", "sort_order", "search", "cursor"]:
             filters[key] = value
     return filters
 
@@ -54,26 +54,55 @@ def get_user_permissions(
 
 @router.get("/", response_model=PaginatedResponse[UserResponse])
 def list_users(
-    page: int = 1,
+    page: Optional[int] = Query(
+        None, ge=1, description="Page number (mutually exclusive with cursor)"
+    ),
     per_page: int = 20,
     sort_by: Optional[str] = Query(None),
     sort_order: str = Query("asc", enum=["asc", "desc"]),
     search: Optional[str] = Query(None),
+    cursor: Optional[int] = Query(
+        None, description="Cursor for infinite scroll (mutually exclusive with page)"
+    ),
     service: UserService = Depends(get_user_service),
     filters: dict = Depends(get_query_filters),
 ):
+    # Ensure only one pagination strategy is used
+    if page is not None and cursor is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either 'page' or 'cursor', not both.",
+        )
+
     try:
-        users, total = service.get_paginated_users(
-            page=page,
-            per_page=per_page,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            search=search,
-            filters=filters,
-        )
-        return create_paginated_response(
-            data=users, total=total, page=page, per_page=per_page
-        )
+        if cursor is not None:
+            users, total = service.get_cursor_users(
+                cursor=cursor,
+                per_page=per_page,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                search=search,
+                filters=filters,
+            )
+            # Derive a synthetic page number for compatibility (optional)
+            page_number = 1
+            return create_paginated_response(
+                data=users, total=total, page=page_number, per_page=per_page
+            )
+        else:
+            # Fallback to traditional page-based pagination; default page 1 if missing.
+            page_number = page or 1
+            users, total = service.get_paginated_users(
+                page=page_number,
+                per_page=per_page,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                search=search,
+                filters=filters,
+            )
+            return create_paginated_response(
+                data=users, total=total, page=page_number, per_page=per_page
+            )
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

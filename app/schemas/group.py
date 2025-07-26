@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class GroupBase(BaseModel):
@@ -26,6 +26,24 @@ class GroupBase(BaseModel):
         None, description="Parent group ID if this is a subgroup"
     )
 
+    @field_validator("parent_id", mode="before")
+    @classmethod
+    def validate_parent_id(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str):
+            if v.strip() == "":
+                return None
+            try:
+                return int(v)
+            except ValueError:
+                raise ValueError(
+                    "parent_id must be a valid integer or string that can be converted to integer"
+                )
+        raise ValueError("parent_id must be an integer, string, or None")
+
 
 class GroupCreate(GroupBase):
     pass
@@ -44,6 +62,25 @@ class GroupUpdate(BaseModel):
     comment: Optional[str] = None
     parent_id: Optional[int] = None
 
+    @field_validator("parent_id", mode="before")
+    @classmethod
+    def validate_parent_id(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str):
+            # Handle empty string as None
+            if v.strip() == "":
+                return None
+            try:
+                return int(v)
+            except ValueError:
+                raise ValueError(
+                    "parent_id must be a valid integer or string that can be converted to integer"
+                )
+        raise ValueError("parent_id must be an integer, string, or None")
+
 
 class GroupUserResponse(BaseModel):
     id: int
@@ -54,9 +91,29 @@ class GroupUserResponse(BaseModel):
         from_attributes = True
 
 
+class GroupAssetResponse(BaseModel):
+    id: int
+    name: str
+    type: str
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
 class GroupResponse(GroupBase):
     id: int
     users: List[GroupUserResponse] = []
+    assets: List[GroupAssetResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class GroupListResponse(GroupBase):
+    id: int
+    user_count: int = 0
+    asset_count: int = 0
 
     class Config:
         from_attributes = True

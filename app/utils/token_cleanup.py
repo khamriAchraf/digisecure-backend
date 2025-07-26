@@ -4,7 +4,7 @@ This can be run as a scheduled task (cron job) to keep the database clean
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.core.logger import logger
 from app.db.crud import refresh_token as refresh_token_crud
@@ -29,7 +29,7 @@ async def cleanup_old_used_tokens(days_old: int = 7):
     """Clean up old used tokens that are older than specified days"""
     try:
         db = next(get_db())
-        cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_old)
 
         # This would need to be implemented in the CRUD layer
         # For now, we'll just log the intention

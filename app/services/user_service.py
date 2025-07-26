@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from sqlalchemy import or_
@@ -22,13 +22,13 @@ class UserService:
 
     def get_own_user(self) -> User:
         logger.info(
-            f"User {self.current_user.id} accessed their own data at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} accessed their own data at {datetime.now(timezone.utc).isoformat()}"
         )
         return self.current_user
 
     def get_user(self, user_id: int) -> User:
         logger.info(
-            f"User {self.current_user.id} attempts to READ user {user_id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to READ user {user_id} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "read", "user"):
             logger.warning(
@@ -49,7 +49,7 @@ class UserService:
         filters: Optional[dict] = None,
     ) -> Tuple[List[User], int]:
         logger.info(
-            f"User {self.current_user.id} attempts to LIST users at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to LIST users at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "read", "user"):
             logger.warning(f"User {self.current_user.id} denied LIST access to users")
@@ -60,9 +60,47 @@ class UserService:
         logger.info(f"User {self.current_user.id} successfully LISTED users")
         return users, total
 
+    # ---------------------------------------------------------------------
+    # Cursor-based pagination (infinite scrolling)
+    # ---------------------------------------------------------------------
+
+    def get_cursor_users(
+        self,
+        cursor: Optional[int] = None,
+        per_page: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        search: Optional[str] = None,
+        filters: Optional[dict] = None,
+    ) -> Tuple[List[User], int]:
+        """Return a slice of users suitable for cursor-based infinite scrolling."""
+
+        logger.info(
+            f"User {self.current_user.id} attempts to LIST users with cursor at {datetime.now(timezone.utc).isoformat()}"
+        )
+
+        if not has_permission(self.current_user, "read", "user"):
+            logger.warning(
+                f"User {self.current_user.id} denied LIST access to users (cursor)"
+            )
+            raise PermissionError("Not allowed to list users.")
+
+        users, total = user_crud.get_cursor_users(
+            self.db,
+            cursor,
+            per_page,
+            sort_by,
+            sort_order,
+            search,
+            filters,
+        )
+
+        logger.info(f"User {self.current_user.id} successfully LISTED users via cursor")
+        return users, total
+
     def create_user(self, user_in: UserCreate) -> User:
         logger.info(
-            f"User {self.current_user.id} attempts to CREATE user {user_in.email} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to CREATE user {user_in.email} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "create", "user"):
             logger.warning(
@@ -81,7 +119,7 @@ class UserService:
 
     def update_user(self, user: User, user_in: UserUpdate) -> User:
         logger.info(
-            f"User {self.current_user.id} attempts to UPDATE user {user.id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to UPDATE user {user.id} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "update", "user"):
             logger.warning(
@@ -94,7 +132,7 @@ class UserService:
 
     def soft_delete_user(self, user: User) -> User:
         logger.info(
-            f"User {self.current_user.id} attempts to DELETE user {user.id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to DELETE user {user.id} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "delete", "user"):
             logger.warning(

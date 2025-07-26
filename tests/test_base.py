@@ -18,7 +18,7 @@ async def test_root():
     ) as ac:
         response = await ac.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"message": "API is alive"}
+    assert response.json() == {"status": "ok"}
 
 
 @pytest.mark.e2e

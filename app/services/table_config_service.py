@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -21,7 +21,7 @@ class TableConfigService:
     def get_table_config(self, table_key: str) -> Optional[TableConfig]:
         """Get a specific table config for the current user."""
         logger.info(
-            f"User {self.current_user.id} attempts to READ table config for '{table_key}' at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to READ table config for '{table_key}' at {datetime.now(timezone.utc).isoformat()}"
         )
         # Users can only access their own table configs
         table_config = table_config_crud.get_table_config(
@@ -36,7 +36,7 @@ class TableConfigService:
     def get_user_table_configs(self) -> List[TableConfig]:
         """Get all table configs for the current user."""
         logger.info(
-            f"User {self.current_user.id} attempts to LIST table configs at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to LIST table configs at {datetime.now(timezone.utc).isoformat()}"
         )
         table_configs = table_config_crud.get_user_table_configs(
             self.db, self.current_user.id
@@ -49,7 +49,7 @@ class TableConfigService:
     def create_table_config(self, table_key: str, columns: List[str]) -> TableConfig:
         """Create a new table config for the current user."""
         logger.info(
-            f"User {self.current_user.id} attempts to CREATE table config for '{table_key}' at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to CREATE table config for '{table_key}' at {datetime.now(timezone.utc).isoformat()}"
         )
         try:
             table_config = table_config_crud.create_table_config(
@@ -68,7 +68,7 @@ class TableConfigService:
     def update_table_config(self, table_key: str, columns: List[str]) -> TableConfig:
         """Update an existing table config for the current user."""
         logger.info(
-            f"User {self.current_user.id} attempts to UPDATE table config for '{table_key}' at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to UPDATE table config for '{table_key}' at {datetime.now(timezone.utc).isoformat()}"
         )
         try:
             table_config = table_config_crud.update_table_config(
@@ -89,7 +89,7 @@ class TableConfigService:
     ) -> TableConfig:
         """Create or update a table config for the current user (upsert operation)."""
         logger.info(
-            f"User {self.current_user.id} attempts to UPSERT table config for '{table_key}' at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to UPSERT table config for '{table_key}' at {datetime.now(timezone.utc).isoformat()}"
         )
         try:
             table_config = table_config_crud.create_or_update_table_config(
@@ -108,7 +108,7 @@ class TableConfigService:
     def delete_table_config(self, table_key: str) -> bool:
         """Delete a table config for the current user."""
         logger.info(
-            f"User {self.current_user.id} attempts to DELETE table config for '{table_key}' at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to DELETE table config for '{table_key}' at {datetime.now(timezone.utc).isoformat()}"
         )
         deleted = table_config_crud.delete_table_config(
             self.db, self.current_user.id, table_key

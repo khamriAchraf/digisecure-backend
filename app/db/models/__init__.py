@@ -1,6 +1,5 @@
 # Import all models to ensure they are registered with SQLAlchemy
 from app.db.models.asset import Asset
-from app.db.models.asset_type import AssetType
 from app.db.models.group import Group
 from app.db.models.location import Location
 from app.db.models.manufacturer import Manufacturer
@@ -17,7 +16,6 @@ __all__ = [
     "RefreshToken",
     "Location",
     "Manufacturer",
-    "AssetType",
     "Asset",
     "TableConfig",
 ]

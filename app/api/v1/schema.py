@@ -6,6 +6,24 @@ from app.services.schema_service import PermissionError, SchemaService
 router = APIRouter(prefix="/schemas", tags=["schemas"])
 
 
+@router.get("/{resource_type}/edit")
+def get_resource_edit_schema(
+    resource_type: str,
+    service: SchemaService = Depends(get_schema_service),
+):
+    """
+    Get JSON edit schema for a specific resource type.
+    Requires 'update' permission on the resource.
+    """
+    try:
+        schema = service.get_resource_edit_schema(resource_type)
+        return schema
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/{resource_type}")
 def get_resource_schema(
     resource_type: str,

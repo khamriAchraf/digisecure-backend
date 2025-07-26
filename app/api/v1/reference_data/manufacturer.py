@@ -2,20 +2,20 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies import get_configuration_service
+from app.api.dependencies import get_reference_data_service
 from app.schemas.manufacturer import (Manufacturer, ManufacturerCreate,
                                       ManufacturerUpdate)
-from app.services.configuration_service import (ConfigurationService,
-                                                PermissionError)
+from app.services.reference_data_service import (PermissionError,
+                                                 ReferenceDataService)
 
-router = APIRouter(prefix="/manufacturer", tags=["configuration:manufacturer"])
+router = APIRouter(prefix="/manufacturers", tags=["reference_data:manufacturers"])
 
 
 @router.get("/", response_model=List[Manufacturer])
 def list_manufacturers(
     skip: int = 0,
     limit: int = 100,
-    service: ConfigurationService = Depends(get_configuration_service),
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         return service.list_manufacturers(skip=skip, limit=limit)
@@ -26,7 +26,7 @@ def list_manufacturers(
 @router.post("/", response_model=Manufacturer, status_code=status.HTTP_201_CREATED)
 def create_manufacturer(
     manufacturer_in: ManufacturerCreate,
-    service: ConfigurationService = Depends(get_configuration_service),
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         return service.create_manufacturer(manufacturer_in)
@@ -37,7 +37,7 @@ def create_manufacturer(
 @router.get("/{manufacturer_id}", response_model=Manufacturer)
 def get_manufacturer(
     manufacturer_id: int,
-    service: ConfigurationService = Depends(get_configuration_service),
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         manufacturer = service.get_manufacturer(manufacturer_id)
@@ -52,7 +52,7 @@ def get_manufacturer(
 def update_manufacturer(
     manufacturer_id: int,
     manufacturer_in: ManufacturerUpdate,
-    service: ConfigurationService = Depends(get_configuration_service),
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         manufacturer = service.get_manufacturer(manufacturer_id)
@@ -66,7 +66,7 @@ def update_manufacturer(
 @router.delete("/{manufacturer_id}", response_model=Manufacturer)
 def delete_manufacturer(
     manufacturer_id: int,
-    service: ConfigurationService = Depends(get_configuration_service),
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         manufacturer = service.get_manufacturer(manufacturer_id)

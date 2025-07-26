@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -25,7 +25,7 @@ async def test_asset_computer_crud_and_pagination():
         headers = {"Authorization": f"Bearer {token}"}
 
         # ---------- 2. Create a Computer ----------
-        unique_suffix = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+        unique_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
         computer_payload = {
             "name": f"E2E-Computer-{unique_suffix}",
             "status": "active",
@@ -45,19 +45,13 @@ async def test_asset_computer_crud_and_pagination():
         assert computer["type"] == "computer"
         assert computer["cpu"] == computer_payload["cpu"]
 
-        # ---------- 3. GET generic endpoint ----------
-        get_resp = await ac.get(f"/assets/{computer_id}", headers=headers)
-        assert get_resp.status_code == 200, f"Generic get failed: {get_resp.text}"
+        # ---------- 3. GET computer endpoint ----------
+        get_resp = await ac.get(f"/assets/computers/{computer_id}", headers=headers)
+        assert get_resp.status_code == 200, f"Computer get failed: {get_resp.text}"
         assert get_resp.json()["id"] == computer_id
+        assert get_resp.json()["cpu"] == computer_payload["cpu"]
 
-        # ---------- 4. GET subtype endpoint ----------
-        get_sub_resp = await ac.get(f"/assets/computers/{computer_id}", headers=headers)
-        assert (
-            get_sub_resp.status_code == 200
-        ), f"Subtype get failed: {get_sub_resp.text}"
-        assert get_sub_resp.json()["cpu"] == computer_payload["cpu"]
-
-        # ---------- 5. Update asset (RAM change) ----------
+        # ---------- 4. Update computer (RAM change) ----------
         update_payload = {"ram": "32GB"}
         update_resp = await ac.put(
             f"/assets/computers/{computer_id}", json=update_payload, headers=headers
@@ -65,9 +59,9 @@ async def test_asset_computer_crud_and_pagination():
         assert update_resp.status_code == 200, f"Update failed: {update_resp.text}"
         assert update_resp.json()["ram"] == "32GB"
 
-        # ---------- 6. List with pagination ----------
+        # ---------- 5. List computers with pagination ----------
         list_resp = await ac.get(
-            "/assets/", params={"page": 1, "per_page": 9999}, headers=headers
+            "/assets/computers/", params={"page": 1, "per_page": 9999}, headers=headers
         )
         assert (
             list_resp.status_code == 200
@@ -78,9 +72,9 @@ async def test_asset_computer_crud_and_pagination():
         ids = [item["id"] for item in paginated_data["data"]]
         assert computer_id in ids, "Created computer missing from paginated list"
 
-        # ---------- 7. List with sorting ----------
+        # ---------- 6. List computers with sorting ----------
         sort_resp = await ac.get(
-            "/assets/",
+            "/assets/computers/",
             params={"sort_by": "name", "sort_order": "desc"},
             headers=headers,
         )
@@ -90,9 +84,11 @@ async def test_asset_computer_crud_and_pagination():
         sorted_data = sort_resp.json()["data"]
         assert len(sorted_data) > 0, "Sorted list should not be empty"
 
-        # ---------- 8. Search endpoint ----------
+        # ---------- 7. Search computers ----------
         search_resp = await ac.get(
-            "/assets/", params={"search": computer_payload["name"]}, headers=headers
+            "/assets/computers/",
+            params={"search": computer_payload["name"]},
+            headers=headers,
         )
         assert search_resp.status_code == 200, f"Search failed: {search_resp.text}"
         search_data = search_resp.json()["data"]
@@ -100,21 +96,15 @@ async def test_asset_computer_crud_and_pagination():
         ids = [item["id"] for item in search_data]
         assert computer_id in ids, "Created computer not found via search"
 
-        # ---------- 9. Analytics counts ----------
-        count_resp = await ac.get("/assets/analytics/counts/by-type", headers=headers)
-        assert count_resp.status_code == 200, f"Analytics failed: {count_resp.text}"
-        counts = count_resp.json()
-        assert (
-            "computer" in counts and counts["computer"] >= 1
-        ), "Analytics count missing or incorrect"
-
-        # ---------- 10. Delete asset ----------
-        del_resp = await ac.delete(f"/assets/{computer_id}", headers=headers)
+        # ---------- 9. Delete computer ----------
+        del_resp = await ac.delete(f"/assets/computers/{computer_id}", headers=headers)
         assert del_resp.status_code == 204, f"Delete failed: {del_resp.text}"
 
-        # ---------- 11. Confirm deletion ----------
-        get_after_del = await ac.get(f"/assets/{computer_id}", headers=headers)
-        assert get_after_del.status_code == 404, "Deleted asset should return 404"
+        # ---------- 10. Confirm deletion ----------
+        get_after_del = await ac.get(
+            f"/assets/computers/{computer_id}", headers=headers
+        )
+        assert get_after_del.status_code == 404, "Deleted computer should return 404"
 
 
 @pytest.mark.e2e
@@ -131,43 +121,63 @@ async def test_all_asset_types_creation():
         )
         token = login_resp.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
-        unique_suffix = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+        unique_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
 
         test_assets = {
-            "network_device": {
+            "computers": {
+                "name": f"E2E-Computer-{unique_suffix}",
+                "status": "active",
+                "cpu": "Intel Core i5",
+            },
+            "printers": {
+                "name": f"E2E-Printer-{unique_suffix}",
+                "status": "active",
+                "model": "HP LaserJet",
+            },
+            "networkdevices": {
                 "name": f"E2E-Network-{unique_suffix}",
                 "status": "active",
                 "device_type": "Switch",
             },
-            "phone": {
+            "phones": {
                 "name": f"E2E-Phone-{unique_suffix}",
                 "status": "active",
                 "phone_type": "Desk Phone",
             },
-            "peripheral": {
+            "peripherals": {
                 "name": f"E2E-Peripheral-{unique_suffix}",
                 "status": "active",
                 "peripheral_type": "Keyboard",
             },
-            "consumable": {
+            "consumables": {
                 "name": f"E2E-Consumable-{unique_suffix}",
                 "status": "active",
                 "consumable_type": "Toner",
             },
-            "rack": {
+            "racks": {
                 "name": f"E2E-Rack-{unique_suffix}",
                 "status": "active",
                 "rack_type": "Server Rack",
             },
-            "cable": {
+            "cables": {
                 "name": f"E2E-Cable-{unique_suffix}",
                 "status": "active",
                 "cable_type": "Ethernet",
             },
-            "sim_card_item": {
+            "simcarditems": {
                 "name": f"E2E-SIM-{unique_suffix}",
                 "status": "active",
                 "sim_type": "Nano",
+            },
+            "virtual_machines": {
+                "name": f"E2E-VM-{unique_suffix}",
+                "status": "active",
+                "hypervisor_type": "VMware",
+                "cpu_cores": 4,
+                "memory_mb": 8192,
+                "storage_gb": 100,
+                "os_type": "Linux",
+                "pci_scope": "Out of Scope",
             },
         }
 
@@ -175,28 +185,45 @@ async def test_all_asset_types_creation():
 
         # Use specific endpoints for each asset type
         for asset_type, payload in test_assets.items():
-            if asset_type == "network_device":
-                endpoint = "/assets/networkdevices/"
-            elif asset_type == "sim_card_item":
-                endpoint = "/assets/simcarditems/"
-            else:
-                endpoint = f"/assets/{asset_type}s/"
+            endpoint = f"/assets/{asset_type}/"
             create_resp = await ac.post(endpoint, json=payload, headers=headers)
             assert (
                 create_resp.status_code == 201
             ), f"Failed to create {asset_type}: {create_resp.text}"
             asset = create_resp.json()
-            assert asset["type"] == asset_type
-            created_assets.append(asset["id"])
 
-        list_resp = await ac.get("/assets/", headers=headers)
-        assert list_resp.status_code == 200
-        global_ids = [item["id"] for item in list_resp.json()["data"]]
-        for asset_id in created_assets:
-            assert asset_id in global_ids
+            # Verify the asset type is correct
+            if asset_type == "computers":
+                assert asset["type"] == "computer"
+            elif asset_type == "networkdevices":
+                assert asset["type"] == "network_device"
+            elif asset_type == "simcarditems":
+                assert asset["type"] == "sim_card_item"
+            elif asset_type == "virtual_machines":
+                assert asset["type"] == "virtual_machine"
+            else:
+                # Remove 's' from the end for the type
+                expected_type = (
+                    asset_type[:-1] if asset_type.endswith("s") else asset_type
+                )
+                assert asset["type"] == expected_type
 
-        for asset_id in created_assets:
-            await ac.delete(f"/assets/{asset_id}", headers=headers)
+            created_assets.append((asset_type, asset["id"]))
+
+        # Verify each asset can be retrieved from its specific endpoint
+        for asset_type, asset_id in created_assets:
+            get_resp = await ac.get(f"/assets/{asset_type}/{asset_id}", headers=headers)
+            assert get_resp.status_code == 200, f"Failed to get {asset_type} {asset_id}"
+            assert get_resp.json()["id"] == asset_id
+
+        # Clean up - delete all created assets
+        for asset_type, asset_id in created_assets:
+            del_resp = await ac.delete(
+                f"/assets/{asset_type}/{asset_id}", headers=headers
+            )
+            assert (
+                del_resp.status_code == 204
+            ), f"Failed to delete {asset_type} {asset_id}"
 
 
 @pytest.mark.e2e
@@ -213,7 +240,7 @@ async def test_asset_filtering_and_search():
         )
         token = login_resp.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
-        unique_suffix = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+        unique_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
 
         test_assets = [
             {
@@ -234,22 +261,16 @@ async def test_asset_filtering_and_search():
         ]
 
         created_ids = {}
-        # Create computers using the computers endpoint
-        for i, asset_data in enumerate(test_assets):
-            if "cpu" in asset_data:  # Computer
-                create_resp = await ac.post(
-                    "/assets/computers/", json=asset_data, headers=headers
-                )
-            else:  # Printer
-                create_resp = await ac.post(
-                    "/assets/printers/", json=asset_data, headers=headers
-                )
+        for asset_data in test_assets:
+            create_resp = await ac.post(
+                f"/assets/{asset_data['type']}/", json=asset_data, headers=headers
+            )
             assert create_resp.status_code == 201
             created_ids[asset_data["name"]] = create_resp.json()["id"]
 
-        # Test status filtering
+        # Test status filtering on computers
         active_resp = await ac.get(
-            "/assets/", params={"status": "active"}, headers=headers
+            "/assets/computers/", params={"status": "active"}, headers=headers
         )
         assert active_resp.status_code == 200
         active_items = active_resp.json()["data"]
@@ -258,9 +279,9 @@ async def test_asset_filtering_and_search():
             for item in active_items
         )
 
-        # Test search by name
+        # Test search by name on computers
         search_resp = await ac.get(
-            "/assets/", params={"search": "Active-Computer"}, headers=headers
+            "/assets/computers/", params={"search": "Active-Computer"}, headers=headers
         )
         assert search_resp.status_code == 200
         search_items = search_resp.json()["data"]
@@ -269,23 +290,288 @@ async def test_asset_filtering_and_search():
             for item in search_items
         )
 
-        # Test search with asset type filter
-        search_filtered_resp = await ac.get(
-            "/assets/",
-            params={"search": "Computer", "asset_type": "computer"},
+        # Test search on computers (should find both computers)
+        search_computer_resp = await ac.get(
+            "/assets/computers/",
+            params={"search": "Computer"},
             headers=headers,
         )
-        assert search_filtered_resp.status_code == 200
-        search_filtered_items = search_filtered_resp.json()["data"]
-        assert len(search_filtered_items) >= 2
+        assert search_computer_resp.status_code == 200
+        search_computer_items = search_computer_resp.json()["data"]
+        assert len(search_computer_items) >= 2
 
-        # Test pagination
+        # Test pagination on computers
         paginated_resp = await ac.get(
-            "/assets/", params={"page": 1, "per_page": 2}, headers=headers
+            "/assets/computers/", params={"page": 1, "per_page": 2}, headers=headers
         )
         assert paginated_resp.status_code == 200
         paginated_items = paginated_resp.json()["data"]
         assert len(paginated_items) <= 2
 
+        # Clean up
         for asset_id in created_ids.values():
-            await ac.delete(f"/assets/{asset_id}", headers=headers)
+            await ac.delete(f"/assets/computers/{asset_id}", headers=headers)
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_asset_type_specific_operations():
+    """Test that each asset type has its own complete CRUD operations."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as ac:
+        login_resp = await ac.post(
+            "/auth/login",
+            data={
+                "username": SUPER_ADMIN["email"],
+                "password": SUPER_ADMIN["password"],
+            },
+        )
+        token = login_resp.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        unique_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+
+        # Test each asset type
+        asset_types = [
+            (
+                "computers",
+                {
+                    "name": f"Test-Computer-{unique_suffix}",
+                    "status": "active",
+                    "cpu": "Intel i5",
+                },
+            ),
+            (
+                "printers",
+                {
+                    "name": f"Test-Printer-{unique_suffix}",
+                    "status": "active",
+                    "model": "HP LaserJet",
+                },
+            ),
+            (
+                "networkdevices",
+                {
+                    "name": f"Test-Network-{unique_suffix}",
+                    "status": "active",
+                    "device_type": "Switch",
+                },
+            ),
+            (
+                "phones",
+                {
+                    "name": f"Test-Phone-{unique_suffix}",
+                    "status": "active",
+                    "phone_type": "Desk Phone",
+                },
+            ),
+            (
+                "peripherals",
+                {
+                    "name": f"Test-Peripheral-{unique_suffix}",
+                    "status": "active",
+                    "peripheral_type": "Keyboard",
+                },
+            ),
+            (
+                "consumables",
+                {
+                    "name": f"Test-Consumable-{unique_suffix}",
+                    "status": "active",
+                    "consumable_type": "Toner",
+                },
+            ),
+            (
+                "racks",
+                {
+                    "name": f"Test-Rack-{unique_suffix}",
+                    "status": "active",
+                    "rack_type": "Server Rack",
+                },
+            ),
+            (
+                "cables",
+                {
+                    "name": f"Test-Cable-{unique_suffix}",
+                    "status": "active",
+                    "cable_type": "Ethernet",
+                },
+            ),
+            (
+                "simcarditems",
+                {
+                    "name": f"Test-SIM-{unique_suffix}",
+                    "status": "active",
+                    "sim_type": "Nano",
+                },
+            ),
+        ]
+
+        for endpoint, payload in asset_types:
+            # Create
+            create_resp = await ac.post(
+                f"/assets/{endpoint}/", json=payload, headers=headers
+            )
+            assert (
+                create_resp.status_code == 201
+            ), f"Failed to create {endpoint}: {create_resp.text}"
+            asset = create_resp.json()
+            asset_id = asset["id"]
+
+            # Read
+            get_resp = await ac.get(f"/assets/{endpoint}/{asset_id}", headers=headers)
+            assert (
+                get_resp.status_code == 200
+            ), f"Failed to get {endpoint}: {get_resp.text}"
+
+            # Update
+            update_payload = {"name": f"Updated-{payload['name']}"}
+            update_resp = await ac.put(
+                f"/assets/{endpoint}/{asset_id}", json=update_payload, headers=headers
+            )
+            assert (
+                update_resp.status_code == 200
+            ), f"Failed to update {endpoint}: {update_resp.text}"
+            assert update_resp.json()["name"] == f"Updated-{payload['name']}"
+
+            # List
+            list_resp = await ac.get(f"/assets/{endpoint}/", headers=headers)
+            assert (
+                list_resp.status_code == 200
+            ), f"Failed to list {endpoint}: {list_resp.text}"
+
+            # Delete
+            delete_resp = await ac.delete(
+                f"/assets/{endpoint}/{asset_id}", headers=headers
+            )
+            assert (
+                delete_resp.status_code == 204
+            ), f"Failed to delete {endpoint}: {delete_resp.text}"
+
+            # Verify deletion
+            get_after_del = await ac.get(
+                f"/assets/{endpoint}/{asset_id}", headers=headers
+            )
+            assert (
+                get_after_del.status_code == 404
+            ), f"Deleted {endpoint} should return 404"
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_asset_virtual_machine_crud_and_pci_compliance():
+    """Full CRUD lifecycle for a VirtualMachine asset with PCI compliance fields."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as ac:
+        # ---------- 1. Login as super-admin ----------
+        login_resp = await ac.post(
+            "/auth/login",
+            data={
+                "username": SUPER_ADMIN["email"],
+                "password": SUPER_ADMIN["password"],
+            },
+        )
+        assert login_resp.status_code == 200, f"Login failed: {login_resp.text}"
+        token = login_resp.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # ---------- 2. Create a VirtualMachine ----------
+        unique_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+        vm_payload = {
+            "name": f"E2E-VM-{unique_suffix}",
+            "status": "active",
+            "hypervisor_type": "VMware",
+            "hypervisor_version": "7.0.3",
+            "vm_platform": "vSphere",
+            "cpu_cores": 8,
+            "memory_mb": 16384,
+            "storage_gb": 500,
+            "os_type": "Linux",
+            "os_version": "Ubuntu 22.04 LTS",
+            "os_architecture": "x86_64",
+            "ip_address": "192.168.1.100",
+            "mac_address": "00:1B:44:11:3A:B7",
+            "network_segment": "Internal",
+            "vlan_id": "100",
+            "pci_scope": "In Scope",
+            "cardholder_data_environment": "CDE",
+            "encryption_status": "Encrypted",
+            "encryption_type": "AES-256",
+            "backup_encryption": "Yes",
+            "admin_access_restricted": "Yes",
+            "multi_factor_auth_enabled": "Yes",
+            "logging_enabled": "Yes",
+            "monitoring_tool": "SIEM",
+            "vulnerability_status": "Compliant",
+            "backup_frequency": "Daily",
+            "backup_retention_days": 30,
+            "disaster_recovery_plan": "Yes",
+            "isolation_level": "High",
+            "resource_isolation": "Yes",
+            "network_isolation": "Yes",
+            "storage_isolation": "Yes",
+            "pci_compliance_status": "Compliant",
+            "power_state": "Running",
+            "ha_enabled": "Yes",
+            "redundancy_level": "N+1",
+            "failover_capability": "Yes",
+        }
+        create_resp = await ac.post(
+            "/assets/virtual_machines/", json=vm_payload, headers=headers
+        )
+        assert (
+            create_resp.status_code == 201
+        ), f"Virtual machine creation failed: {create_resp.text}"
+        vm = create_resp.json()
+        vm_id = vm["id"]
+        assert vm["type"] == "virtual_machine"
+        assert vm["hypervisor_type"] == vm_payload["hypervisor_type"]
+        assert vm["cpu_cores"] == vm_payload["cpu_cores"]
+        assert vm["pci_scope"] == vm_payload["pci_scope"]
+
+        # ---------- 3. GET virtual machine endpoint ----------
+        get_resp = await ac.get(f"/assets/virtual_machines/{vm_id}", headers=headers)
+        assert (
+            get_resp.status_code == 200
+        ), f"Virtual machine get failed: {get_resp.text}"
+        assert get_resp.json()["id"] == vm_id
+        assert get_resp.json()["encryption_status"] == vm_payload["encryption_status"]
+
+        # ---------- 4. Update virtual machine (PCI compliance change) ----------
+        update_payload = {
+            "pci_compliance_status": "Non-Compliant",
+            "vulnerability_status": "Non-Compliant",
+            "compliance_notes": "Security patches pending",
+        }
+        update_resp = await ac.put(
+            f"/assets/virtual_machines/{vm_id}", json=update_payload, headers=headers
+        )
+        assert update_resp.status_code == 200, f"Update failed: {update_resp.text}"
+        updated_vm = update_resp.json()
+        assert updated_vm["pci_compliance_status"] == "Non-Compliant"
+        assert updated_vm["vulnerability_status"] == "Non-Compliant"
+        assert updated_vm["compliance_notes"] == "Security patches pending"
+
+        # ---------- 5. List virtual machines with pagination ----------
+        list_resp = await ac.get(
+            "/assets/virtual_machines/",
+            params={"page": 1, "per_page": 9999},
+            headers=headers,
+        )
+        assert (
+            list_resp.status_code == 200
+        ), f"List with pagination failed: {list_resp.text}"
+        paginated_data = list_resp.json()
+        assert "data" in paginated_data and "total" in paginated_data
+        assert paginated_data["total"] >= 1
+        ids = [item["id"] for item in paginated_data["data"]]
+        assert vm_id in ids, "Created virtual machine missing from paginated list"
+
+        # ---------- 6. Search virtual machines by name ----------
+        search_resp = await ac.get(
+            "/assets/virtual_machines/",
+            params={"search": vm_payload["name"]},
+            headers=headers,
+        )
+        assert search_resp.status_code == 200, f"Search failed: {search_resp.text}"
+        search_data = search_resp.json()["data"]
+        assert len(search_data) > 0
+        ids = [item["id"] for item in search_data]
+        assert vm_id in ids, "Created virtual machine not found via search"

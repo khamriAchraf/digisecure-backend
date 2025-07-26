@@ -2,16 +2,16 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies import get_configuration_service
+from app.api.dependencies import get_reference_data_service
 from app.schemas.location import Location, LocationCreate, LocationUpdate
-from app.services.configuration_service import (ConfigurationService,
-                                                PermissionError)
+from app.services.reference_data_service import (PermissionError,
+                                                 ReferenceDataService)
 
-router = APIRouter(prefix="/location", tags=["configuration:location"])
+router = APIRouter(prefix="/locations", tags=["reference_data:locations"])
 
 
 @router.get("/", response_model=List[Location])
-def list_locations(service: ConfigurationService = Depends(get_configuration_service)):
+def list_locations(service: ReferenceDataService = Depends(get_reference_data_service)):
     try:
         return service.list_locations()
     except PermissionError as e:
@@ -21,7 +21,7 @@ def list_locations(service: ConfigurationService = Depends(get_configuration_ser
 @router.post("/", response_model=Location, status_code=status.HTTP_201_CREATED)
 def create_location(
     location_in: LocationCreate,
-    service: ConfigurationService = Depends(get_configuration_service),
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         return service.create_location(location_in)
@@ -31,7 +31,8 @@ def create_location(
 
 @router.get("/{location_id}", response_model=Location)
 def get_location(
-    location_id: int, service: ConfigurationService = Depends(get_configuration_service)
+    location_id: int,
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         location = service.get_location(location_id)
@@ -46,7 +47,7 @@ def get_location(
 def update_location(
     location_id: int,
     location_in: LocationUpdate,
-    service: ConfigurationService = Depends(get_configuration_service),
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         location = service.get_location(location_id)
@@ -59,7 +60,8 @@ def update_location(
 
 @router.delete("/{location_id}", response_model=Location)
 def delete_location(
-    location_id: int, service: ConfigurationService = Depends(get_configuration_service)
+    location_id: int,
+    service: ReferenceDataService = Depends(get_reference_data_service),
 ):
     try:
         location = service.get_location(location_id)

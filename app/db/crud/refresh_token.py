@@ -37,7 +37,7 @@ def get_refresh_token_by_id(db: Session, token_id: str) -> Optional[RefreshToken
 
 def get_valid_refresh_token(db: Session, token_id: str) -> Optional[RefreshToken]:
     """Get a valid (not revoked, not expired) refresh token"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return (
         db.query(RefreshToken)
         .filter(
@@ -82,7 +82,7 @@ def revoke_all_user_tokens(db: Session, user_id: int) -> int:
 
 def cleanup_expired_tokens(db: Session) -> int:
     """Remove expired tokens from the database"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     result = db.query(RefreshToken).filter(RefreshToken.expires_at < now).delete()
     db.commit()
     return result
@@ -90,7 +90,7 @@ def cleanup_expired_tokens(db: Session) -> int:
 
 def get_user_active_tokens(db: Session, user_id: int) -> list[RefreshToken]:
     """Get all active (not revoked, not expired) tokens for a user"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return (
         db.query(RefreshToken)
         .filter(

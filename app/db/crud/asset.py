@@ -1,21 +1,22 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple, Union
 
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, with_polymorphic
+from sqlalchemy.orm import Session, joinedload, with_polymorphic
 
 from app.db.models.asset import (Asset, Cable, Computer, Consumable,
                                  NetworkDevice, Peripheral, Phone, Printer,
-                                 Rack, SimCardItem)
-from app.schemas.asset import (AssetCreate, AssetUpdate, CableCreate,
-                               CableUpdate, ComputerCreate, ComputerUpdate,
-                               ConsumableCreate, ConsumableUpdate,
-                               NetworkDeviceCreate, NetworkDeviceUpdate,
-                               PeripheralCreate, PeripheralUpdate, PhoneCreate,
-                               PhoneUpdate, PrinterCreate, PrinterUpdate,
-                               RackCreate, RackUpdate, SimCardItemCreate,
-                               SimCardItemUpdate)
+                                 Rack, SimCardItem, VirtualMachine)
+from app.schemas.asset import (CableCreate, CableUpdate, ComputerCreate,
+                               ComputerUpdate, ConsumableCreate,
+                               ConsumableUpdate, NetworkDeviceCreate,
+                               NetworkDeviceUpdate, PeripheralCreate,
+                               PeripheralUpdate, PhoneCreate, PhoneUpdate,
+                               PrinterCreate, PrinterUpdate, RackCreate,
+                               RackUpdate, SimCardItemCreate,
+                               SimCardItemUpdate, VirtualMachineCreate,
+                               VirtualMachineUpdate)
 
 ASSET_TYPE_MAPPING = {
     "computer": (Computer, ComputerCreate),
@@ -27,6 +28,7 @@ ASSET_TYPE_MAPPING = {
     "rack": (Rack, RackCreate),
     "cable": (Cable, CableCreate),
     "sim_card_item": (SimCardItem, SimCardItemCreate),
+    "virtual_machine": (VirtualMachine, VirtualMachineCreate),
 }
 
 ALL_ASSET_TYPES = [
@@ -40,6 +42,7 @@ ALL_ASSET_TYPES = [
     Rack,
     Cable,
     SimCardItem,
+    VirtualMachine,
 ]
 
 
@@ -52,7 +55,17 @@ def get_asset_by_type(db: Session, asset_id: int, asset_type: str) -> Optional[A
         raise ValueError(f"Invalid asset type: {asset_type}")
 
     asset_class = ASSET_TYPE_MAPPING[asset_type][0]
-    return db.query(asset_class).filter(asset_class.id == asset_id).first()
+    return (
+        db.query(asset_class)
+        .options(
+            joinedload(asset_class.manufacturer),
+            joinedload(asset_class.location),
+            joinedload(asset_class.groups),
+            joinedload(asset_class.assigned_user),
+        )
+        .filter(asset_class.id == asset_id)
+        .first()
+    )
 
 
 def get_paginated_assets(
@@ -66,7 +79,12 @@ def get_paginated_assets(
 ) -> Tuple[List[Asset], int]:
 
     AssetPoly = with_polymorphic(Asset, ALL_ASSET_TYPES)
-    query = db.query(AssetPoly)
+    query = db.query(AssetPoly).options(
+        joinedload(AssetPoly.manufacturer),
+        joinedload(AssetPoly.location),
+        joinedload(AssetPoly.groups),
+        joinedload(AssetPoly.assigned_user),
+    )
 
     # Apply filters
     if filters:
@@ -120,7 +138,6 @@ def get_paginated_assets(
 def create_asset(
     db: Session,
     asset_in: Union[
-        AssetCreate,
         ComputerCreate,
         PrinterCreate,
         NetworkDeviceCreate,
@@ -130,9 +147,10 @@ def create_asset(
         RackCreate,
         CableCreate,
         SimCardItemCreate,
+        VirtualMachineCreate,
     ],
 ) -> Asset:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Determine asset type from the input schema
     asset_type = None
@@ -158,7 +176,6 @@ def create_asset(
         "purchase_date": asset_in.purchase_date,
         "warranty_expiry": asset_in.warranty_expiry,
         "location_id": asset_in.location_id,
-        "group_id": asset_in.group_id,
         "assigned_to": asset_in.assigned_to,
         "type": asset_type,  # This ensures the correct polymorphic identity
         "created_at": now,
@@ -180,6 +197,16 @@ def create_asset(
     try:
         db.commit()
         db.refresh(asset)
+
+        # Handle groups relationship if group_ids are provided
+        if hasattr(asset_in, "group_ids") and asset_in.group_ids:
+            from app.db.models.group import Group
+
+            groups = db.query(Group).filter(Group.id.in_(asset_in.group_ids)).all()
+            asset.groups = groups
+            db.commit()
+            db.refresh(asset)
+
     except IntegrityError:
         db.rollback()
         raise
@@ -190,7 +217,6 @@ def update_asset(
     db: Session,
     asset: Asset,
     asset_in: Union[
-        AssetUpdate,
         ComputerUpdate,
         PrinterUpdate,
         NetworkDeviceUpdate,
@@ -200,6 +226,7 @@ def update_asset(
         RackUpdate,
         CableUpdate,
         SimCardItemUpdate,
+        VirtualMachineUpdate,
     ],
 ) -> Asset:
     base_fields = [
@@ -211,7 +238,6 @@ def update_asset(
         "purchase_date",
         "warranty_expiry",
         "location_id",
-        "group_id",
         "assigned_to",
     ]
 
@@ -223,7 +249,14 @@ def update_asset(
         if field not in base_fields and hasattr(asset, field):
             setattr(asset, field, value)
 
-    setattr(asset, "updated_at", datetime.utcnow())
+    # Handle groups relationship if group_ids are provided
+    if hasattr(asset_in, "group_ids") and asset_in.group_ids is not None:
+        from app.db.models.group import Group
+
+        groups = db.query(Group).filter(Group.id.in_(asset_in.group_ids)).all()
+        asset.groups = groups
+
+    setattr(asset, "updated_at", datetime.now(timezone.utc))
     db.commit()
     db.refresh(asset)
     return asset
@@ -263,7 +296,6 @@ def bulk_create_assets(
     db: Session,
     assets_in: List[
         Union[
-            AssetCreate,
             ComputerCreate,
             PrinterCreate,
             NetworkDeviceCreate,
@@ -273,10 +305,11 @@ def bulk_create_assets(
             RackCreate,
             CableCreate,
             SimCardItemCreate,
+            VirtualMachineCreate,
         ]
     ],
 ) -> List[Asset]:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     assets = []
 
     for asset_in in assets_in:
@@ -306,7 +339,6 @@ def bulk_create_assets(
             "purchase_date": asset_in.purchase_date,
             "warranty_expiry": asset_in.warranty_expiry,
             "location_id": asset_in.location_id,
-            "group_id": asset_in.group_id,
             "assigned_to": asset_in.assigned_to,
             "type": asset_type,  # This ensures the correct polymorphic identity
             "created_at": now,
@@ -328,8 +360,19 @@ def bulk_create_assets(
     db.add_all(assets)
     try:
         db.commit()
+
+        # Handle groups relationships for all assets
+        for i, asset_in in enumerate(assets_in):
+            if hasattr(asset_in, "group_ids") and asset_in.group_ids:
+                from app.db.models.group import Group
+
+                groups = db.query(Group).filter(Group.id.in_(asset_in.group_ids)).all()
+                assets[i].groups = groups
+
+        db.commit()
         for asset in assets:
             db.refresh(asset)
+
     except IntegrityError:
         db.rollback()
         raise

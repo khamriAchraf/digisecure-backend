@@ -8,8 +8,8 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.services.asset_service import AssetService
 from app.services.auth_service import decode_access_token, get_user_by_id
-from app.services.configuration_service import ConfigurationService
 from app.services.group_service import GroupService
+from app.services.reference_data_service import ReferenceDataService
 from app.services.schema_service import SchemaService
 from app.services.table_config_service import TableConfigService
 from app.services.user_service import UserService
@@ -51,11 +51,11 @@ def get_group_service(
     return GroupService(db, current_user)
 
 
-def get_configuration_service(
+def get_reference_data_service(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> ConfigurationService:
-    return ConfigurationService(db, current_user)
+) -> ReferenceDataService:
+    return ReferenceDataService(db, current_user)
 
 
 def get_asset_service(

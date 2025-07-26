@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -21,7 +21,7 @@ class RoleService:
 
     def get_role(self, role_id: int) -> Role:
         logger.info(
-            f"User {self.current_user.id} attempts to READ role {role_id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to READ role {role_id} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "read", "role"):
             logger.warning(
@@ -34,7 +34,7 @@ class RoleService:
 
     def list_roles(self, skip: int = 0, limit: int = 100):
         logger.info(
-            f"User {self.current_user.id} attempts to LIST roles at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to LIST roles at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "read", "role"):
             logger.warning(f"User {self.current_user.id} denied LIST access to roles")
@@ -53,7 +53,7 @@ class RoleService:
         filters: Optional[dict] = None,
     ) -> Tuple[List[Role], int]:
         logger.info(
-            f"User {self.current_user.id} attempts to LIST roles at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to LIST roles at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "read", "role"):
             logger.warning(f"User {self.current_user.id} denied LIST access to roles")
@@ -68,7 +68,7 @@ class RoleService:
         self, name: str, description: Optional[str] = None, is_builtin: bool = False
     ) -> Role:
         logger.info(
-            f"User {self.current_user.id} attempts to CREATE role {name} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to CREATE role {name} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "create", "role"):
             logger.warning(
@@ -88,7 +88,7 @@ class RoleService:
         self, role: Role, name: Optional[str] = None, description: Optional[str] = None
     ) -> Role:
         logger.info(
-            f"User {self.current_user.id} attempts to UPDATE role {role.id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to UPDATE role {role.id} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "update", "role"):
             logger.warning(
@@ -101,7 +101,7 @@ class RoleService:
 
     def delete_role(self, role: Role) -> Role:
         logger.info(
-            f"User {self.current_user.id} attempts to DELETE role {role.id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to DELETE role {role.id} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "delete", "role"):
             logger.warning(
@@ -114,7 +114,7 @@ class RoleService:
 
     def assign_permission(self, role: Role, permission: Permission) -> Role:
         logger.info(
-            f"User {self.current_user.id} attempts to ASSIGN permission {permission.id} to role {role.id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to ASSIGN permission {permission.id} to role {role.id} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "update", "role"):
             logger.warning(
@@ -129,7 +129,7 @@ class RoleService:
 
     def unassign_permission(self, role: Role, permission: Permission) -> Role:
         logger.info(
-            f"User {self.current_user.id} attempts to UNASSIGN permission {permission.id} from role {role.id} at {datetime.utcnow().isoformat()}"
+            f"User {self.current_user.id} attempts to UNASSIGN permission {permission.id} from role {role.id} at {datetime.now(timezone.utc).isoformat()}"
         )
         if not has_permission(self.current_user, "update", "role"):
             logger.warning(

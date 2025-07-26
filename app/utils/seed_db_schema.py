@@ -1,6 +1,6 @@
 import argparse
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -185,7 +185,7 @@ def create_sample_assets(session):
     if not users:
         logger.warning("No users found, creating assets without user assignment")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Sample Computers
     computers_data = [
@@ -696,53 +696,86 @@ def main():
         },
     ]
 
-    # 6. Configuration management permissions
-    configuration_permissions = [
+    # 6. Reference data management permissions
+    reference_data_permissions = [
         {
             "action": "read",
-            "resource": "configuration",
-            "description": "View configuration information",
+            "resource": "reference_data",
+            "description": "View reference data information",
         },
         {
             "action": "create",
-            "resource": "configuration",
-            "description": "Create new configurations",
+            "resource": "reference_data",
+            "description": "Create new reference data",
         },
         {
             "action": "update",
-            "resource": "configuration",
-            "description": "Update configuration information",
+            "resource": "reference_data",
+            "description": "Update reference data information",
         },
         {
             "action": "delete",
-            "resource": "configuration",
-            "description": "Delete configurations",
+            "resource": "reference_data",
+            "description": "Delete reference data",
         },
         {
             "action": "purge",
-            "resource": "configuration",
-            "description": "Permanently delete configurations",
+            "resource": "reference_data",
+            "description": "Permanently delete reference data",
         },
     ]
 
-    # 7. Asset management permissions
-    asset_permissions = [
+    # 7. computer management permissions
+    computer_permissions = [
         {
             "action": "read",
-            "resource": "asset",
-            "description": "View asset information",
+            "resource": "computer",
+            "description": "View computer information",
         },
-        {"action": "create", "resource": "asset", "description": "Create new assets"},
+        {
+            "action": "create",
+            "resource": "computer",
+            "description": "Create new computers",
+        },
         {
             "action": "update",
-            "resource": "asset",
-            "description": "Update asset information",
+            "resource": "computer",
+            "description": "Update computer information",
         },
-        {"action": "delete", "resource": "asset", "description": "Delete assets"},
+        {"action": "delete", "resource": "computer", "description": "Delete computers"},
         {
             "action": "purge",
-            "resource": "asset",
-            "description": "Permanently delete assets",
+            "resource": "computer",
+            "description": "Permanently delete computers",
+        },
+    ]
+
+    # 8. virtual machine management permissions
+    virtual_machine_permissions = [
+        {
+            "action": "read",
+            "resource": "virtual_machine",
+            "description": "View virtual machine information",
+        },
+        {
+            "action": "create",
+            "resource": "virtual_machine",
+            "description": "Create new virtual machines",
+        },
+        {
+            "action": "update",
+            "resource": "virtual_machine",
+            "description": "Update virtual machine information",
+        },
+        {
+            "action": "delete",
+            "resource": "virtual_machine",
+            "description": "Delete virtual machines",
+        },
+        {
+            "action": "purge",
+            "resource": "virtual_machine",
+            "description": "Permanently delete virtual machines",
         },
     ]
 
@@ -750,8 +783,9 @@ def main():
         "user": user_permissions,
         "role": role_permissions,
         "group": group_permissions,
-        "configuration": configuration_permissions,
-        "asset": asset_permissions,
+        "reference_data": reference_data_permissions,
+        "computer": computer_permissions,
+        "virtual_machine": virtual_machine_permissions,
     }
 
     # Role-permission mapping
@@ -760,50 +794,57 @@ def main():
             "user": ["read", "create", "update", "delete", "purge"],
             "role": ["read", "create", "update", "delete", "purge"],
             "group": ["read", "create", "update", "delete", "purge"],
-            "configuration": ["read", "create", "update", "delete", "purge"],
-            "asset": ["read", "create", "update", "delete", "purge"],
+            "reference_data": ["read", "create", "update", "delete", "purge"],
+            "computer": ["read", "create", "update", "delete", "purge"],
+            "virtual_machine": ["read", "create", "update", "delete", "purge"],
         },
         "Admin": {
             "user": ["read", "create", "update", "delete"],
             "role": [],
             "group": [],
-            "configuration": ["read", "create", "update", "delete", "purge"],
-            "asset": ["read", "create", "update", "delete"],
+            "reference_data": ["read", "create", "update", "delete", "purge"],
+            "computer": ["read", "create", "update", "delete"],
+            "virtual_machine": ["read", "create", "update", "delete"],
         },
         "Supervisor": {
             "user": ["read", "create", "update"],
             "role": [],
             "group": [],
-            "configuration": [],
-            "asset": ["read", "create", "update"],
+            "reference_data": [],
+            "computer": ["read", "create", "update"],
+            "virtual_machine": ["read", "create", "update"],
         },
         "Technician": {
             "user": ["read", "update"],
             "role": [],
             "group": [],
-            "configuration": [],
-            "asset": ["read", "create", "update"],
+            "reference_data": [],
+            "computer": ["read", "create", "update"],
+            "virtual_machine": ["read", "create", "update"],
         },
         "Hotliner": {
             "user": ["read"],
             "role": [],
             "group": [],
-            "configuration": [],
-            "asset": ["read"],
+            "reference_data": [],
+            "computer": ["read"],
+            "virtual_machine": ["read"],
         },
         "Observer": {
             "user": ["read"],
             "role": [],
             "group": ["read"],
-            "configuration": ["read"],
-            "asset": ["read"],
+            "reference_data": ["read"],
+            "computer": ["read"],
+            "virtual_machine": ["read"],
         },
         "Self-Service": {
             "user": [],
             "role": [],
             "group": [],
-            "configuration": [],
-            "asset": ["read"],
+            "reference_data": [],
+            "computer": ["read"],
+            "virtual_machine": ["read"],
         },
     }
 
