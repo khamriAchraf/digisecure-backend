@@ -173,6 +173,64 @@ class NetworkDeviceBase(AssetBase):
     management_ip: Optional[str] = None
     firmware_version: Optional[str] = None
 
+    # PCI and standards compliance fields
+    # Physical security
+    rack_location: Optional[str] = None
+    physical_lock: Optional[str] = None
+    tamper_evident: Optional[str] = None
+
+    # Network security
+    vlan: Optional[str] = None
+    segmentation: Optional[str] = None
+    firewall_enabled: Optional[bool] = None
+    ids_ips_enabled: Optional[bool] = None
+    remote_access_enabled: Optional[bool] = None
+    remote_access_method: Optional[str] = None
+    remote_access_restriction: Optional[str] = None
+
+    # Authentication and access control
+    admin_username: Optional[str] = None
+    admin_password_set: Optional[bool] = None
+    password_last_changed: Optional[date] = None
+    multi_factor_auth_enabled: Optional[bool] = None
+    default_accounts_disabled: Optional[bool] = None
+
+    # Logging and monitoring
+    logging_enabled: Optional[bool] = None
+    log_retention_days: Optional[int] = None
+    syslog_server: Optional[str] = None
+    snmp_enabled: Optional[bool] = None
+    snmp_version: Optional[str] = None
+    monitoring_tool: Optional[str] = None
+
+    # Patch and vulnerability management
+    last_patch_date: Optional[date] = None
+    patch_level: Optional[str] = None
+    vulnerability_scan_date: Optional[date] = None
+    vulnerability_status: Optional[str] = None
+
+    # Encryption
+    management_encryption: Optional[bool] = None
+    encryption_type: Optional[str] = None
+    data_in_transit_encryption: Optional[bool] = None
+
+    # Compliance tracking
+    pci_assessment_date: Optional[date] = None
+    pci_compliance_status: Optional[str] = None
+    next_assessment_date: Optional[date] = None
+    compliance_notes: Optional[str] = None
+
+    # Device lifecycle
+    power_state: Optional[str] = None
+    creation_date: Optional[date] = None
+    last_modified: Optional[datetime] = None
+    scheduled_decommission_date: Optional[date] = None
+
+    # Redundancy and high availability
+    ha_enabled: Optional[bool] = None
+    redundancy_level: Optional[str] = None
+    failover_capability: Optional[bool] = None
+
 
 class NetworkDeviceCreate(NetworkDeviceBase):
     pass
@@ -197,6 +255,64 @@ class NetworkDeviceUpdate(BaseModel):
     connection_type: Optional[str] = None
     management_ip: Optional[str] = None
     firmware_version: Optional[str] = None
+
+    # PCI and standards compliance fields
+    # Physical security
+    rack_location: Optional[str] = None
+    physical_lock: Optional[str] = None
+    tamper_evident: Optional[str] = None
+
+    # Network security
+    vlan: Optional[str] = None
+    segmentation: Optional[str] = None
+    firewall_enabled: Optional[bool] = None
+    ids_ips_enabled: Optional[bool] = None
+    remote_access_enabled: Optional[bool] = None
+    remote_access_method: Optional[str] = None
+    remote_access_restriction: Optional[str] = None
+
+    # Authentication and access control
+    admin_username: Optional[str] = None
+    admin_password_set: Optional[bool] = None
+    password_last_changed: Optional[date] = None
+    multi_factor_auth_enabled: Optional[bool] = None
+    default_accounts_disabled: Optional[bool] = None
+
+    # Logging and monitoring
+    logging_enabled: Optional[bool] = None
+    log_retention_days: Optional[int] = None
+    syslog_server: Optional[str] = None
+    snmp_enabled: Optional[bool] = None
+    snmp_version: Optional[str] = None
+    monitoring_tool: Optional[str] = None
+
+    # Patch and vulnerability management
+    last_patch_date: Optional[date] = None
+    patch_level: Optional[str] = None
+    vulnerability_scan_date: Optional[date] = None
+    vulnerability_status: Optional[str] = None
+
+    # Encryption
+    management_encryption: Optional[bool] = None
+    encryption_type: Optional[str] = None
+    data_in_transit_encryption: Optional[bool] = None
+
+    # Compliance tracking
+    pci_assessment_date: Optional[date] = None
+    pci_compliance_status: Optional[str] = None
+    next_assessment_date: Optional[date] = None
+    compliance_notes: Optional[str] = None
+
+    # Device lifecycle
+    power_state: Optional[str] = None
+    creation_date: Optional[date] = None
+    last_modified: Optional[datetime] = None
+    scheduled_decommission_date: Optional[date] = None
+
+    # Redundancy and high availability
+    ha_enabled: Optional[bool] = None
+    redundancy_level: Optional[str] = None
+    failover_capability: Optional[bool] = None
 
 
 class NetworkDevice(AssetInDBBase, NetworkDeviceBase):
@@ -602,6 +718,188 @@ class VirtualMachineUpdate(BaseModel):
 
 class VirtualMachine(AssetInDBBase, VirtualMachineBase):
     type: Literal["virtual_machine"] = "virtual_machine"
+
+    class Config:
+        from_attributes = True
+
+
+# Software schemas
+class SoftwareBase(BaseModel):
+    name: str
+    vendor: Optional[str] = None
+    description: Optional[str] = None
+    software_type: Optional[str] = (
+        None  # Application, Operating System, Utility, Security Tool
+    )
+
+    # PCI Compliance and Security fields
+    # Data handling and storage
+    handles_cardholder_data: Optional[bool] = None
+    stores_cardholder_data: Optional[bool] = None
+    transmits_cardholder_data: Optional[bool] = None
+    processes_cardholder_data: Optional[bool] = None
+
+    # Encryption and security
+    encryption_enabled: Optional[bool] = None
+    encryption_type: Optional[str] = None
+    encryption_key_management: Optional[str] = None
+    secure_communication: Optional[bool] = None
+    communication_protocol: Optional[str] = None
+
+    # Authentication and access control
+    authentication_required: Optional[bool] = None
+    multi_factor_auth_supported: Optional[bool] = None
+    role_based_access_control: Optional[bool] = None
+    session_timeout_enabled: Optional[bool] = None
+    session_timeout_minutes: Optional[int] = None
+
+    # Logging and monitoring
+    audit_logging_enabled: Optional[bool] = None
+    log_retention_days: Optional[int] = None
+    log_integrity_protection: Optional[bool] = None
+    centralized_logging: Optional[bool] = None
+
+    # Vulnerability and patch management
+    last_vulnerability_scan: Optional[date] = None
+    vulnerability_status: Optional[str] = None
+    known_vulnerabilities: Optional[str] = None
+    patch_management_enabled: Optional[bool] = None
+    last_patch_date: Optional[date] = None
+    patch_level: Optional[str] = None
+    auto_update_enabled: Optional[bool] = None
+
+    # Network security
+    network_access_required: Optional[bool] = None
+    firewall_rules_required: Optional[str] = None
+    vpn_required: Optional[bool] = None
+    network_segmentation: Optional[str] = None
+
+    # Data protection and privacy
+    data_classification: Optional[str] = None
+    data_retention_policy: Optional[str] = None
+    data_backup_enabled: Optional[bool] = None
+    data_encryption_at_rest: Optional[bool] = None
+
+    # Compliance tracking
+    pci_compliance_status: Optional[str] = None
+    pci_assessment_date: Optional[date] = None
+    next_assessment_date: Optional[date] = None
+    compliance_notes: Optional[str] = None
+
+    # Software lifecycle
+    end_of_life_date: Optional[date] = None
+    end_of_support_date: Optional[date] = None
+    replacement_planned: Optional[bool] = None
+    replacement_software_id: Optional[int] = None
+
+    # Performance and resource usage
+    minimum_requirements: Optional[str] = None
+    recommended_requirements: Optional[str] = None
+    resource_usage_monitoring: Optional[bool] = None
+
+
+class SoftwareCreate(SoftwareBase):
+    pass
+
+
+class SoftwareUpdate(BaseModel):
+    name: Optional[str] = None
+    vendor: Optional[str] = None
+    description: Optional[str] = None
+    software_type: Optional[str] = None
+
+    # PCI Compliance and Security fields
+    handles_cardholder_data: Optional[bool] = None
+    stores_cardholder_data: Optional[bool] = None
+    transmits_cardholder_data: Optional[bool] = None
+    processes_cardholder_data: Optional[bool] = None
+    encryption_enabled: Optional[bool] = None
+    encryption_type: Optional[str] = None
+    encryption_key_management: Optional[str] = None
+    secure_communication: Optional[bool] = None
+    communication_protocol: Optional[str] = None
+    authentication_required: Optional[bool] = None
+    multi_factor_auth_supported: Optional[bool] = None
+    role_based_access_control: Optional[bool] = None
+    session_timeout_enabled: Optional[bool] = None
+    session_timeout_minutes: Optional[int] = None
+    audit_logging_enabled: Optional[bool] = None
+    log_retention_days: Optional[int] = None
+    log_integrity_protection: Optional[bool] = None
+    centralized_logging: Optional[bool] = None
+    last_vulnerability_scan: Optional[date] = None
+    vulnerability_status: Optional[str] = None
+    known_vulnerabilities: Optional[str] = None
+    patch_management_enabled: Optional[bool] = None
+    last_patch_date: Optional[date] = None
+    patch_level: Optional[str] = None
+    auto_update_enabled: Optional[bool] = None
+    network_access_required: Optional[bool] = None
+    firewall_rules_required: Optional[str] = None
+    vpn_required: Optional[bool] = None
+    network_segmentation: Optional[str] = None
+    data_classification: Optional[str] = None
+    data_retention_policy: Optional[str] = None
+    data_backup_enabled: Optional[bool] = None
+    data_encryption_at_rest: Optional[bool] = None
+    pci_compliance_status: Optional[str] = None
+    pci_assessment_date: Optional[date] = None
+    next_assessment_date: Optional[date] = None
+    compliance_notes: Optional[str] = None
+    end_of_life_date: Optional[date] = None
+    end_of_support_date: Optional[date] = None
+    replacement_planned: Optional[bool] = None
+    replacement_software_id: Optional[int] = None
+    minimum_requirements: Optional[str] = None
+    recommended_requirements: Optional[str] = None
+    resource_usage_monitoring: Optional[bool] = None
+
+
+class Software(SoftwareBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    replacement_software: Optional["Software"] = None
+
+    class Config:
+        from_attributes = True
+
+
+# Software Version schemas
+class SoftwareVersionBase(BaseModel):
+    software_id: int
+    version: str
+    build_number: Optional[str] = None
+    release_date: Optional[date] = None
+    end_of_life_date: Optional[date] = None
+    end_of_support_date: Optional[date] = None
+
+
+class SoftwareVersionCreate(SoftwareVersionBase):
+    pass
+
+
+class SoftwareVersionUpdate(BaseModel):
+    version: Optional[str] = None
+    build_number: Optional[str] = None
+    release_date: Optional[date] = None
+    end_of_life_date: Optional[date] = None
+    end_of_support_date: Optional[date] = None
+
+
+class SoftwareVersion(SoftwareVersionBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    software: Software
+
+    class Config:
+        from_attributes = True
+
+
+# Update Software schema to include versions relationship
+class SoftwareWithVersions(Software):
+    versions: List[SoftwareVersion] = []
 
     class Config:
         from_attributes = True

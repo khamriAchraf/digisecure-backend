@@ -1,9 +1,21 @@
-from sqlalchemy import (CheckConstraint, Column, Date, DateTime, ForeignKey,
-                        Integer, String)
+from sqlalchemy import (Boolean, CheckConstraint, Column, Date, DateTime,
+                        ForeignKey, Integer, String, Table)
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
 from app.db.models.group import asset_groups
+
+software_version_computers = Table(
+    "software_version_computers",
+    Base.metadata,
+    Column(
+        "software_version_id",
+        Integer,
+        ForeignKey("software_versions.id"),
+        primary_key=True,
+    ),
+    Column("computer_id", Integer, ForeignKey("computers.id"), primary_key=True),
+)
 
 
 class Asset(Base):
@@ -67,6 +79,13 @@ class Computer(Asset):
     model = Column(String, nullable=True)
     hostname = Column(String, nullable=True)
 
+    # Relationships
+    software_versions = relationship(
+        "SoftwareVersion",
+        secondary=software_version_computers,
+        back_populates="computers",
+    )
+
     __mapper_args__ = {"polymorphic_identity": "computer"}
 
 
@@ -100,6 +119,70 @@ class NetworkDevice(Asset):
     connection_type = Column(String, nullable=True)  # Ethernet, WiFi, Fiber
     management_ip = Column(String, nullable=True)
     firmware_version = Column(String, nullable=True)
+
+    # PCI and standards compliance fields
+    # Physical security
+    rack_location = Column(String, nullable=True)
+    physical_lock = Column(String, nullable=True)  # Yes, No
+    tamper_evident = Column(String, nullable=True)  # Yes, No
+
+    # Network security
+    vlan = Column(String, nullable=True)
+    segmentation = Column(String, nullable=True)  # PCI, Guest, Internal, etc.
+    firewall_enabled = Column(Boolean, nullable=True)  # Yes, No
+    ids_ips_enabled = Column(Boolean, nullable=True)  # Yes, No
+    remote_access_enabled = Column(Boolean, nullable=True)  # Yes, No
+    remote_access_method = Column(String, nullable=True)  # SSH, Telnet, HTTPS, etc.
+    remote_access_restriction = Column(
+        String, nullable=True
+    )  # IP allowlist, VPN only, etc.
+
+    # Authentication and access control
+    admin_username = Column(String, nullable=True)
+    admin_password_set = Column(Boolean, nullable=True)  # Yes, No
+    password_last_changed = Column(Date, nullable=True)
+    multi_factor_auth_enabled = Column(Boolean, nullable=True)  # Yes, No
+    default_accounts_disabled = Column(Boolean, nullable=True)  # Yes, No
+
+    # Logging and monitoring
+    logging_enabled = Column(Boolean, nullable=True)  # Yes, No
+    log_retention_days = Column(Integer, nullable=True)
+    syslog_server = Column(String, nullable=True)
+    snmp_enabled = Column(Boolean, nullable=True)  # Yes, No
+    snmp_version = Column(String, nullable=True)
+    monitoring_tool = Column(String, nullable=True)  # SIEM, IDS/IPS, etc.
+
+    # Patch and vulnerability management
+    last_patch_date = Column(Date, nullable=True)
+    patch_level = Column(String, nullable=True)
+    vulnerability_scan_date = Column(Date, nullable=True)
+    vulnerability_status = Column(
+        String, nullable=True
+    )  # Compliant, Non-Compliant, Pending
+
+    # Encryption
+    management_encryption = Column(Boolean, nullable=True)  # Yes, No, N/A
+    encryption_type = Column(String, nullable=True)  # AES-256, AES-128, etc.
+    data_in_transit_encryption = Column(Boolean, nullable=True)  # Yes, No, N/A
+
+    # Compliance tracking
+    pci_assessment_date = Column(Date, nullable=True)
+    pci_compliance_status = Column(
+        String, nullable=True
+    )  # Compliant, Non-Compliant, In Progress
+    next_assessment_date = Column(Date, nullable=True)
+    compliance_notes = Column(String, nullable=True)
+
+    # Device lifecycle
+    power_state = Column(String, nullable=True)  # On, Off, Standby
+    creation_date = Column(Date, nullable=True)
+    last_modified = Column(DateTime, nullable=True)
+    scheduled_decommission_date = Column(Date, nullable=True)
+
+    # Redundancy and high availability
+    ha_enabled = Column(Boolean, nullable=True)  # Yes, No
+    redundancy_level = Column(String, nullable=True)  # None, N+1, N+2
+    failover_capability = Column(Boolean, nullable=True)  # Yes, No
 
     __mapper_args__ = {"polymorphic_identity": "network_device"}
 
@@ -282,3 +365,144 @@ class VirtualMachine(Asset):
     failover_capability = Column(String, nullable=True)  # Yes, No
 
     __mapper_args__ = {"polymorphic_identity": "virtual_machine"}
+
+
+class Software(Base):
+    __tablename__ = "software"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    vendor = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+
+    # Software classification and type
+    software_type = Column(
+        String, nullable=True
+    )  # Application, Operating System, Utility, Security Tool
+
+    # PCI Compliance and Security fields
+    # Data handling and storage
+    handles_cardholder_data = Column(Boolean, nullable=True, default=False)  # Yes, No
+    stores_cardholder_data = Column(Boolean, nullable=True, default=False)  # Yes, No
+    transmits_cardholder_data = Column(Boolean, nullable=True, default=False)  # Yes, No
+    processes_cardholder_data = Column(Boolean, nullable=True, default=False)  # Yes, No
+
+    # Encryption and security
+    encryption_enabled = Column(Boolean, nullable=True)  # Yes, No, N/A
+    encryption_type = Column(String, nullable=True)  # AES-256, AES-128, TLS 1.2, etc.
+    encryption_key_management = Column(
+        String, nullable=True
+    )  # HSM, Software-based, Cloud KMS
+    secure_communication = Column(Boolean, nullable=True)  # Yes, No, N/A
+    communication_protocol = Column(String, nullable=True)  # HTTPS, SFTP, SSH, etc.
+
+    # Authentication and access control
+    authentication_required = Column(Boolean, nullable=True)  # Yes, No
+    multi_factor_auth_supported = Column(Boolean, nullable=True)  # Yes, No
+    role_based_access_control = Column(Boolean, nullable=True)  # Yes, No
+    session_timeout_enabled = Column(Boolean, nullable=True)  # Yes, No
+    session_timeout_minutes = Column(Integer, nullable=True)
+
+    # Logging and monitoring
+    audit_logging_enabled = Column(Boolean, nullable=True)  # Yes, No
+    log_retention_days = Column(Integer, nullable=True)
+    log_integrity_protection = Column(Boolean, nullable=True)  # Yes, No
+    centralized_logging = Column(Boolean, nullable=True)  # Yes, No
+
+    # Vulnerability and patch management
+    last_vulnerability_scan = Column(Date, nullable=True)
+    vulnerability_status = Column(
+        String, nullable=True
+    )  # Compliant, Non-Compliant, Pending
+    known_vulnerabilities = Column(String, nullable=True)  # List of CVE IDs
+    patch_management_enabled = Column(Boolean, nullable=True)  # Yes, No
+    last_patch_date = Column(Date, nullable=True)
+    patch_level = Column(String, nullable=True)
+    auto_update_enabled = Column(Boolean, nullable=True)  # Yes, No
+
+    # Network security
+    network_access_required = Column(Boolean, nullable=True)  # Yes, No
+    firewall_rules_required = Column(String, nullable=True)  # Inbound, Outbound, Both
+    vpn_required = Column(Boolean, nullable=True)  # Yes, No
+    network_segmentation = Column(String, nullable=True)  # PCI, Internal, DMZ, etc.
+
+    # Data protection and privacy
+    data_classification = Column(
+        String, nullable=True
+    )  # Public, Internal, Confidential, Restricted
+    data_retention_policy = Column(String, nullable=True)
+    data_backup_enabled = Column(Boolean, nullable=True)  # Yes, No
+    data_encryption_at_rest = Column(Boolean, nullable=True)  # Yes, No
+
+    # Compliance tracking
+    pci_compliance_status = Column(
+        String, nullable=True
+    )  # Compliant, Non-Compliant, In Progress
+    pci_assessment_date = Column(Date, nullable=True)
+    next_assessment_date = Column(Date, nullable=True)
+    compliance_notes = Column(String, nullable=True)
+
+    # Software lifecycle
+    end_of_life_date = Column(Date, nullable=True)
+    end_of_support_date = Column(Date, nullable=True)
+    replacement_planned = Column(Boolean, nullable=True)  # Yes, No
+    replacement_software_id = Column(Integer, ForeignKey("software.id"), nullable=True)
+
+    # Performance and resource usage
+    minimum_requirements = Column(
+        String, nullable=True
+    )  # CPU, RAM, Storage requirements
+    recommended_requirements = Column(String, nullable=True)
+    resource_usage_monitoring = Column(Boolean, nullable=True)  # Yes, No
+
+    # Timestamps
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+
+    # Relationships
+    replacement_software = relationship("Software", remote_side=[id])
+    versions = relationship(
+        "SoftwareVersion", back_populates="software", cascade="all, delete-orphan"
+    )
+
+    # Database-level constraints for PCI compliance fields
+    __table_args__ = (
+        CheckConstraint(
+            vulnerability_status.in_(["Compliant", "Non-Compliant", "Pending"]),
+            name="valid_vulnerability_status",
+        ),
+        CheckConstraint(
+            pci_compliance_status.in_(["Compliant", "Non-Compliant", "In Progress"]),
+            name="valid_pci_compliance_status",
+        ),
+        CheckConstraint(
+            data_classification.in_(
+                ["Public", "Internal", "Confidential", "Restricted"]
+            ),
+            name="valid_data_classification",
+        ),
+    )
+
+
+class SoftwareVersion(Base):
+    __tablename__ = "software_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    software_id = Column(Integer, ForeignKey("software.id"), nullable=False)
+    version = Column(String, nullable=False)
+    build_number = Column(String, nullable=True)
+    release_date = Column(Date, nullable=True)
+    end_of_life_date = Column(Date, nullable=True)
+    end_of_support_date = Column(Date, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+
+    # Relationships
+    software = relationship("Software", back_populates="versions")
+    computers = relationship(
+        "Computer",
+        secondary=software_version_computers,
+        back_populates="software_versions",
+    )

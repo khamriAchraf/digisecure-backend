@@ -148,9 +148,9 @@ class UserService:
         Returns all permissions of the user in the format {'action': ..., 'resource': ...}
         """
         permissions = set()
-        for role in user.roles:
-            for perm in role.permissions:
-                permissions.add((perm.action, perm.resource))
+        role = user.role
+        for perm in role.permissions:
+            permissions.add((perm.action, perm.resource))
         # Return as list of dicts
         return [
             {"action": action, "resource": resource} for action, resource in permissions

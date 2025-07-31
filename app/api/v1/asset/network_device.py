@@ -9,7 +9,7 @@ from app.schemas.asset import (NetworkDevice, NetworkDeviceCreate,
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.services.asset_service import AssetService, PermissionError
 
-router = APIRouter(prefix="/networkdevices", tags=["assets:network_devices"])
+router = APIRouter(prefix="/network_devices", tags=["assets:network_devices"])
 
 
 @router.get("/", response_model=PaginatedResponse[NetworkDevice])

@@ -779,6 +779,64 @@ def main():
         },
     ]
 
+    # 9. network device management permissions
+    network_device_permissions = [
+        {
+            "action": "read",
+            "resource": "network_device",
+            "description": "View network device information",
+        },
+        {
+            "action": "create",
+            "resource": "network_device",
+            "description": "Create new network devices",
+        },
+        {
+            "action": "update",
+            "resource": "network_device",
+            "description": "Update network device information",
+        },
+        {
+            "action": "delete",
+            "resource": "network_device",
+            "description": "Delete network devices",
+        },
+        {
+            "action": "purge",
+            "resource": "network_device",
+            "description": "Permanently delete network devices",
+        },
+    ]
+
+    # 10. software management permissions
+    software_permissions = [
+        {
+            "action": "read",
+            "resource": "software",
+            "description": "View software information",
+        },
+        {
+            "action": "create",
+            "resource": "software",
+            "description": "Create new software",
+        },
+        {
+            "action": "update",
+            "resource": "software",
+            "description": "Update software information",
+        },
+        {
+            "action": "delete",
+            "resource": "software",
+            "description": "Delete software",
+        },
+        {
+            "action": "purge",
+            "resource": "software",
+            "description": "Permanently delete software",
+        },
+    ]
+
     ALL_PERMISSIONS = {
         "user": user_permissions,
         "role": role_permissions,
@@ -786,6 +844,8 @@ def main():
         "reference_data": reference_data_permissions,
         "computer": computer_permissions,
         "virtual_machine": virtual_machine_permissions,
+        "network_device": network_device_permissions,
+        "software": software_permissions,
     }
 
     # Role-permission mapping
@@ -797,6 +857,8 @@ def main():
             "reference_data": ["read", "create", "update", "delete", "purge"],
             "computer": ["read", "create", "update", "delete", "purge"],
             "virtual_machine": ["read", "create", "update", "delete", "purge"],
+            "network_device": ["read", "create", "update", "delete", "purge"],
+            "software": ["read", "create", "update", "delete", "purge"],
         },
         "Admin": {
             "user": ["read", "create", "update", "delete"],
@@ -805,6 +867,8 @@ def main():
             "reference_data": ["read", "create", "update", "delete", "purge"],
             "computer": ["read", "create", "update", "delete"],
             "virtual_machine": ["read", "create", "update", "delete"],
+            "network_device": ["read", "create", "update", "delete"],
+            "software": ["read", "create", "update", "delete", "purge"],
         },
         "Supervisor": {
             "user": ["read", "create", "update"],
@@ -813,6 +877,8 @@ def main():
             "reference_data": [],
             "computer": ["read", "create", "update"],
             "virtual_machine": ["read", "create", "update"],
+            "network_device": ["read", "create", "update"],
+            "software": ["read", "create", "update"],
         },
         "Technician": {
             "user": ["read", "update"],
@@ -821,6 +887,8 @@ def main():
             "reference_data": [],
             "computer": ["read", "create", "update"],
             "virtual_machine": ["read", "create", "update"],
+            "network_device": ["read", "create", "update"],
+            "software": ["read", "create", "update"],
         },
         "Hotliner": {
             "user": ["read"],
@@ -829,6 +897,8 @@ def main():
             "reference_data": [],
             "computer": ["read"],
             "virtual_machine": ["read"],
+            "network_device": ["read"],
+            "software": ["read"],
         },
         "Observer": {
             "user": ["read"],
@@ -837,6 +907,8 @@ def main():
             "reference_data": ["read"],
             "computer": ["read"],
             "virtual_machine": ["read"],
+            "network_device": ["read"],
+            "software": ["read"],
         },
         "Self-Service": {
             "user": [],
@@ -845,6 +917,8 @@ def main():
             "reference_data": [],
             "computer": ["read"],
             "virtual_machine": ["read"],
+            "network_device": ["read"],
+            "software": ["read"],
         },
     }
 

@@ -15,8 +15,9 @@ from app.schemas.asset import (CableCreate, CableUpdate, ComputerCreate,
                                PeripheralUpdate, PhoneCreate, PhoneUpdate,
                                PrinterCreate, PrinterUpdate, RackCreate,
                                RackUpdate, SimCardItemCreate,
-                               SimCardItemUpdate, VirtualMachineCreate,
-                               VirtualMachineUpdate)
+                               SimCardItemUpdate, SoftwareCreate,
+                               SoftwareUpdate, SoftwareVersionCreate,
+                               VirtualMachineCreate, VirtualMachineUpdate)
 
 
 class PermissionError(Exception):
@@ -586,3 +587,190 @@ class AssetService:
             f"User {self.current_user.id} successfully BULK CREATED {len(assets)} assets"
         )
         return assets
+
+    # Software methods
+    def get_software(self, software_id: int):
+        """Get a software by ID with access control."""
+        logger.info(
+            f"User {self.current_user.id} attempts to READ software {software_id} at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "read", "software"):
+            logger.warning(
+                f"User {self.current_user.id} denied READ access to software {software_id}"
+            )
+            raise PermissionError("Not allowed to read software.")
+
+        # Import here to avoid circular imports
+        from app.db.crud import software as software_crud
+
+        software = software_crud.get_software(self.db, software_id)
+
+        if not software:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Software not found")
+
+        logger.info(
+            f"User {self.current_user.id} successfully READ software {software_id}"
+        )
+        return software
+
+    def get_paginated_software(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        search: Optional[str] = None,
+        filters: Optional[dict] = None,
+    ) -> Tuple[List, int]:
+        """Get paginated software with access control."""
+        logger.info(
+            f"User {self.current_user.id} attempts to LIST software with pagination at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "read", "software"):
+            logger.warning(
+                f"User {self.current_user.id} denied LIST access to software"
+            )
+            raise PermissionError("Not allowed to list software.")
+
+        # Import here to avoid circular imports
+        from app.db.crud import software as software_crud
+
+        software_list, total = software_crud.get_paginated_software(
+            self.db, page, per_page, sort_by, sort_order, search, filters
+        )
+
+        logger.info(
+            f"User {self.current_user.id} successfully LISTED {len(software_list)} software items"
+        )
+        return software_list, total
+
+    def create_software(self, software_in: SoftwareCreate):
+        """Create a new software."""
+        logger.info(
+            f"User {self.current_user.id} attempts to CREATE software {software_in.name} at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "create", "software"):
+            logger.warning(
+                f"User {self.current_user.id} denied CREATE access for software {software_in.name}"
+            )
+            raise PermissionError("Not allowed to create software.")
+
+        # Import here to avoid circular imports
+        from app.db.crud import software as software_crud
+
+        try:
+            software = software_crud.create_software(self.db, software_in)
+        except ValueError as e:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=409, detail=str(e))
+
+        logger.info(
+            f"User {self.current_user.id} successfully CREATED software {software.id}"
+        )
+        return software
+
+    def update_software(self, software_id: int, software_in: SoftwareUpdate):
+        """Update a software."""
+        logger.info(
+            f"User {self.current_user.id} attempts to UPDATE software {software_id} at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "update", "software"):
+            logger.warning(
+                f"User {self.current_user.id} denied UPDATE access for software {software_id}"
+            )
+            raise PermissionError("Not allowed to update software.")
+
+        # Import here to avoid circular imports
+        from app.db.crud import software as software_crud
+
+        software = software_crud.get_software(self.db, software_id)
+        if not software:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Software not found")
+
+        updated_software = software_crud.update_software(self.db, software, software_in)
+        logger.info(
+            f"User {self.current_user.id} successfully UPDATED software {software_id}"
+        )
+        return updated_software
+
+    def delete_software(self, software_id: int):
+        """Delete a software."""
+        logger.info(
+            f"User {self.current_user.id} attempts to DELETE software {software_id} at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "delete", "software"):
+            logger.warning(
+                f"User {self.current_user.id} denied DELETE access for software {software_id}"
+            )
+            raise PermissionError("Not allowed to delete software.")
+
+        # Import here to avoid circular imports
+        from app.db.crud import software as software_crud
+
+        software = software_crud.get_software(self.db, software_id)
+        if not software:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Software not found")
+
+        software_crud.delete_software(self.db, software)
+        logger.info(
+            f"User {self.current_user.id} successfully DELETED software {software_id}"
+        )
+
+    # Software Version methods
+    def create_software_version(self, version_in: SoftwareVersionCreate):
+        """Create a new software version."""
+        logger.info(
+            f"User {self.current_user.id} attempts to CREATE software version {version_in.version} for software {version_in.software_id} at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "create", "software"):
+            logger.warning(
+                f"User {self.current_user.id} denied CREATE access for software version"
+            )
+            raise PermissionError("Not allowed to create software versions.")
+
+        # Import here to avoid circular imports
+        from app.db.crud import software as software_crud
+
+        try:
+            version = software_crud.create_software_version(self.db, version_in)
+        except ValueError as e:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=409, detail=str(e))
+
+        logger.info(
+            f"User {self.current_user.id} successfully CREATED software version {version.id}"
+        )
+        return version
+
+    def delete_software_version(self, version_id: int):
+        """Delete a software version."""
+        logger.info(
+            f"User {self.current_user.id} attempts to DELETE software version {version_id} at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "delete", "software"):
+            logger.warning(
+                f"User {self.current_user.id} denied DELETE access for software version {version_id}"
+            )
+            raise PermissionError("Not allowed to delete software versions.")
+
+        # Import here to avoid circular imports
+        from app.db.crud import software as software_crud
+
+        version = software_crud.get_software_version(self.db, version_id)
+        if not version:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Software version not found")
+
+        software_crud.delete_software_version(self.db, version)
+        logger.info(
+            f"User {self.current_user.id} successfully DELETED software version {version_id}"
+        )
