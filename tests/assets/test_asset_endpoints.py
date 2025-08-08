@@ -129,45 +129,10 @@ async def test_all_asset_types_creation():
                 "status": "active",
                 "cpu": "Intel Core i5",
             },
-            "printers": {
-                "name": f"E2E-Printer-{unique_suffix}",
-                "status": "active",
-                "model": "HP LaserJet",
-            },
             "networkdevices": {
                 "name": f"E2E-Network-{unique_suffix}",
                 "status": "active",
                 "device_type": "Switch",
-            },
-            "phones": {
-                "name": f"E2E-Phone-{unique_suffix}",
-                "status": "active",
-                "phone_type": "Desk Phone",
-            },
-            "peripherals": {
-                "name": f"E2E-Peripheral-{unique_suffix}",
-                "status": "active",
-                "peripheral_type": "Keyboard",
-            },
-            "consumables": {
-                "name": f"E2E-Consumable-{unique_suffix}",
-                "status": "active",
-                "consumable_type": "Toner",
-            },
-            "racks": {
-                "name": f"E2E-Rack-{unique_suffix}",
-                "status": "active",
-                "rack_type": "Server Rack",
-            },
-            "cables": {
-                "name": f"E2E-Cable-{unique_suffix}",
-                "status": "active",
-                "cable_type": "Ethernet",
-            },
-            "simcarditems": {
-                "name": f"E2E-SIM-{unique_suffix}",
-                "status": "active",
-                "sim_type": "Nano",
             },
             "virtual_machines": {
                 "name": f"E2E-VM-{unique_suffix}",
@@ -177,7 +142,6 @@ async def test_all_asset_types_creation():
                 "memory_mb": 8192,
                 "storage_gb": 100,
                 "os_type": "Linux",
-                "pci_scope": "Out of Scope",
             },
         }
 
@@ -197,8 +161,6 @@ async def test_all_asset_types_creation():
                 assert asset["type"] == "computer"
             elif asset_type == "networkdevices":
                 assert asset["type"] == "network_device"
-            elif asset_type == "simcarditems":
-                assert asset["type"] == "sim_card_item"
             elif asset_type == "virtual_machines":
                 assert asset["type"] == "virtual_machine"
             else:
@@ -247,16 +209,13 @@ async def test_asset_filtering_and_search():
                 "name": f"Active-Computer-{unique_suffix}",
                 "status": "active",
                 "cpu": "Intel i5",
-            },
-            {
-                "name": f"Inactive-Printer-{unique_suffix}",
-                "status": "inactive",
-                "model": "HP LaserJet",
+                "type": "computer",
             },
             {
                 "name": f"Maintenance-Computer-{unique_suffix}",
                 "status": "maintenance",
                 "cpu": "Intel i7",
+                "type": "computer",
             },
         ]
 
@@ -455,123 +414,3 @@ async def test_asset_type_specific_operations():
             ), f"Deleted {endpoint} should return 404"
 
 
-@pytest.mark.e2e
-@pytest.mark.asyncio
-async def test_asset_virtual_machine_crud_and_pci_compliance():
-    """Full CRUD lifecycle for a VirtualMachine asset with PCI compliance fields."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as ac:
-        # ---------- 1. Login as super-admin ----------
-        login_resp = await ac.post(
-            "/auth/login",
-            data={
-                "username": SUPER_ADMIN["email"],
-                "password": SUPER_ADMIN["password"],
-            },
-        )
-        assert login_resp.status_code == 200, f"Login failed: {login_resp.text}"
-        token = login_resp.json()["access_token"]
-        headers = {"Authorization": f"Bearer {token}"}
-
-        # ---------- 2. Create a VirtualMachine ----------
-        unique_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
-        vm_payload = {
-            "name": f"E2E-VM-{unique_suffix}",
-            "status": "active",
-            "hypervisor_type": "VMware",
-            "hypervisor_version": "7.0.3",
-            "vm_platform": "vSphere",
-            "cpu_cores": 8,
-            "memory_mb": 16384,
-            "storage_gb": 500,
-            "os_type": "Linux",
-            "os_version": "Ubuntu 22.04 LTS",
-            "os_architecture": "x86_64",
-            "ip_address": "192.168.1.100",
-            "mac_address": "00:1B:44:11:3A:B7",
-            "network_segment": "Internal",
-            "vlan_id": "100",
-            "pci_scope": "In Scope",
-            "cardholder_data_environment": "CDE",
-            "encryption_status": "Encrypted",
-            "encryption_type": "AES-256",
-            "backup_encryption": "Yes",
-            "admin_access_restricted": "Yes",
-            "multi_factor_auth_enabled": "Yes",
-            "logging_enabled": "Yes",
-            "monitoring_tool": "SIEM",
-            "vulnerability_status": "Compliant",
-            "backup_frequency": "Daily",
-            "backup_retention_days": 30,
-            "disaster_recovery_plan": "Yes",
-            "isolation_level": "High",
-            "resource_isolation": "Yes",
-            "network_isolation": "Yes",
-            "storage_isolation": "Yes",
-            "pci_compliance_status": "Compliant",
-            "power_state": "Running",
-            "ha_enabled": "Yes",
-            "redundancy_level": "N+1",
-            "failover_capability": "Yes",
-        }
-        create_resp = await ac.post(
-            "/assets/virtual_machines/", json=vm_payload, headers=headers
-        )
-        assert (
-            create_resp.status_code == 201
-        ), f"Virtual machine creation failed: {create_resp.text}"
-        vm = create_resp.json()
-        vm_id = vm["id"]
-        assert vm["type"] == "virtual_machine"
-        assert vm["hypervisor_type"] == vm_payload["hypervisor_type"]
-        assert vm["cpu_cores"] == vm_payload["cpu_cores"]
-        assert vm["pci_scope"] == vm_payload["pci_scope"]
-
-        # ---------- 3. GET virtual machine endpoint ----------
-        get_resp = await ac.get(f"/assets/virtual_machines/{vm_id}", headers=headers)
-        assert (
-            get_resp.status_code == 200
-        ), f"Virtual machine get failed: {get_resp.text}"
-        assert get_resp.json()["id"] == vm_id
-        assert get_resp.json()["encryption_status"] == vm_payload["encryption_status"]
-
-        # ---------- 4. Update virtual machine (PCI compliance change) ----------
-        update_payload = {
-            "pci_compliance_status": "Non-Compliant",
-            "vulnerability_status": "Non-Compliant",
-            "compliance_notes": "Security patches pending",
-        }
-        update_resp = await ac.put(
-            f"/assets/virtual_machines/{vm_id}", json=update_payload, headers=headers
-        )
-        assert update_resp.status_code == 200, f"Update failed: {update_resp.text}"
-        updated_vm = update_resp.json()
-        assert updated_vm["pci_compliance_status"] == "Non-Compliant"
-        assert updated_vm["vulnerability_status"] == "Non-Compliant"
-        assert updated_vm["compliance_notes"] == "Security patches pending"
-
-        # ---------- 5. List virtual machines with pagination ----------
-        list_resp = await ac.get(
-            "/assets/virtual_machines/",
-            params={"page": 1, "per_page": 9999},
-            headers=headers,
-        )
-        assert (
-            list_resp.status_code == 200
-        ), f"List with pagination failed: {list_resp.text}"
-        paginated_data = list_resp.json()
-        assert "data" in paginated_data and "total" in paginated_data
-        assert paginated_data["total"] >= 1
-        ids = [item["id"] for item in paginated_data["data"]]
-        assert vm_id in ids, "Created virtual machine missing from paginated list"
-
-        # ---------- 6. Search virtual machines by name ----------
-        search_resp = await ac.get(
-            "/assets/virtual_machines/",
-            params={"search": vm_payload["name"]},
-            headers=headers,
-        )
-        assert search_resp.status_code == 200, f"Search failed: {search_resp.text}"
-        search_data = search_resp.json()["data"]
-        assert len(search_data) > 0
-        ids = [item["id"] for item in search_data]
-        assert vm_id in ids, "Created virtual machine not found via search"

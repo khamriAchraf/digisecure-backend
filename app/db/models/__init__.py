@@ -7,6 +7,7 @@ from app.db.models.refresh_token import RefreshToken
 from app.db.models.role import Permission, Role
 from app.db.models.table_config import TableConfig
 from app.db.models.user import User
+from app.db.models.compliance_scopes import ComplianceScope, AssetComplianceScope
 
 __all__ = [
     "User",
@@ -18,4 +19,6 @@ __all__ = [
     "Manufacturer",
     "Asset",
     "TableConfig",
+    "ComplianceScope",
+    "AssetComplianceScope",
 ]

@@ -33,12 +33,21 @@ router.include_router(virtual_machine_router)
 # router.include_router(bulk_router)
 
 
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import Depends, Query
 
 from app.api.dependencies import get_asset_service
 from app.services.asset_service import AssetService, PermissionError
+from app.schemas.compliance_scope import (
+    AssetComplianceScope,
+    AssetComplianceScopeCreate,
+    AssetComplianceScopeUpdate,
+)
+from app.services.compliance_scope_service import ComplianceScopeService
+from app.api.dependencies import get_db, get_current_user
+from app.db.models.user import User
+from sqlalchemy.orm import Session
 
 
 @router.get(
@@ -70,5 +79,50 @@ def list_all_assets(
         return create_paginated_response(
             data=assets, total=total, page=page, per_page=per_page
         )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+def get_compliance_service(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+) -> ComplianceScopeService:
+    return ComplianceScopeService(db, current_user)
+
+
+@router.post("/{asset_id}/scopes/{scope_id}", response_model=AssetComplianceScope)
+def tag_scope_to_asset(
+    asset_id: int,
+    scope_id: int,
+    mapping_in: AssetComplianceScopeUpdate = None,
+    service: ComplianceScopeService = Depends(get_compliance_service),
+):
+    try:
+        payload = mapping_in.dict() if mapping_in else {}
+        base = AssetComplianceScopeCreate(asset_id=asset_id, scope_id=scope_id, **payload)
+        return service.tag_asset_with_scope(base)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.delete("/{asset_id}/scopes/{scope_id}", status_code=204)
+def untag_scope_from_asset(
+    asset_id: int,
+    scope_id: int,
+    service: ComplianceScopeService = Depends(get_compliance_service),
+):
+    try:
+        service.untag_asset_scope(asset_id, scope_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.put("/{asset_id}/scopes", status_code=204)
+def replace_asset_scopes_endpoint(
+    asset_id: int,
+    scope_ids: List[int],
+    service: ComplianceScopeService = Depends(get_compliance_service),
+):
+    try:
+        service.replace_asset_scopes(asset_id, scope_ids)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))

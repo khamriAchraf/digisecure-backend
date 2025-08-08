@@ -65,6 +65,11 @@ class AssetBase(BaseModel):
     group_ids: Optional[List[int]] = None
     assigned_to: Optional[int] = None
 
+    # Security classification fields (present on base Asset model)
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
+
 
 class AssetInDBBase(AssetBase):
     id: int
@@ -115,6 +120,9 @@ class ComputerUpdate(BaseModel):
     ip_address: Optional[str] = None
     model: Optional[str] = None
     hostname: Optional[str] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
 class Computer(AssetInDBBase, ComputerBase):
@@ -156,6 +164,9 @@ class PrinterUpdate(BaseModel):
     max_resolution: Optional[str] = None
     color_support: Optional[str] = None
     duplex_support: Optional[str] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
 class Printer(AssetInDBBase, PrinterBase):
@@ -214,11 +225,6 @@ class NetworkDeviceBase(AssetBase):
     encryption_type: Optional[str] = None
     data_in_transit_encryption: Optional[bool] = None
 
-    # Compliance tracking
-    pci_assessment_date: Optional[date] = None
-    pci_compliance_status: Optional[str] = None
-    next_assessment_date: Optional[date] = None
-    compliance_notes: Optional[str] = None
 
     # Device lifecycle
     power_state: Optional[str] = None
@@ -297,11 +303,9 @@ class NetworkDeviceUpdate(BaseModel):
     encryption_type: Optional[str] = None
     data_in_transit_encryption: Optional[bool] = None
 
-    # Compliance tracking
-    pci_assessment_date: Optional[date] = None
-    pci_compliance_status: Optional[str] = None
-    next_assessment_date: Optional[date] = None
-    compliance_notes: Optional[str] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
     # Device lifecycle
     power_state: Optional[str] = None
@@ -352,6 +356,9 @@ class PhoneUpdate(BaseModel):
     mac_address: Optional[str] = None
     phone_system: Optional[str] = None
     line_count: Optional[int] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
 class Phone(AssetInDBBase, PhoneBase):
@@ -387,6 +394,9 @@ class PeripheralUpdate(BaseModel):
     connection_type: Optional[str] = None
     compatibility: Optional[str] = None
     special_features: Optional[str] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
 class Peripheral(AssetInDBBase, PeripheralBase):
@@ -424,6 +434,9 @@ class ConsumableUpdate(BaseModel):
     unit: Optional[str] = None
     expiry_date: Optional[date] = None
     compatible_with: Optional[str] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
 class Consumable(AssetInDBBase, ConsumableBase):
@@ -463,6 +476,9 @@ class RackUpdate(BaseModel):
     depth: Optional[str] = None
     max_weight_capacity: Optional[str] = None
     location_details: Optional[str] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
 class Rack(AssetInDBBase, RackBase):
@@ -502,6 +518,9 @@ class CableUpdate(BaseModel):
     category: Optional[str] = None
     color: Optional[str] = None
     max_bandwidth: Optional[str] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
 class Cable(AssetInDBBase, CableBase):
@@ -543,6 +562,9 @@ class SimCardItemUpdate(BaseModel):
     data_plan: Optional[str] = None
     activation_date: Optional[date] = None
     expiry_date: Optional[date] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
 class SimCardItem(AssetInDBBase, SimCardItemBase):
@@ -573,9 +595,7 @@ class VirtualMachineBase(AssetBase):
     network_segment: Optional[str] = None
     vlan_id: Optional[str] = None
 
-    # Security and compliance fields
-    pci_scope: Optional[str] = None
-    cardholder_data_environment: Optional[str] = None
+    # Security
     encryption_status: Optional[str] = None
     encryption_type: Optional[str] = None
     backup_encryption: Optional[str] = None
@@ -604,11 +624,6 @@ class VirtualMachineBase(AssetBase):
     network_isolation: Optional[str] = None
     storage_isolation: Optional[str] = None
 
-    # Compliance tracking
-    pci_assessment_date: Optional[date] = None
-    pci_compliance_status: Optional[str] = None
-    next_assessment_date: Optional[date] = None
-    compliance_notes: Optional[str] = None
 
     # VM lifecycle
     power_state: Optional[str] = None
@@ -662,9 +677,7 @@ class VirtualMachineUpdate(BaseModel):
     network_segment: Optional[str] = None
     vlan_id: Optional[str] = None
 
-    # Security and compliance fields
-    pci_scope: Optional[str] = None
-    cardholder_data_environment: Optional[str] = None
+    # Security
     encryption_status: Optional[str] = None
     encryption_type: Optional[str] = None
     backup_encryption: Optional[str] = None
@@ -693,11 +706,9 @@ class VirtualMachineUpdate(BaseModel):
     network_isolation: Optional[str] = None
     storage_isolation: Optional[str] = None
 
-    # Compliance tracking
-    pci_assessment_date: Optional[date] = None
-    pci_compliance_status: Optional[str] = None
-    next_assessment_date: Optional[date] = None
-    compliance_notes: Optional[str] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
     # VM lifecycle
     power_state: Optional[str] = None
@@ -731,13 +742,6 @@ class SoftwareBase(BaseModel):
     software_type: Optional[str] = (
         None  # Application, Operating System, Utility, Security Tool
     )
-
-    # PCI Compliance and Security fields
-    # Data handling and storage
-    handles_cardholder_data: Optional[bool] = None
-    stores_cardholder_data: Optional[bool] = None
-    transmits_cardholder_data: Optional[bool] = None
-    processes_cardholder_data: Optional[bool] = None
 
     # Encryption and security
     encryption_enabled: Optional[bool] = None
@@ -775,16 +779,10 @@ class SoftwareBase(BaseModel):
     network_segmentation: Optional[str] = None
 
     # Data protection and privacy
-    data_classification: Optional[str] = None
     data_retention_policy: Optional[str] = None
     data_backup_enabled: Optional[bool] = None
     data_encryption_at_rest: Optional[bool] = None
 
-    # Compliance tracking
-    pci_compliance_status: Optional[str] = None
-    pci_assessment_date: Optional[date] = None
-    next_assessment_date: Optional[date] = None
-    compliance_notes: Optional[str] = None
 
     # Software lifecycle
     end_of_life_date: Optional[date] = None
@@ -808,11 +806,6 @@ class SoftwareUpdate(BaseModel):
     description: Optional[str] = None
     software_type: Optional[str] = None
 
-    # PCI Compliance and Security fields
-    handles_cardholder_data: Optional[bool] = None
-    stores_cardholder_data: Optional[bool] = None
-    transmits_cardholder_data: Optional[bool] = None
-    processes_cardholder_data: Optional[bool] = None
     encryption_enabled: Optional[bool] = None
     encryption_type: Optional[str] = None
     encryption_key_management: Optional[str] = None
@@ -838,14 +831,9 @@ class SoftwareUpdate(BaseModel):
     firewall_rules_required: Optional[str] = None
     vpn_required: Optional[bool] = None
     network_segmentation: Optional[str] = None
-    data_classification: Optional[str] = None
     data_retention_policy: Optional[str] = None
     data_backup_enabled: Optional[bool] = None
     data_encryption_at_rest: Optional[bool] = None
-    pci_compliance_status: Optional[str] = None
-    pci_assessment_date: Optional[date] = None
-    next_assessment_date: Optional[date] = None
-    compliance_notes: Optional[str] = None
     end_of_life_date: Optional[date] = None
     end_of_support_date: Optional[date] = None
     replacement_planned: Optional[bool] = None

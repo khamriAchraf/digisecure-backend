@@ -165,14 +165,6 @@ class NetworkDevice(Asset):
     encryption_type = Column(String, nullable=True)  # AES-256, AES-128, etc.
     data_in_transit_encryption = Column(Boolean, nullable=True)  # Yes, No, N/A
 
-    # Compliance tracking
-    pci_assessment_date = Column(Date, nullable=True)
-    pci_compliance_status = Column(
-        String, nullable=True
-    )  # Compliant, Non-Compliant, In Progress
-    next_assessment_date = Column(Date, nullable=True)
-    compliance_notes = Column(String, nullable=True)
-
     # Device lifecycle
     power_state = Column(String, nullable=True)  # On, Off, Standby
     creation_date = Column(Date, nullable=True)
@@ -302,12 +294,6 @@ class VirtualMachine(Asset):
     vlan_id = Column(String, nullable=True)
 
     # Security and compliance fields
-    pci_scope = Column(
-        String, nullable=True, default="Out of Scope"
-    )  # In Scope, Out of Scope
-    cardholder_data_environment = Column(
-        String, nullable=True
-    )  # CDE, Connected-to, Out-of-Scope
     encryption_status = Column(
         String, nullable=True
     )  # Encrypted, Not Encrypted, Partial
@@ -340,13 +326,6 @@ class VirtualMachine(Asset):
     network_isolation = Column(String, nullable=True)  # Yes, No
     storage_isolation = Column(String, nullable=True)  # Yes, No
 
-    # Compliance tracking
-    pci_assessment_date = Column(Date, nullable=True)
-    pci_compliance_status = Column(
-        String, nullable=True
-    )  # Compliant, Non-Compliant, In Progress
-    next_assessment_date = Column(Date, nullable=True)
-    compliance_notes = Column(String, nullable=True)
 
     # VM lifecycle
     power_state = Column(String, nullable=True)  # Running, Stopped, Suspended
@@ -379,13 +358,6 @@ class Software(Base):
     software_type = Column(
         String, nullable=True
     )  # Application, Operating System, Utility, Security Tool
-
-    # PCI Compliance and Security fields
-    # Data handling and storage
-    handles_cardholder_data = Column(Boolean, nullable=True, default=False)  # Yes, No
-    stores_cardholder_data = Column(Boolean, nullable=True, default=False)  # Yes, No
-    transmits_cardholder_data = Column(Boolean, nullable=True, default=False)  # Yes, No
-    processes_cardholder_data = Column(Boolean, nullable=True, default=False)  # Yes, No
 
     # Encryption and security
     encryption_enabled = Column(Boolean, nullable=True)  # Yes, No, N/A
@@ -426,21 +398,9 @@ class Software(Base):
     vpn_required = Column(Boolean, nullable=True)  # Yes, No
     network_segmentation = Column(String, nullable=True)  # PCI, Internal, DMZ, etc.
 
-    # Data protection and privacy
-    data_classification = Column(
-        String, nullable=True
-    )  # Public, Internal, Confidential, Restricted
     data_retention_policy = Column(String, nullable=True)
     data_backup_enabled = Column(Boolean, nullable=True)  # Yes, No
     data_encryption_at_rest = Column(Boolean, nullable=True)  # Yes, No
-
-    # Compliance tracking
-    pci_compliance_status = Column(
-        String, nullable=True
-    )  # Compliant, Non-Compliant, In Progress
-    pci_assessment_date = Column(Date, nullable=True)
-    next_assessment_date = Column(Date, nullable=True)
-    compliance_notes = Column(String, nullable=True)
 
     # Software lifecycle
     end_of_life_date = Column(Date, nullable=True)
@@ -465,21 +425,10 @@ class Software(Base):
         "SoftwareVersion", back_populates="software", cascade="all, delete-orphan"
     )
 
-    # Database-level constraints for PCI compliance fields
     __table_args__ = (
         CheckConstraint(
             vulnerability_status.in_(["Compliant", "Non-Compliant", "Pending"]),
             name="valid_vulnerability_status",
-        ),
-        CheckConstraint(
-            pci_compliance_status.in_(["Compliant", "Non-Compliant", "In Progress"]),
-            name="valid_pci_compliance_status",
-        ),
-        CheckConstraint(
-            data_classification.in_(
-                ["Public", "Internal", "Confidential", "Restricted"]
-            ),
-            name="valid_data_classification",
         ),
     )
 

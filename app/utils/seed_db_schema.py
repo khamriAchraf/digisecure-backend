@@ -9,8 +9,15 @@ from app.core.config import settings
 from app.core.logger import logger
 from app.core.security import get_password_hash
 from app.db.base import Base
-from app.db.models import (Location, Manufacturer, Permission, Role,
-                           TableConfig, User)
+from app.db.models import (
+    Location,
+    Manufacturer,
+    Permission,
+    Role,
+    TableConfig,
+    User,
+    ComplianceScope,
+)
 from app.db.models.asset import (Cable, Computer, Consumable, NetworkDevice,
                                  Peripheral, Phone, Printer, Rack, SimCardItem)
 from app.db.session import SessionLocal, engine
@@ -837,6 +844,44 @@ def main():
         },
     ]
 
+    # 11. compliance scope management permissions
+    compliance_scope_permissions = [
+        {
+            "action": "read",
+            "resource": "compliance_scope",
+            "description": "View compliance scopes",
+        },
+        {
+            "action": "create",
+            "resource": "compliance_scope",
+            "description": "Create compliance scopes",
+        },
+        {
+            "action": "update",
+            "resource": "compliance_scope",
+            "description": "Update compliance scopes",
+        },
+        {
+            "action": "delete",
+            "resource": "compliance_scope",
+            "description": "Delete compliance scopes",
+        },
+        {
+            "action": "purge",
+            "resource": "compliance_scope",
+            "description": "Permanently delete compliance scopes",
+        },
+    ]
+
+    # 12. asset compliance management (tagging/un-tagging)
+    asset_compliance_permissions = [
+        {
+            "action": "compliance_manage",
+            "resource": "asset",
+            "description": "Manage compliance scopes on assets (tag/untag/replace)",
+        }
+    ]
+
     ALL_PERMISSIONS = {
         "user": user_permissions,
         "role": role_permissions,
@@ -846,6 +891,8 @@ def main():
         "virtual_machine": virtual_machine_permissions,
         "network_device": network_device_permissions,
         "software": software_permissions,
+        "compliance_scope": compliance_scope_permissions,
+        "asset": asset_compliance_permissions,
     }
 
     # Role-permission mapping
@@ -859,6 +906,8 @@ def main():
             "virtual_machine": ["read", "create", "update", "delete", "purge"],
             "network_device": ["read", "create", "update", "delete", "purge"],
             "software": ["read", "create", "update", "delete", "purge"],
+            "compliance_scope": ["read", "create", "update", "delete", "purge"],
+            "asset": ["compliance_manage"],
         },
         "Admin": {
             "user": ["read", "create", "update", "delete"],
@@ -869,6 +918,8 @@ def main():
             "virtual_machine": ["read", "create", "update", "delete"],
             "network_device": ["read", "create", "update", "delete"],
             "software": ["read", "create", "update", "delete", "purge"],
+            "compliance_scope": ["read", "create", "update", "delete", "purge"],
+            "asset": ["compliance_manage"],
         },
         "Supervisor": {
             "user": ["read", "create", "update"],
@@ -879,6 +930,7 @@ def main():
             "virtual_machine": ["read", "create", "update"],
             "network_device": ["read", "create", "update"],
             "software": ["read", "create", "update"],
+            "compliance_scope": [],
         },
         "Technician": {
             "user": ["read", "update"],
@@ -889,6 +941,7 @@ def main():
             "virtual_machine": ["read", "create", "update"],
             "network_device": ["read", "create", "update"],
             "software": ["read", "create", "update"],
+            "compliance_scope": [],
         },
         "Hotliner": {
             "user": ["read"],
@@ -899,6 +952,7 @@ def main():
             "virtual_machine": ["read"],
             "network_device": ["read"],
             "software": ["read"],
+            "compliance_scope": ["read"],
         },
         "Observer": {
             "user": ["read"],
@@ -909,6 +963,7 @@ def main():
             "virtual_machine": ["read"],
             "network_device": ["read"],
             "software": ["read"],
+            "compliance_scope": ["read"],
         },
         "Self-Service": {
             "user": [],
@@ -919,6 +974,7 @@ def main():
             "virtual_machine": ["read"],
             "network_device": ["read"],
             "software": ["read"],
+            "compliance_scope": [],
         },
     }
 
@@ -1046,6 +1102,68 @@ def main():
                 session.add(manufacturer)
         session.commit()
         logger.info("Test manufacturers created.")
+
+        # Create compliance scopes
+        logger.info("Creating compliance scopes if not exist...")
+        preset_compliance_scopes = [
+            {
+                "name": "PCI-DSS",
+                "description": "Payment Card Industry Data Security Standard for organizations that process cardholder data.",
+                "reference_url": "https://www.pcisecuritystandards.org/",
+            },
+            {
+                "name": "ISO 27001",
+                "description": "International standard for establishing, implementing, maintaining, and continually improving an ISMS.",
+                "reference_url": "https://www.iso.org/isoiec-27001-information-security.html",
+            },
+            {
+                "name": "SOC 2",
+                "description": "AICPA Trust Services Criteria-based attestation for security, availability, processing integrity, confidentiality, and privacy.",
+                "reference_url": "https://www.aicpa.org/topic/audit-assurance/service-organization-reporting-soc",
+            },
+            {
+                "name": "HIPAA",
+                "description": "U.S. healthcare regulation for the protection of PHI (Protected Health Information).",
+                "reference_url": "https://www.hhs.gov/hipaa/index.html",
+            },
+            {
+                "name": "GDPR",
+                "description": "EU General Data Protection Regulation governing personal data protection and privacy.",
+                "reference_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+            },
+            {
+                "name": "NIST CSF",
+                "description": "NIST Cybersecurity Framework for improving critical infrastructure cybersecurity.",
+                "reference_url": "https://www.nist.gov/cyberframework",
+            },
+            {
+                "name": "NIST SP 800-53",
+                "description": "NIST catalog of security and privacy controls for federal information systems and organizations.",
+                "reference_url": "https://csrc.nist.gov/publications/sp800-53",
+            },
+            {
+                "name": "FedRAMP",
+                "description": "U.S. federal program for security assessment, authorization, and continuous monitoring of cloud services.",
+                "reference_url": "https://www.fedramp.gov/",
+            },
+            {
+                "name": "SOX",
+                "description": "Sarbanes-Oxley Act requirements for financial reporting controls for U.S. public companies.",
+                "reference_url": "https://www.sec.gov/about/laws/soa2002.pdf",
+            },
+        ]
+
+        for scope_data in preset_compliance_scopes:
+            existing_scope = (
+                session.query(ComplianceScope)
+                .filter_by(name=scope_data["name"]) 
+                .first()
+            )
+            if not existing_scope:
+                scope = ComplianceScope(**scope_data)
+                session.add(scope)
+        session.commit()
+        logger.info("Compliance scopes created.")
 
         # Create sample assets
         create_sample_assets(session)

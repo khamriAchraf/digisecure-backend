@@ -31,15 +31,9 @@ async def test_software_crud_and_pagination():
             "vendor": "Test Vendor Inc.",
             "description": "Test software for E2E testing",
             "software_type": "Application",
-            "handles_cardholder_data": True,
-            "stores_cardholder_data": False,
-            "transmits_cardholder_data": True,
-            "processes_cardholder_data": True,
             "encryption_enabled": True,
             "encryption_type": "AES-256",
-            "pci_compliance_status": "Compliant",
             "vulnerability_status": "Compliant",
-            "data_classification": "Confidential",
         }
         create_resp = await ac.post(
             "/assets/software/", json=software_payload, headers=headers
@@ -51,14 +45,7 @@ async def test_software_crud_and_pagination():
         software_id = software["id"]
         assert software["name"] == software_payload["name"]
         assert software["vendor"] == software_payload["vendor"]
-        assert (
-            software["handles_cardholder_data"]
-            == software_payload["handles_cardholder_data"]
-        )
-        assert (
-            software["pci_compliance_status"]
-            == software_payload["pci_compliance_status"]
-        )
+        assert software["vulnerability_status"] == software_payload["vulnerability_status"]
 
         # ---------- 3. GET software endpoint ----------
         get_resp = await ac.get(f"/assets/software/{software_id}", headers=headers)
@@ -68,18 +55,16 @@ async def test_software_crud_and_pagination():
 
         # ---------- 4. Update software (PCI compliance change) ----------
         update_payload = {
-            "pci_compliance_status": "Non-Compliant",
             "vulnerability_status": "Non-Compliant",
-            "compliance_notes": "Security patches pending",
+            "patch_level": "2.0.0",
         }
         update_resp = await ac.put(
             f"/assets/software/{software_id}", json=update_payload, headers=headers
         )
         assert update_resp.status_code == 200, f"Update failed: {update_resp.text}"
         updated_software = update_resp.json()
-        assert updated_software["pci_compliance_status"] == "Non-Compliant"
         assert updated_software["vulnerability_status"] == "Non-Compliant"
-        assert updated_software["compliance_notes"] == "Security patches pending"
+        assert updated_software["patch_level"] == "2.0.0"
 
         # ---------- 5. List software with pagination ----------
         list_resp = await ac.get(
@@ -151,7 +136,6 @@ async def test_software_version_management():
             "vendor": "Version Test Vendor",
             "description": "Software for version testing",
             "software_type": "Application",
-            "pci_compliance_status": "Compliant",
         }
         create_software_resp = await ac.post(
             "/assets/software/", json=software_payload, headers=headers
@@ -250,8 +234,8 @@ async def test_software_version_management():
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_software_pci_compliance_fields():
-    """Test software PCI compliance fields and validation."""
+async def test_software_security_fields():
+    """Test software security-related fields and validation."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE_URL) as ac:
         # ---------- 1. Login as super-admin ----------
         login_resp = await ac.post(
@@ -272,11 +256,6 @@ async def test_software_pci_compliance_fields():
             "vendor": "PCI Vendor Inc.",
             "description": "Software with comprehensive PCI compliance fields",
             "software_type": "Application",
-            # Data handling and storage
-            "handles_cardholder_data": True,
-            "stores_cardholder_data": True,
-            "transmits_cardholder_data": True,
-            "processes_cardholder_data": True,
             # Encryption and security
             "encryption_enabled": True,
             "encryption_type": "AES-256",
@@ -308,15 +287,9 @@ async def test_software_pci_compliance_fields():
             "vpn_required": True,
             "network_segmentation": "PCI",
             # Data protection and privacy
-            "data_classification": "Confidential",
             "data_retention_policy": "7 years",
             "data_backup_enabled": True,
             "data_encryption_at_rest": True,
-            # Compliance tracking
-            "pci_compliance_status": "Compliant",
-            "pci_assessment_date": "2024-01-01",
-            "next_assessment_date": "2024-12-31",
-            "compliance_notes": "Fully compliant with PCI DSS 4.0",
             # Software lifecycle
             "end_of_life_date": "2026-12-31",
             "end_of_support_date": "2025-12-31",
@@ -340,12 +313,6 @@ async def test_software_pci_compliance_fields():
         get_resp = await ac.get(f"/assets/software/{software_id}", headers=headers)
         assert get_resp.status_code == 200, f"Software get failed: {get_resp.text}"
         retrieved_software = get_resp.json()
-
-        # Verify data handling fields
-        assert retrieved_software["handles_cardholder_data"] == True
-        assert retrieved_software["stores_cardholder_data"] == True
-        assert retrieved_software["transmits_cardholder_data"] == True
-        assert retrieved_software["processes_cardholder_data"] == True
 
         # Verify encryption fields
         assert retrieved_software["encryption_enabled"] == True
@@ -384,33 +351,22 @@ async def test_software_pci_compliance_fields():
         assert retrieved_software["network_segmentation"] == "PCI"
 
         # Verify data protection fields
-        assert retrieved_software["data_classification"] == "Confidential"
         assert retrieved_software["data_retention_policy"] == "7 years"
         assert retrieved_software["data_backup_enabled"] == True
         assert retrieved_software["data_encryption_at_rest"] == True
 
-        # Verify compliance fields
-        assert retrieved_software["pci_compliance_status"] == "Compliant"
-        assert (
-            retrieved_software["compliance_notes"] == "Fully compliant with PCI DSS 4.0"
-        )
-
         # ---------- 4. Update compliance status ----------
         update_payload = {
-            "pci_compliance_status": "Non-Compliant",
             "vulnerability_status": "Non-Compliant",
-            "compliance_notes": "Security vulnerabilities detected",
+            "patch_level": "2.1.4",
         }
         update_resp = await ac.put(
             f"/assets/software/{software_id}", json=update_payload, headers=headers
         )
         assert update_resp.status_code == 200, f"Update failed: {update_resp.text}"
         updated_software = update_resp.json()
-        assert updated_software["pci_compliance_status"] == "Non-Compliant"
         assert updated_software["vulnerability_status"] == "Non-Compliant"
-        assert (
-            updated_software["compliance_notes"] == "Security vulnerabilities detected"
-        )
+        assert updated_software["patch_level"] == "2.1.4"
 
         # ---------- 5. Clean up ----------
         del_resp = await ac.delete(f"/assets/software/{software_id}", headers=headers)
@@ -550,19 +506,19 @@ async def test_software_filtering_and_search():
             {
                 "name": f"Compliant-Software-{unique_suffix}",
                 "vendor": "Compliant Vendor",
-                "pci_compliance_status": "Compliant",
+                "vulnerability_status": "Compliant",
                 "software_type": "Application",
             },
             {
                 "name": f"Non-Compliant-Software-{unique_suffix}",
                 "vendor": "Non-Compliant Vendor",
-                "pci_compliance_status": "Non-Compliant",
+                "vulnerability_status": "Non-Compliant",
                 "software_type": "Operating System",
             },
             {
                 "name": f"Security-Tool-{unique_suffix}",
                 "vendor": "Security Vendor",
-                "pci_compliance_status": "In Progress",
+                "vulnerability_status": "Pending",
                 "software_type": "Security Tool",
             },
         ]
@@ -577,19 +533,17 @@ async def test_software_filtering_and_search():
             ), f"Software creation failed: {create_resp.text}"
             created_ids.append(create_resp.json()["id"])
 
-        # ---------- 3. Test filtering by PCI compliance status ----------
+        # ---------- 3. Test filtering by vulnerability status ----------
         compliant_resp = await ac.get(
             "/assets/software/",
-            params={"pci_compliance_status": "Compliant"},
+            params={"vulnerability_status": "Compliant"},
             headers=headers,
         )
         assert (
             compliant_resp.status_code == 200
-        ), f"Filter by compliance failed: {compliant_resp.text}"
+        ), f"Filter by vulnerability_status failed: {compliant_resp.text}"
         compliant_data = compliant_resp.json()["data"]
-        assert all(
-            item["pci_compliance_status"] == "Compliant" for item in compliant_data
-        )
+        assert all(item["vulnerability_status"] == "Compliant" for item in compliant_data)
 
         # ---------- 4. Test filtering by software type ----------
         security_tool_resp = await ac.get(
