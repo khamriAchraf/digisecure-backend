@@ -2,7 +2,6 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.db.models.asset import Asset
 from app.db.models.compliance_scopes import (AssetComplianceScope,
                                              ComplianceScope)
 from app.schemas.compliance_scope import (AssetComplianceScopeCreate,
@@ -15,7 +14,11 @@ from app.schemas.compliance_scope import (AssetComplianceScopeCreate,
 def get_scope(db: Session, scope_id: int) -> Optional[ComplianceScope]:
     return (
         db.query(ComplianceScope)
-        .options(joinedload(ComplianceScope.asset_mappings).joinedload(AssetComplianceScope.asset))
+        .options(
+            joinedload(ComplianceScope.asset_mappings).joinedload(
+                AssetComplianceScope.asset
+            )
+        )
         .filter(ComplianceScope.id == scope_id)
         .first()
     )
@@ -28,7 +31,11 @@ def get_scope_by_name(db: Session, name: str) -> Optional[ComplianceScope]:
 def list_scopes(db: Session, skip: int = 0, limit: int = 100) -> List[ComplianceScope]:
     return (
         db.query(ComplianceScope)
-        .options(joinedload(ComplianceScope.asset_mappings).joinedload(AssetComplianceScope.asset))
+        .options(
+            joinedload(ComplianceScope.asset_mappings).joinedload(
+                AssetComplianceScope.asset
+            )
+        )
         .offset(skip)
         .limit(limit)
         .all()

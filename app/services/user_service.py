@@ -130,7 +130,7 @@ class UserService:
         logger.info(f"User {self.current_user.id} successfully UPDATED user {user.id}")
         return updated_user
 
-    def soft_delete_user(self, user: User) -> User:
+    def delete_user(self, user: User) -> User:
         logger.info(
             f"User {self.current_user.id} attempts to DELETE user {user.id} at {datetime.now(timezone.utc).isoformat()}"
         )
@@ -139,9 +139,9 @@ class UserService:
                 f"User {self.current_user.id} denied DELETE access for user {user.id}"
             )
             raise PermissionError("Not allowed to delete users.")
-        deleted_user = user_crud.soft_delete_user(self.db, user)
+        user_crud.delete_user(self.db, user)
         logger.info(f"User {self.current_user.id} successfully DELETED user {user.id}")
-        return deleted_user
+        return None
 
     def get_user_permissions(self, user: User) -> list[dict]:
         """

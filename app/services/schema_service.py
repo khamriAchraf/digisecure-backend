@@ -3324,7 +3324,6 @@ class SchemaService:
                         "tab_id": "general",
                         "validation": {"required": False},
                     },
-                    
                     # Security tab
                     "encryption_enabled": {
                         "widget": "checkbox",

@@ -8,7 +8,7 @@ class ComplianceScope(Base):
     __tablename__ = "compliance_scopes"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False, unique=True)  # e.g., 'PCI-DSS', 'ISO 27001'
+    name = Column(String, nullable=False, unique=True)
     description = Column(Text, nullable=True)
     reference_url = Column(String, nullable=True)
 
@@ -17,16 +17,12 @@ class ComplianceScope(Base):
     next_audit_due = Column(Date, nullable=True)
     auditor = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
-
-    # Reverse relationship
-    # Do not cascade deletes here; we want DB FK to block deletion when in use.
-    # passive_deletes=True ensures ORM doesn't try to null-out PK FKs on children.
     asset_mappings = relationship(
         "AssetComplianceScope",
         back_populates="scope",
         passive_deletes=True,
     )
-    
+
     @property
     def assets(self):
         """Get all assets associated with this compliance scope."""
@@ -46,4 +42,6 @@ class AssetComplianceScope(Base):
 
     # Relationships
     asset = relationship("Asset", backref="compliance_mappings", passive_deletes=True)
-    scope = relationship("ComplianceScope", back_populates="asset_mappings", passive_deletes=True)
+    scope = relationship(
+        "ComplianceScope", back_populates="asset_mappings", passive_deletes=True
+    )

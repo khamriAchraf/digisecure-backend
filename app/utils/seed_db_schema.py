@@ -11,8 +11,7 @@ from app.core.security import get_password_hash
 from app.db.base import Base
 from app.db.models import (ComplianceScope, Location, Manufacturer, Permission,
                            Role, TableConfig, User)
-from app.db.models.asset import (Cable, Computer, Consumable, NetworkDevice,
-                                 Peripheral, Phone, Printer, Rack, SimCardItem)
+from app.db.models.asset import Computer, NetworkDevice, Software
 from app.db.session import SessionLocal, engine
 
 sys.path.append(".")
@@ -200,8 +199,6 @@ def create_sample_assets(session):
             "location_id": locations[0].id if locations else None,
             "assigned_to": users[0].id if users else None,
             "type": "computer",
-            "created_at": now,
-            "updated_at": now,
             "cpu": "Intel Core i7-12700K",
             "ram": "32GB DDR4",
             "storage": "1TB NVMe SSD",
@@ -210,6 +207,8 @@ def create_sample_assets(session):
             "ip_address": "192.168.1.100",
             "model": "Dell OptiPlex 7090",
             "hostname": "WS001",
+            "created_at": now,
+            "updated_at": now,
         },
         {
             "name": "Laptop-001",
@@ -245,31 +244,6 @@ def create_sample_assets(session):
         },
     ]
 
-    # Sample Printers
-    printers_data = [
-        {
-            "name": "Office-Printer-01",
-            "serial_number": "PR001-2023-001",
-            "inventory_number": "INV-PRT-001",
-            "manufacturer_id": manufacturers[0].id if manufacturers else None,
-            "status": "active",
-            "purchase_date": date(2023, 6, 10),
-            "warranty_expiry": date(2026, 6, 10),
-            "location_id": locations[0].id if locations else None,
-            "type": "printer",
-            "created_at": now,
-            "updated_at": now,
-            "model": "HP LaserJet Pro M404n",
-            "ip_address": "192.168.1.200",
-            "mac_address": "00:1B:44:11:3A:C1",
-            "connection_type": "Network",
-            "print_technology": "Laser",
-            "max_resolution": "600x600 dpi",
-            "color_support": "Monochrome",
-            "duplex_support": "Yes",
-        }
-    ]
-
     # Sample Network Devices
     network_devices_data = [
         {
@@ -286,8 +260,6 @@ def create_sample_assets(session):
             "warranty_expiry": date(2028, 3, 15),
             "location_id": locations[0].id if locations else None,
             "type": "network_device",
-            "created_at": now,
-            "updated_at": now,
             "device_type": "Switch",
             "model": "Cisco Catalyst 2960-X",
             "ip_address": "192.168.1.1",
@@ -296,171 +268,29 @@ def create_sample_assets(session):
             "connection_type": "Ethernet",
             "management_ip": "192.168.1.1",
             "firmware_version": "15.2(4)E7",
+            "created_at": now,
+            "updated_at": now,
         }
     ]
 
-    # Sample Phones
-    phones_data = [
+    # Sample Software
+    software_data = [
         {
-            "name": "Desk-Phone-01",
-            "serial_number": "PH001-2024-001",
-            "inventory_number": "INV-PHN-001",
-            "manufacturer_id": (
-                manufacturers[3].id
-                if len(manufacturers) > 3
-                else manufacturers[0].id if manufacturers else None
-            ),
+            "name": "Microsoft Office 365",
+            "serial_number": "SW001-2023-001",
+            "inventory_number": "INV-SOFT-001",
+            "manufacturer_id": None,
             "status": "active",
-            "purchase_date": date(2024, 1, 10),
-            "warranty_expiry": date(2027, 1, 10),
-            "location_id": locations[0].id if locations else None,
-            "assigned_to": users[0].id if users else None,
-            "type": "phone",
+            "purchase_date": None,
+            "warranty_expiry": None,
+            "location_id": None,
+            "assigned_to": None,
+            "type": "software",
             "created_at": now,
             "updated_at": now,
-            "model": "Cisco IP Phone 8845",
-            "phone_type": "Desk Phone",
-            "extension": "1001",
-            "ip_address": "192.168.1.150",
-            "mac_address": "00:1B:44:11:3A:E1",
-            "phone_system": "Cisco Unified Communications",
-            "line_count": 2,
-        }
-    ]
-
-    # Sample Peripherals
-    peripherals_data = [
-        {
-            "name": "Wireless-Mouse-01",
-            "serial_number": "PR001-2024-001",
-            "inventory_number": "INV-PER-001",
-            "manufacturer_id": (
-                manufacturers[4].id
-                if len(manufacturers) > 4
-                else manufacturers[0].id if manufacturers else None
-            ),
-            "status": "active",
-            "purchase_date": date(2024, 3, 5),
-            "warranty_expiry": date(2027, 3, 5),
-            "location_id": locations[0].id if locations else None,
-            "assigned_to": users[0].id if users else None,
-            "type": "peripheral",
-            "created_at": now,
-            "updated_at": now,
-            "peripheral_type": "Mouse",
-            "model": "Logitech MX Master 3",
-            "connection_type": "Wireless",
-            "compatibility": "Windows, Mac, Linux",
-            "special_features": "Wireless, Ergonomic",
-        }
-    ]
-
-    # Sample Consumables
-    consumables_data = [
-        {
-            "name": "HP-Toner-Cartridge",
-            "serial_number": "TC001-2024-001",
-            "inventory_number": "INV-CON-001",
-            "manufacturer_id": manufacturers[0].id if manufacturers else None,
-            "status": "active",
-            "purchase_date": date(2024, 4, 1),
-            "warranty_expiry": date(2025, 4, 1),
-            "location_id": locations[0].id if locations else None,
-            "type": "consumable",
-            "created_at": now,
-            "updated_at": now,
-            "consumable_type": "Toner",
-            "model": "HP 26A Black Toner Cartridge",
-            "quantity": 5,
-            "unit": "cartridges",
-            "expiry_date": date(2026, 4, 1),
-            "compatible_with": "HP LaserJet Pro M404n",
-        }
-    ]
-
-    # Sample Racks
-    racks_data = [
-        {
-            "name": "Server-Rack-01",
-            "serial_number": "RK001-2023-001",
-            "inventory_number": "INV-RCK-001",
-            "manufacturer_id": (
-                manufacturers[5].id
-                if len(manufacturers) > 5
-                else manufacturers[0].id if manufacturers else None
-            ),
-            "status": "active",
-            "purchase_date": date(2023, 8, 20),
-            "warranty_expiry": date(2028, 8, 20),
-            "location_id": locations[0].id if locations else None,
-            "type": "rack",
-            "created_at": now,
-            "updated_at": now,
-            "rack_type": "Server Rack",
-            "model": "APC AR3100",
-            "height_units": 42,
-            "width": '19"',
-            "depth": '36"',
-            "max_weight_capacity": "2000 lbs",
-            "location_details": "Data Center - Row A",
-        }
-    ]
-
-    # Sample Cables
-    cables_data = [
-        {
-            "name": "Ethernet-Cable-01",
-            "serial_number": "CB001-2024-001",
-            "inventory_number": "INV-CBL-001",
-            "manufacturer_id": (
-                manufacturers[6].id
-                if len(manufacturers) > 6
-                else manufacturers[0].id if manufacturers else None
-            ),
-            "status": "active",
-            "purchase_date": date(2024, 2, 15),
-            "warranty_expiry": date(2029, 2, 15),
-            "location_id": locations[0].id if locations else None,
-            "type": "cable",
-            "created_at": now,
-            "updated_at": now,
-            "cable_type": "Ethernet",
-            "model": "Cat6 UTP Cable",
-            "length": "100m",
-            "connector_type": "RJ45",
-            "category": "Cat6",
-            "color": "Blue",
-            "max_bandwidth": "1 Gbps",
-        }
-    ]
-
-    # Sample SIM Cards
-    sim_cards_data = [
-        {
-            "name": "Data-SIM-01",
-            "serial_number": "SC001-2024-001",
-            "inventory_number": "INV-SIM-001",
-            "manufacturer_id": (
-                manufacturers[7].id
-                if len(manufacturers) > 7
-                else manufacturers[0].id if manufacturers else None
-            ),
-            "status": "active",
-            "purchase_date": date(2024, 1, 20),
-            "warranty_expiry": date(2027, 1, 20),
-            "location_id": locations[0].id if locations else None,
-            "assigned_to": users[0].id if users else None,
-            "type": "sim_card_item",
-            "created_at": now,
-            "updated_at": now,
-            "sim_type": "Nano",
-            "iccid": "89014103211118510720",
-            "imsi": "310260123456789",
-            "carrier": "AT&T",
-            "phone_number": "+1-555-0123",
-            "data_plan": "Unlimited Data",
-            "activation_date": date(2024, 1, 25),
-            "expiry_date": date(2025, 1, 25),
+            "vendor": "Microsoft",
+            "description": "Office productivity suite",
+            "software_type": "Application",
         }
     ]
 
@@ -479,18 +309,6 @@ def create_sample_assets(session):
             session.add(computer)
             assets_created += 1
 
-    # Create printers
-    for prt_data in printers_data:
-        existing = (
-            session.query(Printer)
-            .filter_by(serial_number=prt_data["serial_number"])
-            .first()
-        )
-        if not existing:
-            printer = Printer(**prt_data)
-            session.add(printer)
-            assets_created += 1
-
     # Create network devices
     for net_data in network_devices_data:
         existing = (
@@ -503,76 +321,16 @@ def create_sample_assets(session):
             session.add(network_device)
             assets_created += 1
 
-    # Create phones
-    for phn_data in phones_data:
+    # Create software
+    for soft_data in software_data:
         existing = (
-            session.query(Phone)
-            .filter_by(serial_number=phn_data["serial_number"])
+            session.query(Software)
+            .filter_by(serial_number=soft_data["serial_number"])
             .first()
         )
         if not existing:
-            phone = Phone(**phn_data)
-            session.add(phone)
-            assets_created += 1
-
-    # Create peripherals
-    for per_data in peripherals_data:
-        existing = (
-            session.query(Peripheral)
-            .filter_by(serial_number=per_data["serial_number"])
-            .first()
-        )
-        if not existing:
-            peripheral = Peripheral(**per_data)
-            session.add(peripheral)
-            assets_created += 1
-
-    # Create consumables
-    for con_data in consumables_data:
-        existing = (
-            session.query(Consumable)
-            .filter_by(serial_number=con_data["serial_number"])
-            .first()
-        )
-        if not existing:
-            consumable = Consumable(**con_data)
-            session.add(consumable)
-            assets_created += 1
-
-    # Create racks
-    for rck_data in racks_data:
-        existing = (
-            session.query(Rack)
-            .filter_by(serial_number=rck_data["serial_number"])
-            .first()
-        )
-        if not existing:
-            rack = Rack(**rck_data)
-            session.add(rack)
-            assets_created += 1
-
-    # Create cables
-    for cbl_data in cables_data:
-        existing = (
-            session.query(Cable)
-            .filter_by(serial_number=cbl_data["serial_number"])
-            .first()
-        )
-        if not existing:
-            cable = Cable(**cbl_data)
-            session.add(cable)
-            assets_created += 1
-
-    # Create SIM cards
-    for sim_data in sim_cards_data:
-        existing = (
-            session.query(SimCardItem)
-            .filter_by(serial_number=sim_data["serial_number"])
-            .first()
-        )
-        if not existing:
-            sim_card = SimCardItem(**sim_data)
-            session.add(sim_card)
+            software = Software(**soft_data)
+            session.add(software)
             assets_created += 1
 
     session.commit()

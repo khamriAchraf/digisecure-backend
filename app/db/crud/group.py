@@ -109,8 +109,9 @@ def update_group(db: Session, group: Group, group_in: GroupUpdate) -> Group:
 
 
 def delete_group(db: Session, group: Group) -> None:
-    db.delete(group)
+    group.soft_delete()
     db.commit()
+    return None
 
 
 def add_user_to_group(db: Session, group: Group, user: User) -> Group:

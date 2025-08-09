@@ -4,7 +4,6 @@ from sqlalchemy.orm import relationship
 
 from app.db.base import Base
 
-# Association table for many-to-many relationship between groups and users
 user_groups = Table(
     "user_groups",
     Base.metadata,
@@ -12,7 +11,6 @@ user_groups = Table(
     Column("group_id", Integer, ForeignKey("groups.id"), primary_key=True),
 )
 
-# Association table for many-to-many relationship between groups and assets
 asset_groups = Table(
     "asset_groups",
     Base.metadata,

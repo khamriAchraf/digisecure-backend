@@ -5,55 +5,16 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, with_polymorphic
 
-from app.db.models.asset import (
-    Asset,
-    Cable,
-    Computer,
-    Consumable,
-    NetworkDevice,
-    Peripheral,
-    Phone,
-    Printer,
-    Rack,
-    SimCardItem,
-    VirtualMachine,
-    Software,
-)
-from app.schemas.asset import (
-    CableCreate,
-    CableUpdate,
-    ComputerCreate,
-    ComputerUpdate,
-    ConsumableCreate,
-    ConsumableUpdate,
-    NetworkDeviceCreate,
-    NetworkDeviceUpdate,
-    PeripheralCreate,
-    PeripheralUpdate,
-    PhoneCreate,
-    PhoneUpdate,
-    PrinterCreate,
-    PrinterUpdate,
-    RackCreate,
-    RackUpdate,
-    SimCardItemCreate,
-    SimCardItemUpdate,
-    SoftwareCreate,
-    SoftwareUpdate,
-    VirtualMachineCreate,
-    VirtualMachineUpdate,
-)
+from app.db.models.asset import (Asset, Computer, NetworkDevice, Software,
+                                 VirtualMachine)
+from app.schemas.asset import (ComputerCreate, ComputerUpdate,
+                               NetworkDeviceCreate, NetworkDeviceUpdate,
+                               SoftwareCreate, SoftwareUpdate,
+                               VirtualMachineCreate, VirtualMachineUpdate)
 
 ASSET_TYPE_MAPPING = {
     "computer": (Computer, ComputerCreate),
-    "printer": (Printer, PrinterCreate),
     "network_device": (NetworkDevice, NetworkDeviceCreate),
-    "phone": (Phone, PhoneCreate),
-    "peripheral": (Peripheral, PeripheralCreate),
-    "consumable": (Consumable, ConsumableCreate),
-    "rack": (Rack, RackCreate),
-    "cable": (Cable, CableCreate),
-    "sim_card_item": (SimCardItem, SimCardItemCreate),
     "virtual_machine": (VirtualMachine, VirtualMachineCreate),
     "software": (Software, SoftwareCreate),
 }
@@ -61,14 +22,7 @@ ASSET_TYPE_MAPPING = {
 ALL_ASSET_TYPES = [
     Asset,
     Computer,
-    Printer,
     NetworkDevice,
-    Phone,
-    Peripheral,
-    Consumable,
-    Rack,
-    Cable,
-    SimCardItem,
     VirtualMachine,
     Software,
 ]
@@ -83,21 +37,17 @@ def get_asset_by_type(db: Session, asset_id: int, asset_type: str) -> Optional[A
         raise ValueError(f"Invalid asset type: {asset_type}")
 
     asset_class = ASSET_TYPE_MAPPING[asset_type][0]
-    query = db.query(asset_class).options(
-        joinedload(asset_class.manufacturer),
-        joinedload(asset_class.location),
-        joinedload(asset_class.groups),
-        joinedload(asset_class.assigned_user),
-    )
-    # Eager load compliance scopes through association to avoid N+1
-    from app.db.models.compliance_scopes import AssetComplianceScope, ComplianceScope
-
-    query = query.options(
-        joinedload(asset_class.compliance_mappings).joinedload(
-            AssetComplianceScope.scope
+    return (
+        db.query(asset_class)
+        .options(
+            joinedload(asset_class.manufacturer),
+            joinedload(asset_class.location),
+            joinedload(asset_class.groups),
+            joinedload(asset_class.assigned_user),
         )
+        .filter(asset_class.id == asset_id)
+        .first()
     )
-    return query.filter(asset_class.id == asset_id).first()
 
 
 def get_paginated_assets(
@@ -171,14 +121,7 @@ def create_asset(
     db: Session,
     asset_in: Union[
         ComputerCreate,
-        PrinterCreate,
         NetworkDeviceCreate,
-        PhoneCreate,
-        PeripheralCreate,
-        ConsumableCreate,
-        RackCreate,
-        CableCreate,
-        SimCardItemCreate,
         VirtualMachineCreate,
         SoftwareCreate,
     ],
@@ -210,20 +153,18 @@ def create_asset(
         "warranty_expiry": asset_in.warranty_expiry,
         "location_id": asset_in.location_id,
         "assigned_to": asset_in.assigned_to,
-        "type": asset_type,  # This ensures the correct polymorphic identity
+        "type": asset_type,
         "created_at": now,
         "updated_at": now,
     }
 
-    # Extract subtype-specific fields
     subtype_fields = {}
     for field_name in asset_in.__fields__:
         if field_name not in base_fields and hasattr(asset_in, field_name):
             value = getattr(asset_in, field_name)
-            if value is not None:  # Only include non-None values
+            if value is not None:
                 subtype_fields[field_name] = value
 
-    # Create the asset instance
     asset = asset_class(**base_fields, **subtype_fields)
 
     db.add(asset)
@@ -231,7 +172,6 @@ def create_asset(
         db.commit()
         db.refresh(asset)
 
-        # Handle groups relationship if group_ids are provided
         if hasattr(asset_in, "group_ids") and asset_in.group_ids:
             from app.db.models.group import Group
 
@@ -251,14 +191,7 @@ def update_asset(
     asset: Asset,
     asset_in: Union[
         ComputerUpdate,
-        PrinterUpdate,
         NetworkDeviceUpdate,
-        PhoneUpdate,
-        PeripheralUpdate,
-        ConsumableUpdate,
-        RackUpdate,
-        CableUpdate,
-        SimCardItemUpdate,
         VirtualMachineUpdate,
         SoftwareUpdate,
     ],
@@ -297,7 +230,7 @@ def update_asset(
 
 
 def delete_asset(db: Session, asset: Asset) -> None:
-    db.delete(asset)
+    asset.soft_delete()
     db.commit()
 
 
@@ -331,15 +264,9 @@ def bulk_create_assets(
     assets_in: List[
         Union[
             ComputerCreate,
-            PrinterCreate,
             NetworkDeviceCreate,
-            PhoneCreate,
-            PeripheralCreate,
-            ConsumableCreate,
-            RackCreate,
-            CableCreate,
-            SimCardItemCreate,
             VirtualMachineCreate,
+            SoftwareCreate,
         ]
     ],
 ) -> List[Asset]:

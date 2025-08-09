@@ -17,7 +17,7 @@ The function implements a hierarchical access control system with the following 
 ### 2. Group Membership Check
 - **Condition**: User and resource share the same group
 - **Access**: ✅ **ALLOWED**
-- **Example**: A printer shared by the IT department group
+- **Example**: A computer shared by the IT department group
 - **Use Case**: Team equipment, shared resources
 
 ### 3. Hierarchical Group Check

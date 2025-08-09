@@ -129,7 +129,7 @@ async def test_all_asset_types_creation():
                 "status": "active",
                 "cpu": "Intel Core i5",
             },
-            "networkdevices": {
+            "network_devices": {
                 "name": f"E2E-Network-{unique_suffix}",
                 "status": "active",
                 "device_type": "Switch",
@@ -222,7 +222,7 @@ async def test_asset_filtering_and_search():
         created_ids = {}
         for asset_data in test_assets:
             create_resp = await ac.post(
-                f"/assets/{asset_data['type']}/", json=asset_data, headers=headers
+                f"/assets/{asset_data['type']}s/", json=asset_data, headers=headers
             )
             assert create_resp.status_code == 201
             created_ids[asset_data["name"]] = create_resp.json()["id"]
@@ -299,67 +299,10 @@ async def test_asset_type_specific_operations():
                 },
             ),
             (
-                "printers",
-                {
-                    "name": f"Test-Printer-{unique_suffix}",
-                    "status": "active",
-                    "model": "HP LaserJet",
-                },
-            ),
-            (
-                "networkdevices",
+                "network_devices",
                 {
                     "name": f"Test-Network-{unique_suffix}",
                     "status": "active",
-                    "device_type": "Switch",
-                },
-            ),
-            (
-                "phones",
-                {
-                    "name": f"Test-Phone-{unique_suffix}",
-                    "status": "active",
-                    "phone_type": "Desk Phone",
-                },
-            ),
-            (
-                "peripherals",
-                {
-                    "name": f"Test-Peripheral-{unique_suffix}",
-                    "status": "active",
-                    "peripheral_type": "Keyboard",
-                },
-            ),
-            (
-                "consumables",
-                {
-                    "name": f"Test-Consumable-{unique_suffix}",
-                    "status": "active",
-                    "consumable_type": "Toner",
-                },
-            ),
-            (
-                "racks",
-                {
-                    "name": f"Test-Rack-{unique_suffix}",
-                    "status": "active",
-                    "rack_type": "Server Rack",
-                },
-            ),
-            (
-                "cables",
-                {
-                    "name": f"Test-Cable-{unique_suffix}",
-                    "status": "active",
-                    "cable_type": "Ethernet",
-                },
-            ),
-            (
-                "simcarditems",
-                {
-                    "name": f"Test-SIM-{unique_suffix}",
-                    "status": "active",
-                    "sim_type": "Nano",
                 },
             ),
         ]

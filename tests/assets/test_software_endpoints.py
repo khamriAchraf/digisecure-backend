@@ -183,8 +183,6 @@ async def test_software_version_management():
         assert (
             create_version_2_resp.status_code == 201
         ), f"Version 2.0 creation failed: {create_version_2_resp.text}"
-        version_2_0 = create_version_2_resp.json()
-
 
         # ---------- 6. Get software with versions ----------
         get_with_versions_resp = await ac.get(

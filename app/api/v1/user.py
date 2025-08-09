@@ -133,7 +133,7 @@ def update_user(
         raise HTTPException(status_code=403, detail=str(e))
 
 
-@router.delete("/{user_id}", response_model=UserResponse)
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
     service: UserService = Depends(get_user_service),
@@ -142,6 +142,7 @@ def delete_user(
         user = service.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return service.soft_delete_user(user)
+        service.delete_user(user)
+        return None
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))

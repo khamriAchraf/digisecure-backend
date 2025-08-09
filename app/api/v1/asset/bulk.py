@@ -3,12 +3,8 @@ from typing import List, Union
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_asset_service
-from app.schemas.asset import (Cable, CableCreate, Computer, ComputerCreate,
-                               Consumable, ConsumableCreate, NetworkDevice,
-                               NetworkDeviceCreate, Peripheral,
-                               PeripheralCreate, Phone, PhoneCreate, Printer,
-                               PrinterCreate, Rack, RackCreate, SimCardItem,
-                               SimCardItemCreate)
+from app.schemas.asset import (Computer, ComputerCreate, NetworkDevice,
+                               NetworkDeviceCreate)
 from app.services.asset_service import AssetService, PermissionError
 
 router = APIRouter(prefix="/bulk", tags=["assets:bulk"])
@@ -19,14 +15,7 @@ router = APIRouter(prefix="/bulk", tags=["assets:bulk"])
     response_model=List[
         Union[
             Computer,
-            Printer,
             NetworkDevice,
-            Phone,
-            Peripheral,
-            Consumable,
-            Rack,
-            Cable,
-            SimCardItem,
         ]
     ],
     status_code=status.HTTP_201_CREATED,
@@ -35,14 +24,7 @@ def bulk_create_assets(
     assets_in: List[
         Union[
             ComputerCreate,
-            PrinterCreate,
             NetworkDeviceCreate,
-            PhoneCreate,
-            PeripheralCreate,
-            ConsumableCreate,
-            RackCreate,
-            CableCreate,
-            SimCardItemCreate,
         ]
     ],
     service: AssetService = Depends(get_asset_service),

@@ -204,8 +204,6 @@ def update_user(db: Session, user: User, user_in: UserUpdate) -> User:
     return user
 
 
-def soft_delete_user(db: Session, user: User) -> User:
-    user.status = UserStatus.deleted  # type: ignore
+def delete_user(db: Session, user: User) -> User:
+    user.soft_delete(db)
     db.commit()
-    db.refresh(user)
-    return user

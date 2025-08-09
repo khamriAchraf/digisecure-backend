@@ -8,16 +8,11 @@ from app.core.security import access_filters, can_access, has_permission
 from app.db.crud import asset as asset_crud
 from app.db.models.asset import Asset
 from app.db.models.user import User
-from app.schemas.asset import (CableCreate, CableUpdate, ComputerCreate,
-                               ComputerUpdate, ConsumableCreate,
-                               ConsumableUpdate, NetworkDeviceCreate,
-                               NetworkDeviceUpdate, PeripheralCreate,
-                               PeripheralUpdate, PhoneCreate, PhoneUpdate,
-                               PrinterCreate, PrinterUpdate, RackCreate,
-                               RackUpdate, SimCardItemCreate,
-                               SimCardItemUpdate, SoftwareCreate,
-                               SoftwareUpdate, SoftwareVersionCreate,
-                               VirtualMachineCreate, VirtualMachineUpdate)
+from app.schemas.asset import (ComputerCreate, ComputerUpdate,
+                               NetworkDeviceCreate, NetworkDeviceUpdate,
+                               SoftwareCreate, SoftwareUpdate,
+                               SoftwareVersionCreate, VirtualMachineCreate,
+                               VirtualMachineUpdate)
 
 
 class PermissionError(Exception):
@@ -73,14 +68,7 @@ class AssetService:
         # Define all asset types and their permission names
         asset_types = {
             "computer": "computer",
-            "printer": "printer",
             "network_device": "network_device",
-            "phone": "phone",
-            "peripheral": "peripheral",
-            "consumable": "consumable",
-            "rack": "rack",
-            "cable": "cable",
-            "sim_card_item": "sim_card_item",
             "virtual_machine": "virtual_machine",
             "software": "software",
         }
@@ -342,22 +330,6 @@ class AssetService:
     def delete_computer(self, computer: Asset) -> None:
         return self._delete_asset_by_type(computer, "computer")
 
-    # Printer methods
-    def get_printer(self, printer_id: int) -> Asset:
-        return self._get_asset_by_type(printer_id, "printer")
-
-    def get_paginated_printers(self, **kwargs) -> Tuple[List[Asset], int]:
-        return self._get_paginated_assets_by_type("printer", **kwargs)
-
-    def create_printer(self, printer_in: PrinterCreate) -> Asset:
-        return self._create_asset_by_type(printer_in, "printer")
-
-    def update_printer(self, printer: Asset, printer_in: PrinterUpdate) -> Asset:
-        return self._update_asset_by_type(printer, printer_in, "printer")
-
-    def delete_printer(self, printer: Asset) -> None:
-        return self._delete_asset_by_type(printer, "printer")
-
     # Network Device methods
     def get_network_device(self, network_device_id: int) -> Asset:
         return self._get_asset_by_type(network_device_id, "network_device")
@@ -377,110 +349,6 @@ class AssetService:
 
     def delete_network_device(self, network_device: Asset) -> None:
         return self._delete_asset_by_type(network_device, "network_device")
-
-    # Phone methods
-    def get_phone(self, phone_id: int) -> Asset:
-        return self._get_asset_by_type(phone_id, "phone")
-
-    def get_paginated_phones(self, **kwargs) -> Tuple[List[Asset], int]:
-        return self._get_paginated_assets_by_type("phone", **kwargs)
-
-    def create_phone(self, phone_in: PhoneCreate) -> Asset:
-        return self._create_asset_by_type(phone_in, "phone")
-
-    def update_phone(self, phone: Asset, phone_in: PhoneUpdate) -> Asset:
-        return self._update_asset_by_type(phone, phone_in, "phone")
-
-    def delete_phone(self, phone: Asset) -> None:
-        return self._delete_asset_by_type(phone, "phone")
-
-    # Peripheral methods
-    def get_peripheral(self, peripheral_id: int) -> Asset:
-        return self._get_asset_by_type(peripheral_id, "peripheral")
-
-    def get_paginated_peripherals(self, **kwargs) -> Tuple[List[Asset], int]:
-        return self._get_paginated_assets_by_type("peripheral", **kwargs)
-
-    def create_peripheral(self, peripheral_in: PeripheralCreate) -> Asset:
-        return self._create_asset_by_type(peripheral_in, "peripheral")
-
-    def update_peripheral(
-        self, peripheral: Asset, peripheral_in: PeripheralUpdate
-    ) -> Asset:
-        return self._update_asset_by_type(peripheral, peripheral_in, "peripheral")
-
-    def delete_peripheral(self, peripheral: Asset) -> None:
-        return self._delete_asset_by_type(peripheral, "peripheral")
-
-    # Consumable methods
-    def get_consumable(self, consumable_id: int) -> Asset:
-        return self._get_asset_by_type(consumable_id, "consumable")
-
-    def get_paginated_consumables(self, **kwargs) -> Tuple[List[Asset], int]:
-        return self._get_paginated_assets_by_type("consumable", **kwargs)
-
-    def create_consumable(self, consumable_in: ConsumableCreate) -> Asset:
-        return self._create_asset_by_type(consumable_in, "consumable")
-
-    def update_consumable(
-        self, consumable: Asset, consumable_in: ConsumableUpdate
-    ) -> Asset:
-        return self._update_asset_by_type(consumable, consumable_in, "consumable")
-
-    def delete_consumable(self, consumable: Asset) -> None:
-        return self._delete_asset_by_type(consumable, "consumable")
-
-    # Rack methods
-    def get_rack(self, rack_id: int) -> Asset:
-        return self._get_asset_by_type(rack_id, "rack")
-
-    def get_paginated_racks(self, **kwargs) -> Tuple[List[Asset], int]:
-        return self._get_paginated_assets_by_type("rack", **kwargs)
-
-    def create_rack(self, rack_in: RackCreate) -> Asset:
-        return self._create_asset_by_type(rack_in, "rack")
-
-    def update_rack(self, rack: Asset, rack_in: RackUpdate) -> Asset:
-        return self._update_asset_by_type(rack, rack_in, "rack")
-
-    def delete_rack(self, rack: Asset) -> None:
-        return self._delete_asset_by_type(rack, "rack")
-
-    # Cable methods
-    def get_cable(self, cable_id: int) -> Asset:
-        return self._get_asset_by_type(cable_id, "cable")
-
-    def get_paginated_cables(self, **kwargs) -> Tuple[List[Asset], int]:
-        return self._get_paginated_assets_by_type("cable", **kwargs)
-
-    def create_cable(self, cable_in: CableCreate) -> Asset:
-        return self._create_asset_by_type(cable_in, "cable")
-
-    def update_cable(self, cable: Asset, cable_in: CableUpdate) -> Asset:
-        return self._update_asset_by_type(cable, cable_in, "cable")
-
-    def delete_cable(self, cable: Asset) -> None:
-        return self._delete_asset_by_type(cable, "cable")
-
-    # SimCardItem methods
-    def get_sim_card_item(self, sim_card_item_id: int) -> Asset:
-        return self._get_asset_by_type(sim_card_item_id, "sim_card_item")
-
-    def get_paginated_sim_card_items(self, **kwargs) -> Tuple[List[Asset], int]:
-        return self._get_paginated_assets_by_type("sim_card_item", **kwargs)
-
-    def create_sim_card_item(self, sim_card_item_in: SimCardItemCreate) -> Asset:
-        return self._create_asset_by_type(sim_card_item_in, "sim_card_item")
-
-    def update_sim_card_item(
-        self, sim_card_item: Asset, sim_card_item_in: SimCardItemUpdate
-    ) -> Asset:
-        return self._update_asset_by_type(
-            sim_card_item, sim_card_item_in, "sim_card_item"
-        )
-
-    def delete_sim_card_item(self, sim_card_item: Asset) -> None:
-        return self._delete_asset_by_type(sim_card_item, "sim_card_item")
 
     # VirtualMachine methods
     def get_virtual_machine(self, virtual_machine_id: int) -> Asset:
@@ -557,14 +425,7 @@ class AssetService:
         assets_in: List[
             Union[
                 ComputerCreate,
-                PrinterCreate,
                 NetworkDeviceCreate,
-                PhoneCreate,
-                PeripheralCreate,
-                ConsumableCreate,
-                RackCreate,
-                CableCreate,
-                SimCardItemCreate,
                 VirtualMachineCreate,
             ]
         ],
@@ -655,7 +516,6 @@ class AssetService:
 
     def delete_software(self, software: Asset):
         return self._delete_asset_by_type(software, "software")
-
 
     # Software Version methods
     def create_software_version(self, version_in: SoftwareVersionCreate):

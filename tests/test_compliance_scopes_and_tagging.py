@@ -243,7 +243,7 @@ async def test_compliance_scope_includes_assets():
         ), f"Scope creation failed: {create_scope_resp.text}"
         scope = create_scope_resp.json()
         scope_id = scope["id"]
-        
+
         # Verify empty assets list initially
         assert "assets" in scope
         assert scope["assets"] == []
@@ -260,17 +260,6 @@ async def test_compliance_scope_includes_assets():
         assert create_computer_resp.status_code == 201
         computer_id = create_computer_resp.json()["id"]
 
-        printer_payload = {
-            "name": "Test-Printer-Assets",
-            "status": "active",
-            "model": "HP LaserJet",
-        }
-        create_printer_resp = await ac.post(
-            "/assets/printers/", json=printer_payload, headers=headers
-        )
-        assert create_printer_resp.status_code == 201
-        printer_id = create_printer_resp.json()["id"]
-
         # Tag both assets with the scope
         tag_computer_resp = await ac.post(
             f"/compliance/assets/{computer_id}/scopes/{scope_id}",
@@ -278,33 +267,24 @@ async def test_compliance_scope_includes_assets():
         )
         assert tag_computer_resp.status_code == 201
 
-        tag_printer_resp = await ac.post(
-            f"/compliance/assets/{printer_id}/scopes/{scope_id}",
-            headers=headers,
-        )
-        assert tag_printer_resp.status_code == 201
-
         # Get the scope and verify assets are included
         get_scope_resp = await ac.get(f"/compliance/scopes/{scope_id}", headers=headers)
         assert get_scope_resp.status_code == 200
         scope_with_assets = get_scope_resp.json()
-        
+
         # Verify assets field exists and contains both assets
         assert "assets" in scope_with_assets
         assert len(scope_with_assets["assets"]) == 2
-        
+
         # Verify asset objects contain only id, name, and type
         asset_names = {asset["name"] for asset in scope_with_assets["assets"]}
         asset_types = {asset["type"] for asset in scope_with_assets["assets"]}
         asset_ids = {asset["id"] for asset in scope_with_assets["assets"]}
-        
+
         assert "Test-Computer-Assets" in asset_names
-        assert "Test-Printer-Assets" in asset_names
         assert "computer" in asset_types
-        assert "printer" in asset_types
         assert computer_id in asset_ids
-        assert printer_id in asset_ids
-        
+
         # Verify each asset only has id, name, type fields
         for asset in scope_with_assets["assets"]:
             assert set(asset.keys()) == {"id", "name", "type"}
@@ -313,7 +293,7 @@ async def test_compliance_scope_includes_assets():
         list_scopes_resp = await ac.get("/compliance/scopes", headers=headers)
         assert list_scopes_resp.status_code == 200
         scopes_list = list_scopes_resp.json()
-        
+
         # Find our scope in the list
         our_scope = next(s for s in scopes_list if s["id"] == scope_id)
         assert "assets" in our_scope
@@ -321,5 +301,4 @@ async def test_compliance_scope_includes_assets():
 
         # Clean up
         await ac.delete(f"/assets/computers/{computer_id}", headers=headers)
-        await ac.delete(f"/assets/printers/{printer_id}", headers=headers)
         await ac.delete(f"/compliance/scopes/{scope_id}", headers=headers)

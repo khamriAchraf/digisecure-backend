@@ -110,10 +110,18 @@ class GroupService:
                 f"User {self.current_user.id} denied DELETE access for group {group.id}"
             )
             raise PermissionError("Not allowed to delete groups.")
+        if group.users or group.assets or group.children:
+            logger.warning(
+                f"User {self.current_user.id} tried to delete group {group.id} but it has dependent children"
+            )
+            raise PermissionError(
+                "Cannot delete group with assigned users, assets, or child groups."
+            )
         group_crud.delete_group(self.db, group)
         logger.info(
             f"User {self.current_user.id} successfully DELETED group {group.id}"
         )
+        return None
 
     def add_user_to_group(self, group_id: int, user: User) -> Group:
         from app.db.crud.group import get_group
