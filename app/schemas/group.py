@@ -95,7 +95,7 @@ class GroupAssetResponse(BaseModel):
     id: int
     name: str
     type: str
-    status: str
+    status: Optional[str] = None
 
     class Config:
         from_attributes = True

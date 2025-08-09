@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel
+from app.schemas.compliance_scope import ComplianceScope
 
 
 class Asset(BaseModel):
@@ -58,7 +59,7 @@ class AssetBase(BaseModel):
     serial_number: Optional[str] = None
     inventory_number: Optional[str] = None
     manufacturer_id: Optional[int] = None
-    status: str
+    status: Optional[str] = None
     purchase_date: Optional[date] = None
     warranty_expiry: Optional[date] = None
     location_id: Optional[int] = None
@@ -80,6 +81,7 @@ class AssetInDBBase(AssetBase):
     location: Optional[LocationRef] = None
     groups: List[GroupRef] = []
     assigned_user: Optional[UserRef] = None
+    compliance_scopes: List[ComplianceScope] = []
 
     class Config:
         from_attributes = True
@@ -224,7 +226,6 @@ class NetworkDeviceBase(AssetBase):
     management_encryption: Optional[bool] = None
     encryption_type: Optional[str] = None
     data_in_transit_encryption: Optional[bool] = None
-
 
     # Device lifecycle
     power_state: Optional[str] = None
@@ -624,7 +625,6 @@ class VirtualMachineBase(AssetBase):
     network_isolation: Optional[str] = None
     storage_isolation: Optional[str] = None
 
-
     # VM lifecycle
     power_state: Optional[str] = None
     creation_date: Optional[date] = None
@@ -735,8 +735,7 @@ class VirtualMachine(AssetInDBBase, VirtualMachineBase):
 
 
 # Software schemas
-class SoftwareBase(BaseModel):
-    name: str
+class SoftwareBase(AssetBase):
     vendor: Optional[str] = None
     description: Optional[str] = None
     software_type: Optional[str] = (
@@ -783,7 +782,6 @@ class SoftwareBase(BaseModel):
     data_backup_enabled: Optional[bool] = None
     data_encryption_at_rest: Optional[bool] = None
 
-
     # Software lifecycle
     end_of_life_date: Optional[date] = None
     end_of_support_date: Optional[date] = None
@@ -801,7 +799,19 @@ class SoftwareCreate(SoftwareBase):
 
 
 class SoftwareUpdate(BaseModel):
+    # Base asset fields
     name: Optional[str] = None
+    serial_number: Optional[str] = None
+    inventory_number: Optional[str] = None
+    manufacturer_id: Optional[int] = None
+    status: Optional[str] = None
+    purchase_date: Optional[date] = None
+    warranty_expiry: Optional[date] = None
+    location_id: Optional[int] = None
+    group_ids: Optional[List[int]] = None
+    assigned_to: Optional[int] = None
+
+    # Software specific
     vendor: Optional[str] = None
     description: Optional[str] = None
     software_type: Optional[str] = None
@@ -841,16 +851,13 @@ class SoftwareUpdate(BaseModel):
     minimum_requirements: Optional[str] = None
     recommended_requirements: Optional[str] = None
     resource_usage_monitoring: Optional[bool] = None
+    confidentiality_level: Optional[str] = None
+    integrity_level: Optional[str] = None
+    availability_level: Optional[str] = None
 
 
-class Software(SoftwareBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    replacement_software: Optional["Software"] = None
-
-    class Config:
-        from_attributes = True
+class Software(AssetInDBBase, SoftwareBase):
+    type: Literal["software"] = "software"
 
 
 # Software Version schemas

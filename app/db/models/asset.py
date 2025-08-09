@@ -3,6 +3,7 @@ from sqlalchemy import (Boolean, CheckConstraint, Column, Date, DateTime,
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.db.models.compliance_scopes import AssetComplianceScope
 from app.db.models.group import asset_groups
 
 software_version_computers = Table(
@@ -25,7 +26,7 @@ class Asset(Base):
     serial_number = Column(String, nullable=True)
     inventory_number = Column(String, nullable=True)
     manufacturer_id = Column(Integer, ForeignKey("manufacturers.id"), nullable=True)
-    status = Column(String, nullable=False)
+    status = Column(String, nullable=True)
     purchase_date = Column(Date, nullable=True)
     warranty_expiry = Column(Date, nullable=True)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
@@ -46,6 +47,11 @@ class Asset(Base):
     location = relationship("Location")
     groups = relationship("Group", secondary=asset_groups, back_populates="assets")
     assigned_user = relationship("User")
+
+    @property
+    def compliance_scopes(self):
+        """Get all compliance scopes associated with this asset."""
+        return [mapping.scope for mapping in self.compliance_mappings]
 
     # Polymorphic configuration
     __mapper_args__ = {"polymorphic_on": type, "polymorphic_identity": "asset"}
@@ -326,7 +332,6 @@ class VirtualMachine(Asset):
     network_isolation = Column(String, nullable=True)  # Yes, No
     storage_isolation = Column(String, nullable=True)  # Yes, No
 
-
     # VM lifecycle
     power_state = Column(String, nullable=True)  # Running, Stopped, Suspended
     creation_date = Column(Date, nullable=True)
@@ -346,11 +351,10 @@ class VirtualMachine(Asset):
     __mapper_args__ = {"polymorphic_identity": "virtual_machine"}
 
 
-class Software(Base):
+class Software(Asset):
     __tablename__ = "software"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
+    id = Column(Integer, ForeignKey("assets.id"), primary_key=True)
     vendor = Column(String, nullable=True)
     description = Column(String, nullable=True)
 
@@ -415,12 +419,13 @@ class Software(Base):
     recommended_requirements = Column(String, nullable=True)
     resource_usage_monitoring = Column(Boolean, nullable=True)  # Yes, No
 
-    # Timestamps
-    created_at = Column(DateTime, nullable=False)
-    updated_at = Column(DateTime, nullable=False)
-
     # Relationships
-    replacement_software = relationship("Software", remote_side=[id])
+    replacement_software = relationship(
+        "Software",
+        remote_side=[id],
+        foreign_keys=[replacement_software_id],
+        uselist=False,
+    )
     versions = relationship(
         "SoftwareVersion", back_populates="software", cascade="all, delete-orphan"
     )
@@ -431,6 +436,8 @@ class Software(Base):
             name="valid_vulnerability_status",
         ),
     )
+
+    __mapper_args__ = {"polymorphic_identity": "software"}
 
 
 class SoftwareVersion(Base):
@@ -443,10 +450,8 @@ class SoftwareVersion(Base):
     release_date = Column(Date, nullable=True)
     end_of_life_date = Column(Date, nullable=True)
     end_of_support_date = Column(Date, nullable=True)
-
-    # Timestamps
-    created_at = Column(DateTime, nullable=False)
-    updated_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, nullable=True)
 
     # Relationships
     software = relationship("Software", back_populates="versions")

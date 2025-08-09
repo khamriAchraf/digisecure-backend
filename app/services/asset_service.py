@@ -82,6 +82,7 @@ class AssetService:
             "cable": "cable",
             "sim_card_item": "sim_card_item",
             "virtual_machine": "virtual_machine",
+            "software": "software",
         }
 
         # Check which asset types the user has read permissions for
@@ -647,81 +648,14 @@ class AssetService:
         return software_list, total
 
     def create_software(self, software_in: SoftwareCreate):
-        """Create a new software."""
-        logger.info(
-            f"User {self.current_user.id} attempts to CREATE software {software_in.name} at {datetime.now(timezone.utc).isoformat()}"
-        )
-        if not has_permission(self.current_user, "create", "software"):
-            logger.warning(
-                f"User {self.current_user.id} denied CREATE access for software {software_in.name}"
-            )
-            raise PermissionError("Not allowed to create software.")
+        return self._create_asset_by_type(software_in, "software")
 
-        # Import here to avoid circular imports
-        from app.db.crud import software as software_crud
+    def update_software(self, software: Asset, software_in: SoftwareUpdate):
+        return self._update_asset_by_type(software, software_in, "software")
 
-        try:
-            software = software_crud.create_software(self.db, software_in)
-        except ValueError as e:
-            from fastapi import HTTPException
+    def delete_software(self, software: Asset):
+        return self._delete_asset_by_type(software, "software")
 
-            raise HTTPException(status_code=409, detail=str(e))
-
-        logger.info(
-            f"User {self.current_user.id} successfully CREATED software {software.id}"
-        )
-        return software
-
-    def update_software(self, software_id: int, software_in: SoftwareUpdate):
-        """Update a software."""
-        logger.info(
-            f"User {self.current_user.id} attempts to UPDATE software {software_id} at {datetime.now(timezone.utc).isoformat()}"
-        )
-        if not has_permission(self.current_user, "update", "software"):
-            logger.warning(
-                f"User {self.current_user.id} denied UPDATE access for software {software_id}"
-            )
-            raise PermissionError("Not allowed to update software.")
-
-        # Import here to avoid circular imports
-        from app.db.crud import software as software_crud
-
-        software = software_crud.get_software(self.db, software_id)
-        if not software:
-            from fastapi import HTTPException
-
-            raise HTTPException(status_code=404, detail="Software not found")
-
-        updated_software = software_crud.update_software(self.db, software, software_in)
-        logger.info(
-            f"User {self.current_user.id} successfully UPDATED software {software_id}"
-        )
-        return updated_software
-
-    def delete_software(self, software_id: int):
-        """Delete a software."""
-        logger.info(
-            f"User {self.current_user.id} attempts to DELETE software {software_id} at {datetime.now(timezone.utc).isoformat()}"
-        )
-        if not has_permission(self.current_user, "delete", "software"):
-            logger.warning(
-                f"User {self.current_user.id} denied DELETE access for software {software_id}"
-            )
-            raise PermissionError("Not allowed to delete software.")
-
-        # Import here to avoid circular imports
-        from app.db.crud import software as software_crud
-
-        software = software_crud.get_software(self.db, software_id)
-        if not software:
-            from fastapi import HTTPException
-
-            raise HTTPException(status_code=404, detail="Software not found")
-
-        software_crud.delete_software(self.db, software)
-        logger.info(
-            f"User {self.current_user.id} successfully DELETED software {software_id}"
-        )
 
     # Software Version methods
     def create_software_version(self, version_in: SoftwareVersionCreate):

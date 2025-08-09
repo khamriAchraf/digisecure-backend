@@ -6,8 +6,9 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 
-from app.api.v1 import auth, group, role, schema, table_config, user
+from app.api.v1 import auth
 from app.api.v1 import compliance as compliance_module
+from app.api.v1 import group, role, schema, table_config, user
 from app.api.v1.asset import router as asset_router
 from app.api.v1.reference_data import router as reference_data_router
 from app.core.config import settings

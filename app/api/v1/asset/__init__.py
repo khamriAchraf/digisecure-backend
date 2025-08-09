@@ -33,21 +33,18 @@ router.include_router(virtual_machine_router)
 # router.include_router(bulk_router)
 
 
-from typing import Optional, List
+from typing import List, Optional
 
 from fastapi import Depends, Query
-
-from app.api.dependencies import get_asset_service
-from app.services.asset_service import AssetService, PermissionError
-from app.schemas.compliance_scope import (
-    AssetComplianceScope,
-    AssetComplianceScopeCreate,
-    AssetComplianceScopeUpdate,
-)
-from app.services.compliance_scope_service import ComplianceScopeService
-from app.api.dependencies import get_db, get_current_user
-from app.db.models.user import User
 from sqlalchemy.orm import Session
+
+from app.api.dependencies import get_asset_service, get_current_user, get_db
+from app.db.models.user import User
+from app.schemas.compliance_scope import (AssetComplianceScope,
+                                          AssetComplianceScopeCreate,
+                                          AssetComplianceScopeUpdate)
+from app.services.asset_service import AssetService, PermissionError
+from app.services.compliance_scope_service import ComplianceScopeService
 
 
 @router.get(
@@ -98,7 +95,9 @@ def tag_scope_to_asset(
 ):
     try:
         payload = mapping_in.dict() if mapping_in else {}
-        base = AssetComplianceScopeCreate(asset_id=asset_id, scope_id=scope_id, **payload)
+        base = AssetComplianceScopeCreate(
+            asset_id=asset_id, scope_id=scope_id, **payload
+        )
         return service.tag_asset_with_scope(base)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Date, ForeignKey
+from sqlalchemy import Column, Date, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -15,18 +15,22 @@ class ComplianceScope(Base):
     last_audit_date = Column(Date, nullable=True)
     last_audit_result = Column(String, nullable=True)
     next_audit_due = Column(Date, nullable=True)
-    auditor = Column(String, nullable=True) 
+    auditor = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
-
 
     # Reverse relationship
     # Do not cascade deletes here; we want DB FK to block deletion when in use.
     # passive_deletes=True ensures ORM doesn't try to null-out PK FKs on children.
-    assets = relationship(
+    asset_mappings = relationship(
         "AssetComplianceScope",
         back_populates="scope",
         passive_deletes=True,
     )
+    
+    @property
+    def assets(self):
+        """Get all assets associated with this compliance scope."""
+        return [mapping.asset for mapping in self.asset_mappings]
 
 
 class AssetComplianceScope(Base):
@@ -41,5 +45,5 @@ class AssetComplianceScope(Base):
     compliance_notes = Column(Text, nullable=True)
 
     # Relationships
-    asset = relationship("Asset", backref="compliance_mappings")
-    scope = relationship("ComplianceScope", back_populates="assets")
+    asset = relationship("Asset", backref="compliance_mappings", passive_deletes=True)
+    scope = relationship("ComplianceScope", back_populates="asset_mappings", passive_deletes=True)

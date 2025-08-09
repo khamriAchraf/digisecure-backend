@@ -412,5 +412,3 @@ async def test_asset_type_specific_operations():
             assert (
                 get_after_del.status_code == 404
             ), f"Deleted {endpoint} should return 404"
-
-

@@ -1,21 +1,20 @@
 from datetime import datetime, timezone
 from typing import List
 
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.core.logger import logger
 from app.core.security import has_permission
 from app.db.crud import asset as asset_crud
 from app.db.crud import compliance_scope as compliance_crud
-from app.db.models.compliance_scopes import ComplianceScope as ComplianceScopeModel
+from app.db.models.compliance_scopes import \
+    ComplianceScope as ComplianceScopeModel
 from app.db.models.user import User
-from app.schemas.compliance_scope import (
-    AssetComplianceScopeCreate,
-    AssetComplianceScopeUpdate,
-    ComplianceScopeCreate,
-    ComplianceScopeUpdate,
-)
+from app.schemas.compliance_scope import (AssetComplianceScopeCreate,
+                                          AssetComplianceScopeUpdate,
+                                          ComplianceScopeCreate,
+                                          ComplianceScopeUpdate)
 
 
 class PermissionError(Exception):
@@ -62,7 +61,9 @@ class ComplianceScopeService:
             raise PermissionError("Not allowed to create compliance scopes.")
         return compliance_crud.create_scope(self.db, scope_in)
 
-    def update_scope(self, scope: ComplianceScopeModel, scope_in: ComplianceScopeUpdate):
+    def update_scope(
+        self, scope: ComplianceScopeModel, scope_in: ComplianceScopeUpdate
+    ):
         logger.info(
             f"User {self.current_user.id} attempts to UPDATE compliance scope {scope.id} at {datetime.now(timezone.utc).isoformat()}"
         )
@@ -119,7 +120,9 @@ class ComplianceScopeService:
             return existing
         return compliance_crud.create_asset_scope(self.db, mapping_in)
 
-    def update_asset_scope(self, asset_id: int, scope_id: int, mapping_in: AssetComplianceScopeUpdate):
+    def update_asset_scope(
+        self, asset_id: int, scope_id: int, mapping_in: AssetComplianceScopeUpdate
+    ):
         logger.info(
             f"User {self.current_user.id} attempts to UPDATE asset {asset_id} scope {scope_id} at {datetime.now(timezone.utc).isoformat()}"
         )
@@ -167,20 +170,23 @@ class ComplianceScopeService:
             raise HTTPException(status_code=404, detail="Asset not found")
 
         # Validate scopes
-        valid_scopes = self.db.query(ComplianceScopeModel.id).filter(
-            ComplianceScopeModel.id.in_(scope_ids)
-        ).all()
+        valid_scopes = (
+            self.db.query(ComplianceScopeModel.id)
+            .filter(ComplianceScopeModel.id.in_(scope_ids))
+            .all()
+        )
         valid_ids = {sid for (sid,) in valid_scopes}
         if len(valid_ids) != len(set(scope_ids)):
             from fastapi import HTTPException
 
-            raise HTTPException(status_code=400, detail="One or more scopes are invalid")
+            raise HTTPException(
+                status_code=400, detail="One or more scopes are invalid"
+            )
 
-        from app.db.models.compliance_scopes import AssetComplianceScope as Mapping
+        from app.db.models.compliance_scopes import \
+            AssetComplianceScope as Mapping
 
         self.db.query(Mapping).filter(Mapping.asset_id == asset_id).delete()
         for sid in scope_ids:
             self.db.add(Mapping(asset_id=asset_id, scope_id=sid))
         self.db.commit()
-
-

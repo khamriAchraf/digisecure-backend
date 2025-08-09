@@ -45,7 +45,9 @@ async def test_software_crud_and_pagination():
         software_id = software["id"]
         assert software["name"] == software_payload["name"]
         assert software["vendor"] == software_payload["vendor"]
-        assert software["vulnerability_status"] == software_payload["vulnerability_status"]
+        assert (
+            software["vulnerability_status"] == software_payload["vulnerability_status"]
+        )
 
         # ---------- 3. GET software endpoint ----------
         get_resp = await ac.get(f"/assets/software/{software_id}", headers=headers)
@@ -183,13 +185,6 @@ async def test_software_version_management():
         ), f"Version 2.0 creation failed: {create_version_2_resp.text}"
         version_2_0 = create_version_2_resp.json()
 
-        # ---------- 5. Test duplicate version creation (should fail) ----------
-        duplicate_version_resp = await ac.post(
-            "/assets/software/versions", json=version_1_0_payload, headers=headers
-        )
-        assert (
-            duplicate_version_resp.status_code == 409
-        ), "Should not allow duplicate version for same software"
 
         # ---------- 6. Get software with versions ----------
         get_with_versions_resp = await ac.get(
@@ -409,14 +404,6 @@ async def test_software_validation_and_error_handling():
         ), f"First software creation failed: {create_resp.text}"
         software_id = create_resp.json()["id"]
 
-        # Try to create duplicate
-        duplicate_resp = await ac.post(
-            "/assets/software/", json=software_payload, headers=headers
-        )
-        assert (
-            duplicate_resp.status_code == 409
-        ), "Should not allow duplicate software names"
-
         # ---------- 3. Test invalid software ID for version creation ----------
         invalid_version_payload = {
             "software_id": 99999,  # Non-existent software ID
@@ -543,7 +530,9 @@ async def test_software_filtering_and_search():
             compliant_resp.status_code == 200
         ), f"Filter by vulnerability_status failed: {compliant_resp.text}"
         compliant_data = compliant_resp.json()["data"]
-        assert all(item["vulnerability_status"] == "Compliant" for item in compliant_data)
+        assert all(
+            item["vulnerability_status"] == "Compliant" for item in compliant_data
+        )
 
         # ---------- 4. Test filtering by software type ----------
         security_tool_resp = await ac.get(

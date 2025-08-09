@@ -5,18 +5,44 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, with_polymorphic
 
-from app.db.models.asset import (Asset, Cable, Computer, Consumable,
-                                 NetworkDevice, Peripheral, Phone, Printer,
-                                 Rack, SimCardItem, VirtualMachine)
-from app.schemas.asset import (CableCreate, CableUpdate, ComputerCreate,
-                               ComputerUpdate, ConsumableCreate,
-                               ConsumableUpdate, NetworkDeviceCreate,
-                               NetworkDeviceUpdate, PeripheralCreate,
-                               PeripheralUpdate, PhoneCreate, PhoneUpdate,
-                               PrinterCreate, PrinterUpdate, RackCreate,
-                               RackUpdate, SimCardItemCreate,
-                               SimCardItemUpdate, VirtualMachineCreate,
-                               VirtualMachineUpdate)
+from app.db.models.asset import (
+    Asset,
+    Cable,
+    Computer,
+    Consumable,
+    NetworkDevice,
+    Peripheral,
+    Phone,
+    Printer,
+    Rack,
+    SimCardItem,
+    VirtualMachine,
+    Software,
+)
+from app.schemas.asset import (
+    CableCreate,
+    CableUpdate,
+    ComputerCreate,
+    ComputerUpdate,
+    ConsumableCreate,
+    ConsumableUpdate,
+    NetworkDeviceCreate,
+    NetworkDeviceUpdate,
+    PeripheralCreate,
+    PeripheralUpdate,
+    PhoneCreate,
+    PhoneUpdate,
+    PrinterCreate,
+    PrinterUpdate,
+    RackCreate,
+    RackUpdate,
+    SimCardItemCreate,
+    SimCardItemUpdate,
+    SoftwareCreate,
+    SoftwareUpdate,
+    VirtualMachineCreate,
+    VirtualMachineUpdate,
+)
 
 ASSET_TYPE_MAPPING = {
     "computer": (Computer, ComputerCreate),
@@ -29,6 +55,7 @@ ASSET_TYPE_MAPPING = {
     "cable": (Cable, CableCreate),
     "sim_card_item": (SimCardItem, SimCardItemCreate),
     "virtual_machine": (VirtualMachine, VirtualMachineCreate),
+    "software": (Software, SoftwareCreate),
 }
 
 ALL_ASSET_TYPES = [
@@ -43,6 +70,7 @@ ALL_ASSET_TYPES = [
     Cable,
     SimCardItem,
     VirtualMachine,
+    Software,
 ]
 
 
@@ -55,17 +83,21 @@ def get_asset_by_type(db: Session, asset_id: int, asset_type: str) -> Optional[A
         raise ValueError(f"Invalid asset type: {asset_type}")
 
     asset_class = ASSET_TYPE_MAPPING[asset_type][0]
-    return (
-        db.query(asset_class)
-        .options(
-            joinedload(asset_class.manufacturer),
-            joinedload(asset_class.location),
-            joinedload(asset_class.groups),
-            joinedload(asset_class.assigned_user),
-        )
-        .filter(asset_class.id == asset_id)
-        .first()
+    query = db.query(asset_class).options(
+        joinedload(asset_class.manufacturer),
+        joinedload(asset_class.location),
+        joinedload(asset_class.groups),
+        joinedload(asset_class.assigned_user),
     )
+    # Eager load compliance scopes through association to avoid N+1
+    from app.db.models.compliance_scopes import AssetComplianceScope, ComplianceScope
+
+    query = query.options(
+        joinedload(asset_class.compliance_mappings).joinedload(
+            AssetComplianceScope.scope
+        )
+    )
+    return query.filter(asset_class.id == asset_id).first()
 
 
 def get_paginated_assets(
@@ -148,6 +180,7 @@ def create_asset(
         CableCreate,
         SimCardItemCreate,
         VirtualMachineCreate,
+        SoftwareCreate,
     ],
 ) -> Asset:
     now = datetime.now(timezone.utc)
@@ -227,6 +260,7 @@ def update_asset(
         CableUpdate,
         SimCardItemUpdate,
         VirtualMachineUpdate,
+        SoftwareUpdate,
     ],
 ) -> Asset:
     base_fields = [

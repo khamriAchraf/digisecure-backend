@@ -5,21 +5,16 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db
 from app.db.models.user import User
-from app.schemas.compliance_scope import (
-    AssetComplianceScope,
-    AssetComplianceScopeCreate,
-    AssetComplianceScopeUpdate,
-    ComplianceScope,
-    ComplianceScopeCreate,
-    ComplianceScopeUpdate,
-)
-from app.services.compliance_scope_service import (
-    ComplianceScopeService,
-    PermissionError,
-)
+from app.schemas.compliance_scope import (AssetComplianceScope,
+                                          AssetComplianceScopeCreate,
+                                          AssetComplianceScopeUpdate,
+                                          ComplianceScope,
+                                          ComplianceScopeCreate,
+                                          ComplianceScopeUpdate)
+from app.services.compliance_scope_service import (ComplianceScopeService,
+                                                   PermissionError)
 
-
-router = APIRouter(prefix="/compliance", tags=["compliance"]) 
+router = APIRouter(prefix="/compliance", tags=["compliance"])
 
 
 def get_compliance_service(
@@ -40,9 +35,12 @@ def list_scopes(
         raise HTTPException(status_code=403, detail=str(e))
 
 
-@router.post("/scopes", response_model=ComplianceScope, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/scopes", response_model=ComplianceScope, status_code=status.HTTP_201_CREATED
+)
 def create_scope(
-    scope_in: ComplianceScopeCreate, service: ComplianceScopeService = Depends(get_compliance_service)
+    scope_in: ComplianceScopeCreate,
+    service: ComplianceScopeService = Depends(get_compliance_service),
 ):
     try:
         return service.create_scope(scope_in)
@@ -51,7 +49,9 @@ def create_scope(
 
 
 @router.get("/scopes/{scope_id}", response_model=ComplianceScope)
-def get_scope(scope_id: int, service: ComplianceScopeService = Depends(get_compliance_service)):
+def get_scope(
+    scope_id: int, service: ComplianceScopeService = Depends(get_compliance_service)
+):
     try:
         scope = service.get_scope(scope_id)
         if not scope:
@@ -77,7 +77,9 @@ def update_scope(
 
 
 @router.delete("/scopes/{scope_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_scope(scope_id: int, service: ComplianceScopeService = Depends(get_compliance_service)):
+def delete_scope(
+    scope_id: int, service: ComplianceScopeService = Depends(get_compliance_service)
+):
     try:
         scope = service.get_scope(scope_id)
         if not scope:
@@ -88,7 +90,11 @@ def delete_scope(scope_id: int, service: ComplianceScopeService = Depends(get_co
 
 
 # Asset tagging endpoints
-@router.post("/assets/{asset_id}/scopes/{scope_id}", response_model=AssetComplianceScope, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/assets/{asset_id}/scopes/{scope_id}",
+    response_model=AssetComplianceScope,
+    status_code=status.HTTP_201_CREATED,
+)
 def tag_asset_scope(
     asset_id: int,
     scope_id: int,
@@ -97,7 +103,9 @@ def tag_asset_scope(
 ):
     try:
         payload = mapping_in.dict() if mapping_in else {}
-        base = AssetComplianceScopeCreate(asset_id=asset_id, scope_id=scope_id, **payload)
+        base = AssetComplianceScopeCreate(
+            asset_id=asset_id, scope_id=scope_id, **payload
+        )
         return service.tag_asset_with_scope(base)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -116,9 +124,13 @@ def update_asset_scope(
         raise HTTPException(status_code=403, detail=str(e))
 
 
-@router.delete("/assets/{asset_id}/scopes/{scope_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/assets/{asset_id}/scopes/{scope_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 def untag_asset_scope(
-    asset_id: int, scope_id: int, service: ComplianceScopeService = Depends(get_compliance_service)
+    asset_id: int,
+    scope_id: int,
+    service: ComplianceScopeService = Depends(get_compliance_service),
 ):
     try:
         service.untag_asset_scope(asset_id, scope_id)
@@ -136,5 +148,3 @@ def replace_asset_scopes(
         service.replace_asset_scopes(asset_id, scope_ids)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
-
-

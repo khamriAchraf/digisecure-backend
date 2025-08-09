@@ -1,7 +1,16 @@
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
+
+
+class AssetRef(BaseModel):
+    id: int
+    name: str
+    type: str
+
+    class Config:
+        from_attributes = True
 
 
 class ComplianceScopeBase(BaseModel):
@@ -32,6 +41,7 @@ class ComplianceScopeUpdate(BaseModel):
 
 class ComplianceScope(ComplianceScopeBase):
     id: int
+    assets: List[AssetRef] = []
 
     class Config:
         from_attributes = True
@@ -67,5 +77,3 @@ class AssetComplianceScope(BaseModel):
 
     class Config:
         from_attributes = True
-
-

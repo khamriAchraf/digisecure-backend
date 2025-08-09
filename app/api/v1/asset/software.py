@@ -93,7 +93,7 @@ def update_software(
         software = service.get_software(software_id)
         if not software:
             raise HTTPException(status_code=404, detail="Software not found")
-        return service.update_software(software_id, software_in)
+        return service.update_software(software, software_in)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
@@ -108,7 +108,7 @@ def delete_software(
         software = service.get_software(software_id)
         if not software:
             raise HTTPException(status_code=404, detail="Software not found")
-        service.delete_software(software_id)
+        service.delete_software(software)
         return None
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))

@@ -9,15 +9,8 @@ from app.core.config import settings
 from app.core.logger import logger
 from app.core.security import get_password_hash
 from app.db.base import Base
-from app.db.models import (
-    Location,
-    Manufacturer,
-    Permission,
-    Role,
-    TableConfig,
-    User,
-    ComplianceScope,
-)
+from app.db.models import (ComplianceScope, Location, Manufacturer, Permission,
+                           Role, TableConfig, User)
 from app.db.models.asset import (Cable, Computer, Consumable, NetworkDevice,
                                  Peripheral, Phone, Printer, Rack, SimCardItem)
 from app.db.session import SessionLocal, engine
@@ -1156,7 +1149,7 @@ def main():
         for scope_data in preset_compliance_scopes:
             existing_scope = (
                 session.query(ComplianceScope)
-                .filter_by(name=scope_data["name"]) 
+                .filter_by(name=scope_data["name"])
                 .first()
             )
             if not existing_scope:

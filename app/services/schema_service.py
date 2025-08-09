@@ -1265,6 +1265,7 @@ class SchemaService:
             {"id": "specifications", "label_key": "forms.tabs.specifications"},
             {"id": "network", "label_key": "forms.tabs.network"},
             {"id": "groups", "label_key": "forms.tabs.groups"},
+            {"id": "compliance", "label_key": "forms.tabs.compliance"},
         ]
         enhanced_schema = {
             "version": "1.0.0",
@@ -1540,6 +1541,7 @@ class SchemaService:
             {"id": "compliance", "label_key": "forms.tabs.compliance"},
             {"id": "backup", "label_key": "forms.tabs.backup"},
             {"id": "groups", "label_key": "forms.tabs.groups"},
+            {"id": "compliance", "label_key": "forms.tabs.compliance"},
         ]
         enhanced_schema = {
             "version": "1.0.0",
@@ -2425,9 +2427,9 @@ class SchemaService:
             {"id": "security", "label_key": "forms.tabs.security"},
             {"id": "authentication", "label_key": "forms.tabs.authentication"},
             {"id": "monitoring", "label_key": "forms.tabs.monitoring"},
-            {"id": "compliance", "label_key": "forms.tabs.compliance"},
             {"id": "lifecycle", "label_key": "forms.tabs.lifecycle"},
             {"id": "groups", "label_key": "forms.tabs.groups"},
+            {"id": "compliance", "label_key": "forms.tabs.compliance"},
         ]
         enhanced_schema = {
             "version": "1.0.0",
@@ -3255,9 +3257,10 @@ class SchemaService:
         # Define tab definitions so that the frontend can render tabbed forms
         tabs = [
             {"id": "general", "label_key": "forms.tabs.general"},
-            {"id": "pci_compliance", "label_key": "forms.tabs.pci_compliance"},
             {"id": "security", "label_key": "forms.tabs.security"},
             {"id": "lifecycle", "label_key": "forms.tabs.lifecycle"},
+            {"id": "groups", "label_key": "forms.tabs.groups"},
+            {"id": "compliance", "label_key": "forms.tabs.compliance"},
         ]
 
         enhanced_schema = {
@@ -3321,81 +3324,7 @@ class SchemaService:
                         "tab_id": "general",
                         "validation": {"required": False},
                     },
-                    # PCI Compliance tab
-                    "handles_cardholder_data": {
-                        "widget": "checkbox",
-                        "label_key": "forms.software.fields.handles_cardholder_data.label",
-                        "order": 1,
-                        "tab_id": "pci_compliance",
-                        "validation": {"required": False},
-                    },
-                    "stores_cardholder_data": {
-                        "widget": "checkbox",
-                        "label_key": "forms.software.fields.stores_cardholder_data.label",
-                        "order": 2,
-                        "tab_id": "pci_compliance",
-                        "validation": {"required": False},
-                    },
-                    "transmits_cardholder_data": {
-                        "widget": "checkbox",
-                        "label_key": "forms.software.fields.transmits_cardholder_data.label",
-                        "order": 3,
-                        "tab_id": "pci_compliance",
-                        "validation": {"required": False},
-                    },
-                    "processes_cardholder_data": {
-                        "widget": "checkbox",
-                        "label_key": "forms.software.fields.processes_cardholder_data.label",
-                        "order": 4,
-                        "tab_id": "pci_compliance",
-                        "validation": {"required": False},
-                    },
-                    "pci_compliance_status": {
-                        "widget": "select",
-                        "options": [
-                            {
-                                "value": "Compliant",
-                                "label_key": "forms.software.fields.pci_compliance_status.options.compliant",
-                            },
-                            {
-                                "value": "Non-Compliant",
-                                "label_key": "forms.software.fields.pci_compliance_status.options.non_compliant",
-                            },
-                            {
-                                "value": "In Progress",
-                                "label_key": "forms.software.fields.pci_compliance_status.options.in_progress",
-                            },
-                        ],
-                        "placeholder_key": "forms.software.fields.pci_compliance_status.placeholder",
-                        "label_key": "forms.software.fields.pci_compliance_status.label",
-                        "order": 5,
-                        "tab_id": "pci_compliance",
-                        "validation": {"required": False},
-                    },
-                    "pci_assessment_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.software.fields.pci_assessment_date.placeholder",
-                        "label_key": "forms.software.fields.pci_assessment_date.label",
-                        "order": 6,
-                        "tab_id": "pci_compliance",
-                        "validation": {"required": False},
-                    },
-                    "next_assessment_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.software.fields.next_assessment_date.placeholder",
-                        "label_key": "forms.software.fields.next_assessment_date.label",
-                        "order": 7,
-                        "tab_id": "pci_compliance",
-                        "validation": {"required": False},
-                    },
-                    "compliance_notes": {
-                        "widget": "textarea",
-                        "placeholder_key": "forms.software.fields.compliance_notes.placeholder",
-                        "label_key": "forms.software.fields.compliance_notes.label",
-                        "order": 8,
-                        "tab_id": "pci_compliance",
-                        "validation": {"required": False},
-                    },
+                    
                     # Security tab
                     "encryption_enabled": {
                         "widget": "checkbox",
@@ -3496,6 +3425,16 @@ class SchemaService:
                         "label_key": "forms.software.fields.replacement_planned.label",
                         "order": 3,
                         "tab_id": "lifecycle",
+                        "validation": {"required": False},
+                    },
+                    # Groups tab
+                    "groups": {
+                        "widget": "relationship",
+                        "quick_create_resource": "group",
+                        "placeholder_key": "forms.software.fields.group_id.placeholder",
+                        "label_key": "forms.software.fields.group_id.label",
+                        "order": 1,
+                        "tab_id": "groups",
                         "validation": {"required": False},
                     },
                 },
