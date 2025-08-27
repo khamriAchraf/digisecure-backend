@@ -6,31 +6,19 @@ from sqlalchemy.orm import Query, Session
 
 from app.db.models.role import Role
 from app.db.models.user import User, UserStatus
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import UserCreate, UserList, UserUpdate
 
 
 def get_user(db: Session, user_id: int) -> Optional[User]:
-    return (
-        db.query(User)
-        .filter(User.id == user_id, User.status != UserStatus.deleted)
-        .first()
-    )
+    return db.query(User).filter(User.id == user_id).first()
 
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    return (
-        db.query(User)
-        .filter(User.email == email, User.status != UserStatus.deleted)
-        .first()
-    )
+    return db.query(User).filter(User.email == email).first()
 
 
 def get_user_by_username(db: Session, username: str) -> Optional[User]:
-    return (
-        db.query(User)
-        .filter(User.username == username, User.status != UserStatus.deleted)
-        .first()
-    )
+    return db.query(User).filter(User.username == username).first()
 
 
 def get_paginated_users(
@@ -41,8 +29,94 @@ def get_paginated_users(
     sort_order: str = "asc",
     search: Optional[str] = None,
     filters: Optional[dict] = None,
+) -> Tuple[List[UserList], int]:
+    # Only select the fields required by UserList: id, username, role, status
+    # Join Role to return a proper Role instance for Pydantic (instead of a boolean expression)
+    query: Query = db.query(
+        User.id,
+        User.username,
+        Role,
+        User.status,
+    ).outerjoin(Role, User.role_id == Role.id)
+
+    # Apply filters
+    if filters:
+        for key, value in filters.items():
+            if hasattr(User, key) and value is not None and value != "":
+                query = query.filter(getattr(User, key) == value)
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                User.full_name.ilike(search_term),
+                User.email.ilike(search_term),
+                User.username.ilike(search_term),
+            )
+        )
+
+    # For total, count on the base User query (not the projection)
+    total_query = db.query(User.id)
+    if filters:
+        for key, value in filters.items():
+            if hasattr(User, key) and value is not None and value != "":
+                total_query = total_query.filter(getattr(User, key) == value)
+    if search:
+        search_term = f"%{search}%"
+        total_query = total_query.filter(
+            or_(
+                User.full_name.ilike(search_term),
+                User.email.ilike(search_term),
+                User.username.ilike(search_term),
+            )
+        )
+    total = total_query.count()
+
+    # Apply sorting
+    if sort_by and hasattr(User, sort_by):
+        column = getattr(User, sort_by)
+        if sort_order.lower() == "desc":
+            query = query.order_by(column.desc())
+        else:
+            query = query.order_by(column.asc())
+
+    # Apply pagination
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    results = query.all()
+
+    # Convert results to UserList Pydantic models
+    user_lists = []
+    for row in results:
+        # row: (id, username, role (Role model or None), status (UserStatus))
+        user_dict = {
+            "id": row[0],
+            "username": row[1],
+            "role": row[2],
+            "status": row[3].value if hasattr(row[3], "value") else row[3],
+        }
+        user_lists.append(UserList(**user_dict))
+
+    return user_lists, total
+
+
+# Deleted users pagination
+def get_paginated_deleted_users(
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
 ) -> Tuple[List[User], int]:
-    query: Query = db.query(User).filter(User.status != UserStatus.deleted)
+    """
+    Returns a paginated list of soft-deleted users.
+    Uses the custom SoftDeleteQuery.only_deleted to include only rows with is_deleted=True.
+    """
+    query: Query = db.query(User).only_deleted()
 
     # Apply filters
     if filters:
@@ -70,6 +144,8 @@ def get_paginated_users(
             query = query.order_by(column.desc())
         else:
             query = query.order_by(column.asc())
+    else:
+        query = query.order_by(User.id.asc())
 
     # Apply pagination
     offset = (page - 1) * per_page
@@ -88,26 +164,30 @@ def get_cursor_users(
     sort_order: str = "asc",
     search: Optional[str] = None,
     filters: Optional[dict] = None,
-) -> Tuple[List[User], int]:
+) -> Tuple[List[UserList], int]:
     """Return users for infinite scrolling based on an integer cursor.
 
-    If a cursor is provided, the query will fetch items *after* the cursor for
-    ascending order and *before* the cursor for descending order. The function
-    mimics the structure of ``get_paginated_users`` to keep logic consistent.
+    Returns minimal fields aligned with UserList: id, username, role, status.
     """
 
-    query: Query = db.query(User).filter(User.status != UserStatus.deleted)
+    # Base query selecting minimal fields and joining role
+    base_query: Query = db.query(
+        User.id,
+        User.username,
+        Role,
+        User.status,
+    ).outerjoin(Role, User.role_id == Role.id)
 
     # Apply filters (reuse logic from get_paginated_users)
     if filters:
         for key, value in filters.items():
             if hasattr(User, key) and value is not None and value != "":
-                query = query.filter(getattr(User, key) == value)
+                base_query = base_query.filter(getattr(User, key) == value)
 
     # Apply search
     if search:
         search_term = f"%{search}%"
-        query = query.filter(
+        base_query = base_query.filter(
             or_(
                 User.full_name.ilike(search_term),
                 User.email.ilike(search_term),
@@ -118,11 +198,12 @@ def get_cursor_users(
     # Apply cursor filtering BEFORE counting total to ensure total reflects remaining items
     if cursor is not None:
         if sort_order.lower() == "desc":
-            query = query.filter(User.id < cursor)
+            base_query = base_query.filter(User.id < cursor)
         else:
-            query = query.filter(User.id > cursor)
+            base_query = base_query.filter(User.id > cursor)
 
-    total = query.count()
+    # Total after cursor filter
+    total = base_query.count()
 
     # Apply sorting (fallback to id)
     if sort_by and hasattr(User, sort_by):
@@ -131,15 +212,27 @@ def get_cursor_users(
         column = User.id
 
     if sort_order.lower() == "desc":
-        query = query.order_by(column.desc())
+        base_query = base_query.order_by(column.desc())
     else:
-        query = query.order_by(column.asc())
+        base_query = base_query.order_by(column.asc())
 
     # Limit results for infinite scroll
-    query = query.limit(per_page)
+    base_query = base_query.limit(per_page)
 
-    users = query.all()
-    return users, total
+    rows = base_query.all()
+
+    users_list: List[UserList] = []
+    for row in rows:
+        users_list.append(
+            UserList(
+                id=row[0],
+                username=row[1],
+                role=row[2],
+                status=row[3].value if hasattr(row[3], "value") else row[3],
+            )
+        )
+
+    return users_list, total
 
 
 def create_user(db: Session, user_in: UserCreate, hashed_password: str) -> User:
@@ -163,6 +256,8 @@ def create_user(db: Session, user_in: UserCreate, hashed_password: str) -> User:
         administartive_number=user_in.administartive_number,
         hashed_password=hashed_password,
     )
+    if role.rank < user.role.rank:
+        raise ValueError("User role is higher than the role of the current user.")
     db.add(user)
     try:
         db.commit()
@@ -207,3 +302,35 @@ def update_user(db: Session, user: User, user_in: UserUpdate) -> User:
 def delete_user(db: Session, user: User) -> User:
     user.soft_delete(db)
     db.commit()
+
+
+def get_deleted_user(db: Session, user_id: int) -> Optional[User]:
+    """
+    Return the user only if they are soft-deleted.
+    """
+    return db.query(User).only_deleted().filter(User.id == user_id).first()
+
+
+def restore_user(db: Session, user_id: int) -> Optional[User]:
+    """
+    Restores a soft-deleted user by setting deleted_at to None.
+    """
+    user = get_deleted_user(db, user_id)
+    if user:
+        user.restore()
+        db.commit()
+        db.refresh(user)
+        return user
+    return None
+
+
+def purge_user(db: Session, user_id: int) -> Optional[User]:
+    """
+    Permanently deletes a user by id, only if already soft-deleted.
+    """
+    user = get_deleted_user(db, user_id)
+    if user is None:
+        return None
+    db.delete(user)
+    db.commit()
+    return user

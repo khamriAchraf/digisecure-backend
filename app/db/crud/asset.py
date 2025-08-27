@@ -5,18 +5,22 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, with_polymorphic
 
-from app.db.models.asset import (Asset, Computer, NetworkDevice, Software,
+from app.db.models.asset import (Asset, CertificateKey, Computer,
+                                 NetworkDevice, Software, SoftwareVersion,
                                  VirtualMachine)
-from app.schemas.asset import (ComputerCreate, ComputerUpdate,
+from app.schemas.asset import (CertificateKeyCreate, CertificateKeyUpdate,
+                               ComputerCreate, ComputerUpdate,
                                NetworkDeviceCreate, NetworkDeviceUpdate,
                                SoftwareCreate, SoftwareUpdate,
-                               VirtualMachineCreate, VirtualMachineUpdate)
+                               SoftwareVersionUpdate, VirtualMachineCreate,
+                               VirtualMachineUpdate)
 
 ASSET_TYPE_MAPPING = {
     "computer": (Computer, ComputerCreate),
     "network_device": (NetworkDevice, NetworkDeviceCreate),
     "virtual_machine": (VirtualMachine, VirtualMachineCreate),
     "software": (Software, SoftwareCreate),
+    "certificate_key": (CertificateKey, CertificateKeyCreate),
 }
 
 ALL_ASSET_TYPES = [
@@ -25,6 +29,7 @@ ALL_ASSET_TYPES = [
     NetworkDevice,
     VirtualMachine,
     Software,
+    CertificateKey,
 ]
 
 
@@ -124,6 +129,7 @@ def create_asset(
         NetworkDeviceCreate,
         VirtualMachineCreate,
         SoftwareCreate,
+        CertificateKeyCreate,
     ],
 ) -> Asset:
     now = datetime.now(timezone.utc)
@@ -194,6 +200,7 @@ def update_asset(
         NetworkDeviceUpdate,
         VirtualMachineUpdate,
         SoftwareUpdate,
+        CertificateKeyUpdate,
     ],
 ) -> Asset:
     base_fields = [
@@ -230,7 +237,7 @@ def update_asset(
 
 
 def delete_asset(db: Session, asset: Asset) -> None:
-    asset.soft_delete()
+    asset.soft_delete(db)
     db.commit()
 
 
@@ -339,3 +346,152 @@ def bulk_create_assets(
         raise
 
     return assets
+
+
+def get_paginated_deleted_assets(
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> Tuple[List[Asset], int]:
+    """
+    Returns a paginated list of soft-deleted assets.
+    """
+    AssetPoly = with_polymorphic(Asset, ALL_ASSET_TYPES)
+    query = (
+        db.query(AssetPoly)
+        .options(
+            joinedload(AssetPoly.manufacturer),
+            joinedload(AssetPoly.location),
+            joinedload(AssetPoly.groups),
+            joinedload(AssetPoly.assigned_user),
+        )
+        .only_deleted()
+    )
+
+    # Apply filters
+    if filters:
+        if "warranty_expired" in filters:
+            from datetime import date
+
+            today = date.today()
+            if filters["warranty_expired"]:
+                query = query.filter(
+                    Asset.warranty_expiry.isnot(None), Asset.warranty_expiry < today
+                )
+            else:
+                query = query.filter(
+                    Asset.warranty_expiry.isnot(None), Asset.warranty_expiry >= today
+                )
+        if "type" in filters and filters["type"] in ASSET_TYPE_MAPPING:
+            asset_class = ASSET_TYPE_MAPPING[filters["type"]][0]
+            query = query.filter(
+                Asset.type == asset_class.__mapper_args__["polymorphic_identity"]
+            )
+        # Add more filters as needed
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Asset.name.ilike(search_term),
+                Asset.serial_number.ilike(search_term),
+                Asset.inventory_number.ilike(search_term),
+            )
+        )
+
+    # Sorting
+    if sort_by:
+        sort_col = getattr(Asset, sort_by, None)
+        if sort_col is not None:
+            if sort_order == "desc":
+                query = query.order_by(sort_col.desc())
+            else:
+                query = query.order_by(sort_col.asc())
+    else:
+        query = query.order_by(Asset.id.asc())
+
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+    return items, total
+
+
+def restore_asset(db: Session, asset_id: int) -> Optional[Asset]:
+    """
+    Restores a soft-deleted asset by setting deleted_at to None.
+
+    Args:
+        db: Database session
+        asset_id: ID of the asset to restore
+
+    Returns:
+        The restored asset if found, None otherwise
+    """
+    AssetPoly = with_polymorphic(Asset, ALL_ASSET_TYPES)
+    asset = db.query(AssetPoly).only_deleted().filter(AssetPoly.id == asset_id).first()
+
+    if asset:
+        asset.restore()
+        asset.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(asset)
+        return asset
+
+    return None
+
+
+def get_deleted_asset(db: Session, asset_id: int) -> Optional[Asset]:
+    """
+    Return the asset only if they are soft-deleted.
+    """
+    return db.query(Asset).only_deleted().filter(Asset.id == asset_id).first()
+
+
+def purge_asset(db: Session, asset_id: int) -> Optional[Asset]:
+    """
+    Permanently deletes a asset by id, only if already soft-deleted.
+    """
+    asset = get_deleted_asset(db, asset_id)
+    if asset is None:
+        return None
+    db.delete(asset)
+    db.commit()
+    return asset
+
+
+# SoftwareVersion CRUD
+def soft_delete_software_version(db: Session, version: SoftwareVersion) -> None:
+    version.soft_delete()
+    version.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
+
+def update_software_version_fields(
+    db: Session, version: SoftwareVersion, version_in: SoftwareVersionUpdate
+) -> SoftwareVersion:
+    update_data = version_in.model_dump(exclude_unset=True)
+
+    # Enforce uniqueness of version within the same software if 'version' changes
+    if "version" in update_data and update_data["version"] != version.version:
+        from app.db.crud.software import \
+            get_software_version_by_version_and_software
+
+        existing = get_software_version_by_version_and_software(
+            db, version.software_id, update_data["version"]
+        )
+        if existing:
+            raise ValueError(
+                f"Version '{update_data['version']}' already exists for software ID {version.software_id}"
+            )
+
+    for field, value in update_data.items():
+        setattr(version, field, value)
+
+    version.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(version)
+    return version

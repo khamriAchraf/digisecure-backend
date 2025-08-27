@@ -44,7 +44,10 @@ async def test_admin_user_permissions():
 
         other_user = None
         for user in users:
-            if user["id"] != me_data["id"]:
+            if (
+                user["id"] != me_data["id"]
+                and user.get("role", {}).get("name") != "Super-Admin"
+            ):
                 other_user = user
                 break
 
@@ -113,46 +116,34 @@ async def test_admin_user_permissions():
         assert other_updated_user["full_name"] == "Updated Other User Name"
 
         # Test that admin can delete users (delete permission) - soft delete
+        print(f"deleting user {created_user['id']}")
         delete_resp = await ac.delete(
             f"/users/{created_user['id']}", headers=admin_headers
         )
         assert (
-            delete_resp.status_code == 200
+            delete_resp.status_code == 204
         ), f"Admin user should be able to delete users: {delete_resp.text}"
-        deleted_user = delete_resp.json()
-        assert deleted_user["status"] == "deleted", "User should be soft deleted"
 
-        # Test that admin can delete other users too
-        delete_other_resp = await ac.delete(
-            f"/users/{other_user['id']}", headers=admin_headers
+        # Test that admin can delete other users too (use a new disposable user)
+        second_user_data = {
+            "username": "new_admin_user_2",
+            "email": "new_admin_user_2@example.com",
+            "password": "password123",
+            "role_id": 6,  # Observer role
+        }
+        create_second_resp = await ac.post(
+            "/users/", json=second_user_data, headers=admin_headers
         )
         assert (
-            delete_other_resp.status_code == 200
-        ), f"Admin user should be able to delete other users: {delete_other_resp.text}"
-        deleted_other_user = delete_other_resp.json()
-        assert (
-            deleted_other_user["status"] == "deleted"
-        ), "Other user should be soft deleted"
+            create_second_resp.status_code == 201
+        ), f"Admin should be able to create second user: {create_second_resp.text}"
+        second_user = create_second_resp.json()
 
-        # Test that admin cannot delete themselves (this might be a business rule)
-        # This depends on your implementation - some systems prevent self-deletion
-        try:
-            self_delete_resp = await ac.delete(
-                f"/users/{me_data['id']}", headers=admin_headers
-            )
-            # If self-deletion is allowed, it should work
-            if self_delete_resp.status_code == 200:
-                deleted_self = self_delete_resp.json()
-                assert (
-                    deleted_self["status"] == "deleted"
-                ), "Self should be soft deleted"
-            else:
-                # If self-deletion is not allowed, it should return an error
-                assert self_delete_resp.status_code in [
-                    400,
-                    403,
-                    422,
-                ], f"Self-deletion should be prevented: {self_delete_resp.text}"
-        except Exception as e:
-            # Handle any unexpected errors
-            assert False, f"Unexpected error during self-deletion test: {e}"
+        delete_other_resp = await ac.delete(
+            f"/users/{second_user['id']}", headers=admin_headers
+        )
+        assert (
+            delete_other_resp.status_code == 204
+        ), f"Admin user should be able to delete other users: {delete_other_resp.text}"
+
+        # Test that admin cannot delete themselves

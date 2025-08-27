@@ -5,10 +5,10 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.logger import logger
-from app.core.security import get_password_hash, has_permission
+from app.core.security import can_access, get_password_hash, has_permission
 from app.db.crud import user as user_crud
 from app.db.models.user import User
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import UserCreate, UserList, UserUpdate
 
 
 class PermissionError(Exception):
@@ -36,6 +36,11 @@ class UserService:
             )
             raise PermissionError("Not allowed to read users.")
         user = user_crud.get_user(self.db, user_id)
+        if not can_access(self.current_user, user):
+            logger.warning(
+                f"User {self.current_user.id} denied READ access to user {user_id}"
+            )
+            raise PermissionError("Not allowed to read this user (hierarchy issue).")
         logger.info(f"User {self.current_user.id} successfully READ user {user_id}")
         return user
 
@@ -47,11 +52,11 @@ class UserService:
         sort_order: str = "asc",
         search: Optional[str] = None,
         filters: Optional[dict] = None,
-    ) -> Tuple[List[User], int]:
+    ) -> Tuple[List[UserList], int]:
         logger.info(
             f"User {self.current_user.id} attempts to LIST users at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "user"):
+        if not has_permission(self.current_user, "list", "user"):
             logger.warning(f"User {self.current_user.id} denied LIST access to users")
             raise PermissionError("Not allowed to list users.")
         users, total = user_crud.get_paginated_users(
@@ -79,7 +84,7 @@ class UserService:
             f"User {self.current_user.id} attempts to LIST users with cursor at {datetime.now(timezone.utc).isoformat()}"
         )
 
-        if not has_permission(self.current_user, "read", "user"):
+        if not has_permission(self.current_user, "list", "user"):
             logger.warning(
                 f"User {self.current_user.id} denied LIST access to users (cursor)"
             )
@@ -139,6 +144,11 @@ class UserService:
                 f"User {self.current_user.id} denied DELETE access for user {user.id}"
             )
             raise PermissionError("Not allowed to delete users.")
+        if not can_access(self.current_user, user):
+            logger.warning(
+                f"User {self.current_user.id} denied DELETE access to user {user.id}"
+            )
+            raise PermissionError("Not allowed to delete this user (hierarchy issue).")
         user_crud.delete_user(self.db, user)
         logger.info(f"User {self.current_user.id} successfully DELETED user {user.id}")
         return None
@@ -147,6 +157,14 @@ class UserService:
         """
         Returns all permissions of the user in the format {'action': ..., 'resource': ...}
         """
+        logger.info(
+            f"User {self.current_user.id} attempts to GET permissions for user {user.id} at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "read", "user"):
+            logger.warning(
+                f"User {self.current_user.id} denied READ access to user {user.id}"
+            )
+            raise PermissionError("Not allowed to read user permissions.")
         permissions = set()
         role = user.role
         for perm in role.permissions:
@@ -160,6 +178,14 @@ class UserService:
         """
         Fetch a user by id (int), username, or email.
         """
+        logger.info(
+            f"User {self.current_user.id} attempts to GET user {identifier} by identifier at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "read", "user"):
+            logger.warning(
+                f"User {self.current_user.id} denied READ access to user {identifier}"
+            )
+            raise PermissionError("Not allowed to read user.")
         query = self.db.query(User)
         if identifier.isdigit():
             user = query.filter(User.id == int(identifier)).first()

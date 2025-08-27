@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.services.asset_service import AssetService
 from app.services.auth_service import decode_access_token, get_user_by_id
 from app.services.group_service import GroupService
+from app.services.recycle_bin_service import RecycleBinService
 from app.services.reference_data_service import ReferenceDataService
 from app.services.schema_service import SchemaService
 from app.services.table_config_service import TableConfigService
@@ -77,3 +78,10 @@ def get_schema_service(
     current_user: User = Depends(get_current_user),
 ) -> SchemaService:
     return SchemaService(db, current_user)
+
+
+def get_recycle_bin_service(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> RecycleBinService:
+    return RecycleBinService(db, current_user)

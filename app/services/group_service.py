@@ -38,7 +38,7 @@ class GroupService:
         logger.info(
             f"User {self.current_user.id} attempts to LIST groups at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "group"):
+        if not has_permission(self.current_user, "list", "group"):
             logger.warning(f"User {self.current_user.id} denied LIST access to groups")
             raise PermissionError("Not allowed to list groups.")
         groups = group_crud.get_groups_with_counts(self.db, skip=skip, limit=limit)
@@ -57,7 +57,7 @@ class GroupService:
         logger.info(
             f"User {self.current_user.id} attempts to LIST groups at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "group"):
+        if not has_permission(self.current_user, "list", "group"):
             logger.warning(f"User {self.current_user.id} denied LIST access to groups")
             raise PermissionError("Not allowed to list groups.")
         groups, total = group_crud.get_paginated_groups(

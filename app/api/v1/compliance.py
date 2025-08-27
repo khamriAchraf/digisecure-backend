@@ -1,16 +1,25 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db
 from app.db.models.user import User
 from app.schemas.compliance_scope import (AssetComplianceScope,
                                           AssetComplianceScopeCreate,
-                                          AssetComplianceScopeUpdate,
+                                          AssetComplianceScopeUpdate)
+from app.schemas.compliance_scope import \
+    ComplianceControl as ComplianceControlSchema
+from app.schemas.compliance_scope import (ComplianceControlListItem,
                                           ComplianceScope,
                                           ComplianceScopeCreate,
                                           ComplianceScopeUpdate)
+from app.schemas.compliance_scope import \
+    ControlDocumentLink as ControlDocumentLinkSchema
+from app.schemas.compliance_scope import (ControlDocumentLinkCreate,
+                                          ControlDocumentLinkDelete,
+                                          ScopedAsset)
+from app.schemas.pagination import PaginatedResponse
 from app.services.compliance_scope_service import (ComplianceScopeService,
                                                    PermissionError)
 
@@ -21,6 +30,22 @@ def get_compliance_service(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ) -> ComplianceScopeService:
     return ComplianceScopeService(db, current_user)
+
+
+def get_query_filters(request: Request) -> dict:
+    filters = {}
+    for key, value in request.query_params.items():
+        if key not in [
+            "page",
+            "per_page",
+            "sort_by",
+            "sort_order",
+            "search",
+            "cursor",
+            "type",
+        ]:
+            filters[key] = value
+    return filters
 
 
 @router.get("/scopes", response_model=List[ComplianceScope])
@@ -120,6 +145,130 @@ def update_asset_scope(
 ):
     try:
         return service.update_asset_scope(asset_id, scope_id, mapping_in)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.get(
+    "/scopes/{scope_id}/assets",
+    response_model=PaginatedResponse[ScopedAsset],
+)
+def list_scope_assets(
+    scope_id: int,
+    page: Optional[int] = Query(
+        None, ge=1, description="Page number (mutually exclusive with cursor)"
+    ),
+    per_page: int = Query(20, ge=1, le=1000),
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", enum=["asc", "desc"]),
+    search: Optional[str] = Query(None),
+    cursor: Optional[int] = Query(
+        None, description="Cursor for infinite scroll (mutually exclusive with page)"
+    ),
+    asset_type: Optional[str] = Query(
+        None,
+        alias="type",
+        description="Filter by asset type (e.g., computer, software, network_device, virtual_machine)",
+    ),
+    filters: dict = Depends(get_query_filters),
+    service: ComplianceScopeService = Depends(get_compliance_service),
+):
+    # Ensure only one pagination strategy is used
+    if page is not None and cursor is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either 'page' or 'cursor', not both.",
+        )
+
+    try:
+        effective_filters = dict(filters) if filters else {}
+        if asset_type is not None:
+            effective_filters["type"] = asset_type
+        if cursor is not None:
+            return service.get_cursor_scope_assets(
+                scope_id=scope_id,
+                cursor=cursor,
+                per_page=per_page,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                search=search,
+                filters=effective_filters,
+            )
+        else:
+            page_number = page or 1
+            return service.get_paginated_scope_assets(
+                scope_id=scope_id,
+                page=page_number,
+                per_page=per_page,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                search=search,
+                filters=effective_filters,
+            )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.get(
+    "/scopes/{scope_id}/controls", response_model=List[ComplianceControlListItem]
+)
+def list_scope_controls(
+    scope_id: int,
+    service: ComplianceScopeService = Depends(get_compliance_service),
+):
+    try:
+        return service.list_scope_controls(scope_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.get(
+    "/scopes/{scope_id}/controls/{control_id}",
+    response_model=ComplianceControlSchema,
+)
+def get_scope_control(
+    scope_id: int,
+    control_id: int,
+    service: ComplianceScopeService = Depends(get_compliance_service),
+):
+    try:
+        control = service.get_scope_control(scope_id, control_id)
+        if control is None:
+            raise HTTPException(status_code=404, detail="Control not found")
+        return control
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post(
+    "/scopes/{scope_id}/controls/{control_id}/documents",
+    response_model=List[ControlDocumentLinkSchema],
+    status_code=status.HTTP_201_CREATED,
+)
+def link_documents_to_control(
+    scope_id: int,
+    control_id: int,
+    payload: ControlDocumentLinkCreate,
+    service: ComplianceScopeService = Depends(get_compliance_service),
+):
+    try:
+        return service.link_documents_to_control(scope_id, control_id, payload)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.delete(
+    "/scopes/{scope_id}/controls/{control_id}/documents",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def unlink_documents_from_control(
+    scope_id: int,
+    control_id: int,
+    payload: ControlDocumentLinkDelete,
+    service: ComplianceScopeService = Depends(get_compliance_service),
+):
+    try:
+        service.unlink_documents_from_control(scope_id, control_id, payload)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

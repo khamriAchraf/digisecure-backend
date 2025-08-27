@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.dependencies import get_group_service
-from app.schemas.group import (GroupCreate, GroupCreateWithUsers,
+from app.schemas.group import (GroupCreate, GroupCreateWithUsers, GroupList,
                                GroupResponse, GroupUpdate)
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.services.group_service import GroupService, PermissionError
@@ -33,7 +33,7 @@ def get_group(
         raise HTTPException(status_code=403, detail=str(e))
 
 
-@router.get("/", response_model=PaginatedResponse[GroupResponse])
+@router.get("/", response_model=PaginatedResponse[GroupList])
 def list_groups(
     page: int = 1,
     per_page: int = 20,

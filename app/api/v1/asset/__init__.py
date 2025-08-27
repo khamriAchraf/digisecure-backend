@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
+from app.api.v1.asset.certificate_key import router as certificate_key_router
 # from app.api.v1.asset.analytics import router as analytics_router
 # from app.api.v1.asset.bulk import router as bulk_router
 from app.api.v1.asset.computer import router as computer_router
@@ -15,6 +16,7 @@ router.include_router(computer_router)
 router.include_router(network_device_router)
 router.include_router(software_router)
 router.include_router(virtual_machine_router)
+router.include_router(certificate_key_router)
 # router.include_router(analytics_router)
 # router.include_router(bulk_router)
 

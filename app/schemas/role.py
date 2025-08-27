@@ -31,6 +31,7 @@ class RoleUpdate(BaseModel):
 class RoleResponse(RoleBase):
     id: int
     is_builtin: Optional[bool] = False
+    rank: int
     permissions: List[PermissionResponse] = []
 
     class Config:

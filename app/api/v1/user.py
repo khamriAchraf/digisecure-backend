@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from app.api.dependencies import get_current_user, get_user_service
 from app.db.models.user import User
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import UserCreate, UserList, UserResponse, UserUpdate
 from app.services.user_service import PermissionError, UserService
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -52,7 +52,7 @@ def get_user_permissions(
         raise HTTPException(status_code=403, detail=str(e))
 
 
-@router.get("/", response_model=PaginatedResponse[UserResponse])
+@router.get("/", response_model=PaginatedResponse[UserList])
 def list_users(
     page: Optional[int] = Query(
         None, ge=1, description="Page number (mutually exclusive with cursor)"

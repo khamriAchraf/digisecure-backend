@@ -42,7 +42,7 @@ class ReferenceDataService:
         logger.info(
             f"User {self.current_user.id} attempts to LIST reference_data(location) at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "reference_data"):
+        if not has_permission(self.current_user, "list", "reference_data"):
             logger.warning(
                 f"User {self.current_user.id} denied LIST access to reference_data(location)"
             )
@@ -124,7 +124,7 @@ class ReferenceDataService:
         logger.info(
             f"User {self.current_user.id} attempts to LIST reference_data(manufacturer) at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "reference_data"):
+        if not has_permission(self.current_user, "list", "reference_data"):
             logger.warning(
                 f"User {self.current_user.id} denied LIST access to reference_data(manufacturer)"
             )

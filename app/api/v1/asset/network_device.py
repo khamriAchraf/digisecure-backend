@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.api.dependencies import get_asset_service
 from app.api.v1.asset.utils import get_query_filters
 from app.schemas.asset import (NetworkDevice, NetworkDeviceCreate,
-                               NetworkDeviceUpdate)
+                               NetworkDeviceList, NetworkDeviceUpdate)
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.services.asset_service import AssetService, PermissionError
 
 router = APIRouter(prefix="/network_devices", tags=["assets:network_devices"])
 
 
-@router.get("/", response_model=PaginatedResponse[NetworkDevice])
+@router.get("/", response_model=PaginatedResponse[NetworkDeviceList])
 def list_network_devices(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=99999),

@@ -24,6 +24,9 @@ async def test_access_filters_computer_access_control():
         unique_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
 
         # ---------- 1. Login as Super-Admin ----------
+        print(
+            f"logging in using super admin credentials {SUPER_ADMIN['email']} and {SUPER_ADMIN['password']}"
+        )
         login_resp = await ac.post(
             "/auth/login",
             data={
@@ -31,6 +34,7 @@ async def test_access_filters_computer_access_control():
                 "password": SUPER_ADMIN["password"],
             },
         )
+
         assert (
             login_resp.status_code == 200
         ), f"Super-Admin login failed: {login_resp.text}"
@@ -328,14 +332,14 @@ async def test_access_filters_computer_access_control():
         # Delete user
         del_user_resp = await ac.delete(f"/users/{user_id}", headers=admin_headers)
         assert (
-            del_user_resp.status_code == 200
+            del_user_resp.status_code == 204
         ), f"Failed to delete user: {del_user_resp.text}"
         print(f"Deleted user: {user['username']}")
 
         # Delete role
         del_role_resp = await ac.delete(f"/roles/{role_id}", headers=admin_headers)
         assert (
-            del_role_resp.status_code == 200
+            del_role_resp.status_code == 204
         ), f"Failed to delete role: {del_role_resp.text}"
         print(f"Deleted role: {role['name']}")
 

@@ -1,33 +1,31 @@
-# Use official Python image
 FROM python:3.12-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    POETRY_VERSION=1.8.3 \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false
 
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
+# System deps (add dev headers only if needed by your deps)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl build-essential \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="/root/.local/bin:$PATH"
+RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 
-# Copy only requirements to cache dependencies
-COPY pyproject.toml poetry.lock* /app/
+WORKDIR /app
 
-# Install dependencies
-RUN poetry install --no-root --only main
+# Install dependencies first (leverages Docker layer caching)
+COPY pyproject.toml poetry.lock* ./
+RUN poetry install --no-ansi --no-root
 
-# Copy project files
-COPY . /app
+# Copy application code
+COPY . .
 
-# Expose the port
 EXPOSE 8000
 
-# Entrypoint
-ENTRYPOINT ["/bin/bash", "start_app.sh"] 
+# Default command starts FastAPI app; docker-compose overrides to run seeding first
+CMD /bin/bash -c "./seed_db.sh && uvicorn app.main:app --host 0.0.0.0 --port 8000"

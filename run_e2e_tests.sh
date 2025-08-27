@@ -36,4 +36,4 @@ echo "Seeding database..."
 poetry run python app/utils/seed_db_schema.py --username admin --email admin@admin.com --password admin
 
 echo "Running e2e tests only..."
-poetry run pytest -m e2e --tb=short 
+poetry run pytest -x -m e2e --tb=short 

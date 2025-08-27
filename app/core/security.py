@@ -75,8 +75,7 @@ def access_filters(user: User, resource_model):
     1. Direct assignment (resource.assigned_to == user.id)
     2. Group membership (shared groups between user and resource)
     3. Many-to-many group membership (resource.groups relationship)
-    4. Hierarchical group access (parent groups can access child group resources)
-    5. Super Admin override (if user is Super-Admin, no filters applied)
+    4. Super Admin override (if user is Super-Admin, no filters applied)
 
     Args:
         user: User object with id, groups, and role attributes
@@ -94,11 +93,8 @@ def access_filters(user: User, resource_model):
     # Get user's group IDs (direct membership)
     user_group_ids = {group.id for group in user.groups}
 
-    # Get all accessible group IDs including hierarchical access
+    # Only direct group memberships (no hierarchical access)
     accessible_group_ids = set(user_group_ids)
-    for user_group in user.groups:
-        # Add all child groups recursively
-        _add_child_group_ids(user_group, accessible_group_ids)
 
     # Build filter conditions
     conditions = []
@@ -107,11 +103,11 @@ def access_filters(user: User, resource_model):
     if hasattr(resource_model, "assigned_to"):
         conditions.append(resource_model.assigned_to == user.id)
 
-    # 2. Group membership (including hierarchical via foreign key)
+    # 2. Group membership via foreign key (exact same group only)
     if hasattr(resource_model, "group_id") and accessible_group_ids:
         conditions.append(resource_model.group_id.in_(accessible_group_ids))
 
-    # 3. Many-to-many group membership (including hierarchical)
+    # 3. Many-to-many group membership (exact same group only)
     if hasattr(resource_model, "groups") and accessible_group_ids:
         from app.db.models.group import Group  # local import to avoid circular
 
@@ -123,19 +119,6 @@ def access_filters(user: User, resource_model):
 
     # Return OR condition for all access methods
     return [or_(*conditions)]
-
-
-def _add_child_group_ids(group, accessible_ids):
-    """
-    Recursively add all child group IDs to the accessible_ids set.
-
-    Args:
-        group: Group object with children relationship
-        accessible_ids: Set to add child group IDs to
-    """
-    for child in group.children:
-        accessible_ids.add(child.id)
-        _add_child_group_ids(child, accessible_ids)
 
 
 def can_access(user: User, resource) -> bool:
@@ -165,28 +148,33 @@ def can_access(user: User, resource) -> bool:
         else:
             outcome = False
             access_reason = "not_group_member_or_no_update_permission"
+    elif isinstance(resource, User):
+        # Users cannot access (read/update/delete/purge) a user with a higher-privilege role
+        # Lower rank value means higher privilege
+        requester_rank = user.role.rank if getattr(user, "role", None) else float("inf")
+        target_rank = (
+            resource.role.rank if getattr(resource, "role", None) else float("inf")
+        )
+
+        if requester_rank > target_rank:
+            outcome = False
+            access_reason = "target_user_has_higher_rank"
+        else:
+            outcome = True
+            access_reason = "user_rank_check_allowed"
     else:
         # 1. Direct Assignment Check
         if hasattr(resource, "assigned_to") and resource.assigned_to == user.id:
             outcome = True
             access_reason = "direct_assignment"
 
-        # 2. Group Membership Check (many-to-many via groups)
+        # 2. Group Membership Check (many-to-many via groups; exact same group only)
         elif hasattr(resource, "groups") and resource.groups:
             user_group_ids = {group.id for group in user.groups}
             resource_group_ids = {group.id for group in resource.groups}
             if user_group_ids.intersection(resource_group_ids):
                 outcome = True
                 access_reason = "group_membership_m2m"
-            else:
-                for user_group in user.groups:
-                    for res_group in resource.groups:
-                        if _check_group_hierarchy(user_group, res_group.id):
-                            outcome = True
-                            access_reason = "hierarchical_group_m2m"
-                            break
-                    if outcome:
-                        break
 
     # 4. Super Admin Override
     if user.role and user.role.name == "Super-Admin":
@@ -210,16 +198,115 @@ def can_access(user: User, resource) -> bool:
     return outcome
 
 
-def _check_group_hierarchy(user_group, resource_group_id):
+def authorize(user: User, action: str, resource: str, resource_instance=None) -> bool:
     """
-    Check if user_group is in the hierarchy of resource_group_id.
-    This handles parent/child group relationships.
+    Combined authorization check that validates both role-based permission and
+    optional instance-level access.
+
+    Rules:
+    - Super-Admin: always authorized
+    - If no resource_instance is provided: only role permission is required
+    - If resource_instance is provided: requires role permission AND can_access
     """
-    if user_group.id == resource_group_id:
+    # Super Admin override
+    if user.role and user.role.name == "Super-Admin":
+        logger.info(
+            "authorization_check",
+            extra={
+                "log_type": "authorization",
+                "request_id": request_id_ctx.get() or "-",
+                "user_id": getattr(user, "id", None),
+                "action": action,
+                "resource": resource,
+                "resource_type": (
+                    type(resource_instance).__name__ if resource_instance else None
+                ),
+                "resource_id": (
+                    getattr(resource_instance, "id", None)
+                    if resource_instance
+                    else None
+                ),
+                "access_reason": "super_admin",
+                "success": True,
+            },
+        )
         return True
 
-    for child in user_group.children:
-        if _check_group_hierarchy(child, resource_group_id):
-            return True
+    has_perm = has_permission(user, action, resource)
+    if not has_perm:
+        logger.warning(
+            "authorization_check",
+            extra={
+                "log_type": "authorization",
+                "request_id": request_id_ctx.get() or "-",
+                "user_id": getattr(user, "id", None),
+                "action": action,
+                "resource": resource,
+                "resource_type": (
+                    type(resource_instance).__name__ if resource_instance else None
+                ),
+                "resource_id": (
+                    getattr(resource_instance, "id", None)
+                    if resource_instance
+                    else None
+                ),
+                "access_reason": "no_permission",
+                "success": False,
+            },
+        )
+        return False
 
-    return False
+    # Allow listing users regardless of rank (permission-only)
+    if resource == "user" and action == "list":
+        logger.info(
+            "authorization_check",
+            extra={
+                "log_type": "authorization",
+                "request_id": request_id_ctx.get() or "-",
+                "user_id": getattr(user, "id", None),
+                "action": action,
+                "resource": resource,
+                "resource_type": None,
+                "resource_id": None,
+                "access_reason": "list_no_rank_restriction",
+                "success": True,
+            },
+        )
+        return True
+
+    if resource_instance is None:
+        logger.info(
+            "authorization_check",
+            extra={
+                "log_type": "authorization",
+                "request_id": request_id_ctx.get() or "-",
+                "user_id": getattr(user, "id", None),
+                "action": action,
+                "resource": resource,
+                "resource_type": None,
+                "resource_id": None,
+                "access_reason": "permission_only",
+                "success": True,
+            },
+        )
+        return True
+
+    has_access = can_access(user, resource_instance)
+    log_method = logger.info if has_access else logger.warning
+    log_method(
+        "authorization_check",
+        extra={
+            "log_type": "authorization",
+            "request_id": request_id_ctx.get() or "-",
+            "user_id": getattr(user, "id", None),
+            "action": action,
+            "resource": resource,
+            "resource_type": type(resource_instance).__name__,
+            "resource_id": getattr(resource_instance, "id", None),
+            "access_reason": (
+                "permission_and_access" if has_access else "no_resource_access"
+            ),
+            "success": has_access,
+        },
+    )
+    return has_access

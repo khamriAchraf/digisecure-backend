@@ -4,14 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.dependencies import get_asset_service
 from app.api.v1.asset.utils import get_query_filters
-from app.schemas.asset import Computer, ComputerCreate, ComputerUpdate
+from app.schemas.asset import (Computer, ComputerCreate, ComputerList,
+                               ComputerUpdate)
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.services.asset_service import AssetService, PermissionError
 
 router = APIRouter(prefix="/computers", tags=["assets:computers"])
 
 
-@router.get("/", response_model=PaginatedResponse[Computer])
+@router.get("/", response_model=PaginatedResponse[ComputerList])
 def list_computers(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=99999),

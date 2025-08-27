@@ -33,6 +33,8 @@ fi
 if [[ "$1" == "--load-test" ]]; then
   echo "[INFO] Running normal seeding before load test user generation..." | tee -a "$LOGFILE"
   export PYTHONPATH="$SCRIPT_DIR"
+  # Ensure target database and schema exist before seeding
+  poetry run python -c "from app.utils.seed_db_schema import ensure_database_exists, ensure_schema_exists; ensure_database_exists(); ensure_schema_exists()" 2>&1 | tee -a "$LOGFILE"
   poetry run python "$SEED_SCRIPT" --username admin --email admin@admin.com --password admin 2>&1 | tee -a "$LOGFILE"
   STATUS=${PIPESTATUS[0]}
   if [ $STATUS -ne 0 ]; then
@@ -58,6 +60,9 @@ echo "[INFO] Starting database seeding at $(date)" | tee -a "$LOGFILE"
 
 # Set up Python path
 export PYTHONPATH="$SCRIPT_DIR"
+
+# Ensure target database and schema exist before seeding
+poetry run python -c "from app.utils.seed_db_schema import ensure_database_exists, ensure_schema_exists; ensure_database_exists(); ensure_schema_exists()" 2>&1 | tee -a "$LOGFILE"
 
 echo "[INFO] Seeding roles, permissions, and creating default admin user (admin/admin@admin.com/admin)" | tee -a "$LOGFILE"
 poetry run python "$SEED_SCRIPT" --username admin --email admin@admin.com --password admin 2>&1 | tee -a "$LOGFILE"

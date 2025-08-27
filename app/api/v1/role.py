@@ -138,7 +138,7 @@ def update_role(
 
 @router.delete(
     "/{role_id}",
-    response_model=RoleResponse,
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a role",
     description="Delete a role by its ID.",
 )
@@ -148,7 +148,8 @@ def delete_role(role_id: int, service: RoleService = Depends(get_role_service)):
         role = service.get_role(role_id)
         if not role:
             raise HTTPException(status_code=404, detail="Role not found")
-        return service.delete_role(role)
+        service.delete_role(role)
+        return None
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

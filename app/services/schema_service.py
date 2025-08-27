@@ -73,6 +73,7 @@ class SchemaService:
             "virtual_machine": self._get_virtual_machine_schema(),
             "network_device": self._get_network_device_schema(),
             "software": self._get_software_schema(),
+            "certificate_key": self._get_certificate_key_schema(),
             # Add other resource types here as they're implemented
         }
         if resource_type not in schemas:
@@ -90,6 +91,7 @@ class SchemaService:
             "virtual_machine": self._get_virtual_machine_edit_schema(),
             "network_device": self._get_network_device_edit_schema(),
             "software": self._get_software_edit_schema(),
+            "certificate_key": self._get_certificate_key_edit_schema(),
         }
         if resource_type not in schemas:
             raise ValueError(f"Unknown resource type: {resource_type}")
@@ -396,7 +398,7 @@ class SchemaService:
                     },
                     "role_id": {
                         "widget": "select",
-                        "quick_create_resource": "role",
+                        "options": self._get_role_options(),
                         "placeholder_key": "forms.user.fields.role_id.placeholder",
                         "label_key": "forms.user.fields.role_id.label",
                         "order": 15,
@@ -1538,7 +1540,6 @@ class SchemaService:
             {"id": "specifications", "label_key": "forms.tabs.specifications"},
             {"id": "network", "label_key": "forms.tabs.network"},
             {"id": "security", "label_key": "forms.tabs.security"},
-            {"id": "compliance", "label_key": "forms.tabs.compliance"},
             {"id": "backup", "label_key": "forms.tabs.backup"},
             {"id": "groups", "label_key": "forms.tabs.groups"},
             {"id": "compliance", "label_key": "forms.tabs.compliance"},
@@ -2179,139 +2180,6 @@ class SchemaService:
                         "label_key": "forms.virtual_machine.fields.mac_address.label",
                         "order": 4,
                         "tab_id": "network",
-                        "validation": {"required": False},
-                    },
-                    # Compliance tab
-                    "pci_scope": {
-                        "widget": "select",
-                        "options": [
-                            {
-                                "value": "In Scope",
-                                "label_key": "forms.virtual_machine.fields.pci_scope.options.in_scope",
-                            },
-                            {
-                                "value": "Out of Scope",
-                                "label_key": "forms.virtual_machine.fields.pci_scope.options.out_of_scope",
-                            },
-                        ],
-                        "placeholder_key": "forms.virtual_machine.fields.pci_scope.placeholder",
-                        "label_key": "forms.virtual_machine.fields.pci_scope.label",
-                        "order": 1,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "cardholder_data_environment": {
-                        "widget": "select",
-                        "options": [
-                            {
-                                "value": "CDE",
-                                "label_key": "forms.virtual_machine.fields.cardholder_data_environment.options.cde",
-                            },
-                            {
-                                "value": "Connected-to",
-                                "label_key": "forms.virtual_machine.fields.cardholder_data_environment.options.connected_to",
-                            },
-                            {
-                                "value": "Out-of-Scope",
-                                "label_key": "forms.virtual_machine.fields.cardholder_data_environment.options.out_of_scope",
-                            },
-                        ],
-                        "placeholder_key": "forms.virtual_machine.fields.cardholder_data_environment.placeholder",
-                        "label_key": "forms.virtual_machine.fields.cardholder_data_environment.label",
-                        "order": 2,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "pci_assessment_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.virtual_machine.fields.pci_assessment_date.placeholder",
-                        "label_key": "forms.virtual_machine.fields.pci_assessment_date.label",
-                        "order": 3,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "pci_compliance_status": {
-                        "widget": "select",
-                        "options": [
-                            {
-                                "value": "Compliant",
-                                "label_key": "forms.virtual_machine.fields.pci_compliance_status.options.compliant",
-                            },
-                            {
-                                "value": "Non-Compliant",
-                                "label_key": "forms.virtual_machine.fields.pci_compliance_status.options.non_compliant",
-                            },
-                            {
-                                "value": "In Progress",
-                                "label_key": "forms.virtual_machine.fields.pci_compliance_status.options.in_progress",
-                            },
-                        ],
-                        "placeholder_key": "forms.virtual_machine.fields.pci_compliance_status.placeholder",
-                        "label_key": "forms.virtual_machine.fields.pci_compliance_status.label",
-                        "order": 4,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "next_assessment_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.virtual_machine.fields.next_assessment_date.placeholder",
-                        "label_key": "forms.virtual_machine.fields.next_assessment_date.label",
-                        "order": 5,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "compliance_notes": {
-                        "widget": "textarea",
-                        "placeholder_key": "forms.virtual_machine.fields.compliance_notes.placeholder",
-                        "label_key": "forms.virtual_machine.fields.compliance_notes.label",
-                        "order": 6,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "last_patch_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.virtual_machine.fields.last_patch_date.placeholder",
-                        "label_key": "forms.virtual_machine.fields.last_patch_date.label",
-                        "order": 7,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "patch_level": {
-                        "widget": "text",
-                        "placeholder_key": "forms.virtual_machine.fields.patch_level.placeholder",
-                        "label_key": "forms.virtual_machine.fields.patch_level.label",
-                        "order": 8,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "vulnerability_scan_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.virtual_machine.fields.vulnerability_scan_date.placeholder",
-                        "label_key": "forms.virtual_machine.fields.vulnerability_scan_date.label",
-                        "order": 9,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "vulnerability_status": {
-                        "widget": "select",
-                        "options": [
-                            {
-                                "value": "Compliant",
-                                "label_key": "forms.virtual_machine.fields.vulnerability_status.options.compliant",
-                            },
-                            {
-                                "value": "Non-Compliant",
-                                "label_key": "forms.virtual_machine.fields.vulnerability_status.options.non_compliant",
-                            },
-                            {
-                                "value": "Pending",
-                                "label_key": "forms.virtual_machine.fields.vulnerability_status.options.pending",
-                            },
-                        ],
-                        "placeholder_key": "forms.virtual_machine.fields.vulnerability_status.placeholder",
-                        "label_key": "forms.virtual_machine.fields.vulnerability_status.label",
-                        "order": 10,
-                        "tab_id": "compliance",
                         "validation": {"required": False},
                     },
                     # Backup tab
@@ -2967,99 +2835,6 @@ class SchemaService:
                         "tab_id": "monitoring",
                         "validation": {"required": False},
                     },
-                    # Compliance tab
-                    "pci_assessment_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.network_device.fields.pci_assessment_date.placeholder",
-                        "label_key": "forms.network_device.fields.pci_assessment_date.label",
-                        "order": 1,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "pci_compliance_status": {
-                        "widget": "select",
-                        "options": [
-                            {
-                                "value": "Compliant",
-                                "label_key": "forms.network_device.fields.pci_compliance_status.options.compliant",
-                            },
-                            {
-                                "value": "Non-Compliant",
-                                "label_key": "forms.network_device.fields.pci_compliance_status.options.non_compliant",
-                            },
-                            {
-                                "value": "In Progress",
-                                "label_key": "forms.network_device.fields.pci_compliance_status.options.in_progress",
-                            },
-                        ],
-                        "placeholder_key": "forms.network_device.fields.pci_compliance_status.placeholder",
-                        "label_key": "forms.network_device.fields.pci_compliance_status.label",
-                        "order": 2,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "next_assessment_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.network_device.fields.next_assessment_date.placeholder",
-                        "label_key": "forms.network_device.fields.next_assessment_date.label",
-                        "order": 3,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "compliance_notes": {
-                        "widget": "textarea",
-                        "placeholder_key": "forms.network_device.fields.compliance_notes.placeholder",
-                        "label_key": "forms.network_device.fields.compliance_notes.label",
-                        "order": 4,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "last_patch_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.network_device.fields.last_patch_date.placeholder",
-                        "label_key": "forms.network_device.fields.last_patch_date.label",
-                        "order": 5,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "patch_level": {
-                        "widget": "text",
-                        "placeholder_key": "forms.network_device.fields.patch_level.placeholder",
-                        "label_key": "forms.network_device.fields.patch_level.label",
-                        "order": 6,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "vulnerability_scan_date": {
-                        "widget": "date",
-                        "placeholder_key": "forms.network_device.fields.vulnerability_scan_date.placeholder",
-                        "label_key": "forms.network_device.fields.vulnerability_scan_date.label",
-                        "order": 7,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
-                    "vulnerability_status": {
-                        "widget": "select",
-                        "options": [
-                            {
-                                "value": "Compliant",
-                                "label_key": "forms.network_device.fields.vulnerability_status.options.compliant",
-                            },
-                            {
-                                "value": "Non-Compliant",
-                                "label_key": "forms.network_device.fields.vulnerability_status.options.non_compliant",
-                            },
-                            {
-                                "value": "Pending",
-                                "label_key": "forms.network_device.fields.vulnerability_status.options.pending",
-                            },
-                        ],
-                        "placeholder_key": "forms.network_device.fields.vulnerability_status.placeholder",
-                        "label_key": "forms.network_device.fields.vulnerability_status.label",
-                        "order": 8,
-                        "tab_id": "compliance",
-                        "validation": {"required": False},
-                    },
                     # Lifecycle tab
                     "power_state": {
                         "widget": "select",
@@ -3260,6 +3035,8 @@ class SchemaService:
             {"id": "security", "label_key": "forms.tabs.security"},
             {"id": "lifecycle", "label_key": "forms.tabs.lifecycle"},
             {"id": "groups", "label_key": "forms.tabs.groups"},
+            {"id": "software_versions", "label_key": "forms.tabs.software_versions"},
+            {"id": "documents", "label_key": "forms.tabs.documents"},
             {"id": "compliance", "label_key": "forms.tabs.compliance"},
         ]
 
@@ -3441,6 +3218,348 @@ class SchemaService:
         }
         return enhanced_schema
 
+    def _get_certificate_key_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON schema for certificate/key asset creation.
+        Keep only the most important fields for creation.
+        """
+        from app.schemas.asset import \
+            CertificateKeyCreate  # Local import to avoid circular
+
+        base_schema = CertificateKeyCreate.model_json_schema()
+
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "certificate_key",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.certificate_key.create.title",
+                "description_key": "forms.certificate_key.create.description",
+                "fields": {
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.certificate_key.fields.name.placeholder",
+                        "label_key": "forms.certificate_key.fields.name.label",
+                        "order": 1,
+                        "validation": {
+                            "required": True,
+                            "error_messages": {
+                                "required": "forms.certificate_key.fields.name.errors.required",
+                            },
+                        },
+                    },
+                    "cert_type": {
+                        "widget": "select",
+                        "options": [
+                            {
+                                "value": "CERTIFICATE",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.certificate",
+                            },
+                            {
+                                "value": "PRIVATE_KEY",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.private_key",
+                            },
+                            {
+                                "value": "PUBLIC_KEY",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.public_key",
+                            },
+                            {
+                                "value": "API_KEY",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.api",
+                            },
+                            {
+                                "value": "SSH_KEY",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.ssh_key",
+                            },
+                            {
+                                "value": "Other",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.other",
+                            },
+                        ],
+                        "placeholder_key": "forms.certificate_key.fields.cert_type.placeholder",
+                        "label_key": "forms.certificate_key.fields.cert_type.label",
+                        "order": 2,
+                        "validation": {"required": False},
+                    },
+                    "algorithm": {
+                        "widget": "select",
+                        "options": [
+                            {
+                                "value": "RSA",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.rsa",
+                            },
+                            {
+                                "value": "ECC",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.ecc",
+                            },
+                            {
+                                "value": "DSA",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.dsa",
+                            },
+                            {
+                                "value": "Ed25519",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.ed25519",
+                            },
+                            {
+                                "value": "Other",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.other",
+                            },
+                        ],
+                        "placeholder_key": "forms.certificate_key.fields.algorithm.placeholder",
+                        "label_key": "forms.certificate_key.fields.algorithm.label",
+                        "order": 3,
+                        "validation": {"required": False},
+                    },
+                    "storage_location": {
+                        "widget": "text",
+                        "placeholder_key": "forms.certificate_key.fields.storage_location.placeholder",
+                        "label_key": "forms.certificate_key.fields.storage_location.label",
+                        "order": 4,
+                        "validation": {"required": False},
+                    },
+                    "issuer": {
+                        "widget": "text",
+                        "placeholder_key": "forms.certificate_key.fields.issuer.placeholder",
+                        "label_key": "forms.certificate_key.fields.issuer.label",
+                        "order": 5,
+                        "validation": {"required": False},
+                    },
+                    "subject": {
+                        "widget": "text",
+                        "placeholder_key": "forms.certificate_key.fields.subject.placeholder",
+                        "label_key": "forms.certificate_key.fields.subject.label",
+                        "order": 6,
+                        "validation": {"required": False},
+                    },
+                    "expiration_date": {
+                        "widget": "date",
+                        "placeholder_key": "forms.certificate_key.fields.expiration_date.placeholder",
+                        "label_key": "forms.certificate_key.fields.expiration_date.label",
+                        "order": 7,
+                        "validation": {"required": False},
+                    },
+                    "cert_status": {
+                        "widget": "select",
+                        "options": [
+                            {
+                                "value": "Valid",
+                                "label_key": "forms.certificate_key.fields.cert_status.options.valid",
+                            },
+                            {
+                                "value": "Expired",
+                                "label_key": "forms.certificate_key.fields.cert_status.options.expired",
+                            },
+                            {
+                                "value": "Revoked",
+                                "label_key": "forms.certificate_key.fields.cert_status.options.revoked",
+                            },
+                            {
+                                "value": "Pending",
+                                "label_key": "forms.certificate_key.fields.cert_status.options.pending",
+                            },
+                        ],
+                        "placeholder_key": "forms.certificate_key.fields.cert_status.placeholder",
+                        "label_key": "forms.certificate_key.fields.cert_status.label",
+                        "order": 8,
+                        "validation": {"required": False},
+                    },
+                },
+            },
+        }
+        return enhanced_schema
+
+    def _get_certificate_key_edit_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON edit schema for certificate/key asset.
+        Focus on key management lifecycle fields and crypto details.
+        """
+        from app.schemas.asset import \
+            CertificateKeyUpdate  # Local import to avoid circular
+
+        base_schema = CertificateKeyUpdate.model_json_schema()
+
+        tabs = [
+            {"id": "general", "label_key": "forms.tabs.general"},
+            {"id": "cryptography", "label_key": "forms.tabs.cryptography"},
+            {"id": "lifecycle", "label_key": "forms.tabs.lifecycle"},
+            {"id": "groups", "label_key": "forms.tabs.groups"},
+            {"id": "compliance", "label_key": "forms.tabs.compliance"},
+        ]
+
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "certificate_key",
+            "schema_type": "edit",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.certificate_key.edit.title",
+                "description_key": "forms.certificate_key.edit.description",
+                "tabs": tabs,
+                "fields": {
+                    # General tab
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.certificate_key.fields.name.placeholder",
+                        "label_key": "forms.certificate_key.fields.name.label",
+                        "order": 1,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "cert_type": {
+                        "widget": "select",
+                        "options": [
+                            {
+                                "value": "SSL/TLS",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.ssl_tls",
+                            },
+                            {
+                                "value": "Code Signing",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.code_signing",
+                            },
+                            {
+                                "value": "Client",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.client",
+                            },
+                            {
+                                "value": "SSH",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.ssh",
+                            },
+                            {
+                                "value": "API",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.api",
+                            },
+                            {
+                                "value": "Other",
+                                "label_key": "forms.certificate_key.fields.cert_type.options.other",
+                            },
+                        ],
+                        "placeholder_key": "forms.certificate_key.fields.cert_type.placeholder",
+                        "label_key": "forms.certificate_key.fields.cert_type.label",
+                        "order": 2,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "issuer": {
+                        "widget": "text",
+                        "placeholder_key": "forms.certificate_key.fields.issuer.placeholder",
+                        "label_key": "forms.certificate_key.fields.issuer.label",
+                        "order": 3,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "subject": {
+                        "widget": "text",
+                        "placeholder_key": "forms.certificate_key.fields.subject.placeholder",
+                        "label_key": "forms.certificate_key.fields.subject.label",
+                        "order": 4,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "storage_location": {
+                        "widget": "text",
+                        "placeholder_key": "forms.certificate_key.fields.storage_location.placeholder",
+                        "label_key": "forms.certificate_key.fields.storage_location.label",
+                        "order": 5,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "cert_status": {
+                        "widget": "select",
+                        "options": [
+                            {
+                                "value": "Valid",
+                                "label_key": "forms.certificate_key.fields.cert_status.options.valid",
+                            },
+                            {
+                                "value": "Expired",
+                                "label_key": "forms.certificate_key.fields.cert_status.options.expired",
+                            },
+                            {
+                                "value": "Revoked",
+                                "label_key": "forms.certificate_key.fields.cert_status.options.revoked",
+                            },
+                            {
+                                "value": "Pending",
+                                "label_key": "forms.certificate_key.fields.cert_status.options.pending",
+                            },
+                        ],
+                        "placeholder_key": "forms.certificate_key.fields.cert_status.placeholder",
+                        "label_key": "forms.certificate_key.fields.cert_status.label",
+                        "order": 6,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    # Cryptography tab
+                    "algorithm": {
+                        "widget": "select",
+                        "options": [
+                            {
+                                "value": "RSA",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.rsa",
+                            },
+                            {
+                                "value": "ECC",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.ecc",
+                            },
+                            {
+                                "value": "DSA",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.dsa",
+                            },
+                            {
+                                "value": "Ed25519",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.ed25519",
+                            },
+                            {
+                                "value": "Other",
+                                "label_key": "forms.certificate_key.fields.algorithm.options.other",
+                            },
+                        ],
+                        "placeholder_key": "forms.certificate_key.fields.algorithm.placeholder",
+                        "label_key": "forms.certificate_key.fields.algorithm.label",
+                        "order": 1,
+                        "tab_id": "cryptography",
+                        "validation": {"required": False},
+                    },
+                    # Lifecycle tab
+                    "expiration_date": {
+                        "widget": "date",
+                        "placeholder_key": "forms.certificate_key.fields.expiration_date.placeholder",
+                        "label_key": "forms.certificate_key.fields.expiration_date.label",
+                        "order": 1,
+                        "tab_id": "lifecycle",
+                        "validation": {"required": False},
+                    },
+                    "last_rotation_date": {
+                        "widget": "date",
+                        "placeholder_key": "forms.certificate_key.fields.last_rotation_date.placeholder",
+                        "label_key": "forms.certificate_key.fields.last_rotation_date.label",
+                        "order": 2,
+                        "tab_id": "lifecycle",
+                        "validation": {"required": False},
+                    },
+                    "next_rotation_due": {
+                        "widget": "date",
+                        "placeholder_key": "forms.certificate_key.fields.next_rotation_due.placeholder",
+                        "label_key": "forms.certificate_key.fields.next_rotation_due.label",
+                        "order": 3,
+                        "tab_id": "lifecycle",
+                        "validation": {"required": False},
+                    },
+                    # Relationships tab
+                    "groups": {
+                        "widget": "relationship",
+                        "quick_create_resource": "group",
+                        "placeholder_key": "forms.certificate_key.fields.group_id.placeholder",
+                        "label_key": "forms.certificate_key.fields.group_id.label",
+                        "order": 1,
+                        "tab_id": "groups",
+                        "validation": {"required": False},
+                    },
+                },
+            },
+        }
+        return enhanced_schema
+
     def get_available_resources(self) -> Dict[str, Any]:
         """
         Get list of available resource types that the user has create permission for.
@@ -3576,23 +3695,39 @@ class SchemaService:
     def _get_role_options(self) -> List[Dict[str, Any]]:
         """
         Get available roles for the single role select dropdown.
+        Enforces role assignment permissions based on user's role rank.
+        A user can only assign a role that has a rank strictly greater than their own.
         """
         try:
             from app.db.crud.role import list_roles
 
             roles = list_roles(self.db, skip=0, limit=1000)
             options = []
+
+            # Get current user's role and rank
+            current_user_role = self.current_user.role
+            current_user_rank = (
+                current_user_role.rank
+                if current_user_role and hasattr(current_user_role, "rank")
+                else None
+            )
+
             for role in roles:
-                options.append(
-                    {
-                        "value": str(role.id),
-                        "label_key": "forms.user.fields.role_id.options.role_name",
-                        "label_params": {
-                            "name": role.name,
-                            "description": role.description or "",
-                        },
-                    }
-                )
+                # Only allow assigning roles with rank strictly greater than the current user's rank
+                if current_user_rank is not None and hasattr(role, "rank"):
+                    if role.rank > current_user_rank:
+                        options.append(
+                            {
+                                "value": str(role.id),
+                                "label_key": "forms.user.fields.role_id.options.role_name",
+                                "label_params": {
+                                    "name": role.name,
+                                    "description": role.description or "",
+                                },
+                            }
+                        )
+                # If user has no role or rank, do not allow any options
+            print(options)
             return options
         except Exception as e:
             logger.warning(f"Failed to fetch role options: {e}")

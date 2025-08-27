@@ -1,7 +1,8 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Table
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Session, relationship
 
-from app.db.base import Base
+from app.db.base import Base, SoftDeleteMixin
+from app.db.models.user import User
 
 role_permissions = Table(
     "role_permissions",
@@ -21,7 +22,7 @@ role_permissions = Table(
 )
 
 
-class Role(Base):
+class Role(Base, SoftDeleteMixin):
     __tablename__ = "roles"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
@@ -31,6 +32,15 @@ class Role(Base):
         "Permission", secondary=role_permissions, back_populates="roles"
     )
     users = relationship("User", back_populates="role")
+    rank = Column(Integer, nullable=False)
+
+    def soft_delete(self, db: Session):
+        super().soft_delete()
+        db.query(role_permissions).filter(
+            role_permissions.c.role_id == self.id
+        ).delete()
+        db.query(User).filter(User.role_id == self.id).update({"role_id": None})
+        return None
 
 
 class Permission(Base):

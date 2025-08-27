@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.api.dependencies import get_asset_service
 from app.api.v1.asset.utils import get_query_filters
 from app.schemas.asset import (VirtualMachine, VirtualMachineCreate,
-                               VirtualMachineUpdate)
+                               VirtualMachineList, VirtualMachineUpdate)
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.services.asset_service import AssetService, PermissionError
 
 router = APIRouter(prefix="/virtual_machines", tags=["assets:virtual_machines"])
 
 
-@router.get("/", response_model=PaginatedResponse[VirtualMachine])
+@router.get("/", response_model=PaginatedResponse[VirtualMachineList])
 def list_virtual_machines(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=99999),

@@ -104,7 +104,7 @@ async def test_role_deletion_orphaned_users():
         super_token = login_resp.json()["access_token"]
         super_headers = {"Authorization": f"Bearer {super_token}"}
         del_resp = await ac.delete(f"/roles/{role_id}", headers=super_headers)
-        assert del_resp.status_code == 200, f"Failed to delete role: {del_resp.text}"
+        assert del_resp.status_code == 204, f"Failed to delete role: {del_resp.text}"
 
         # 9. Log in again as the new user
         login_resp = await ac.post("/auth/login", data=login_data)

@@ -3,7 +3,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
-from app.schemas.compliance_scope import ComplianceScope
+from app.schemas.compliance_scope import ComplianceScopeForAsset
 
 
 class Asset(BaseModel):
@@ -12,6 +12,14 @@ class Asset(BaseModel):
     type: str
     created_at: datetime
     updated_at: datetime
+
+
+class DeletedAssetList(BaseModel):
+    id: int
+    name: str
+    serial_number: Optional[str] = None
+    deleted_at: datetime
+    created_at: datetime
 
 
 class ManufacturerRef(BaseModel):
@@ -80,7 +88,7 @@ class AssetInDBBase(AssetBase):
     location: Optional[LocationRef] = None
     groups: List[GroupRef] = []
     assigned_user: Optional[UserRef] = None
-    compliance_scopes: List[ComplianceScope] = []
+    compliance_scopes: List[ComplianceScopeForAsset] = []
 
     class Config:
         from_attributes = True
@@ -99,6 +107,14 @@ class ComputerBase(AssetBase):
 
 class ComputerCreate(ComputerBase):
     pass
+
+
+class ComputerList(BaseModel):
+    id: int
+    name: str
+    serial_number: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 class ComputerUpdate(BaseModel):
@@ -194,6 +210,14 @@ class NetworkDeviceBase(AssetBase):
 
 class NetworkDeviceCreate(NetworkDeviceBase):
     pass
+
+
+class NetworkDeviceList(BaseModel):
+    id: int
+    name: str
+    serial_number: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 class NetworkDeviceUpdate(BaseModel):
@@ -347,6 +371,14 @@ class VirtualMachineCreate(VirtualMachineBase):
     pass
 
 
+class VirtualMachineList(BaseModel):
+    id: int
+    name: str
+    serial_number: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
 class VirtualMachineUpdate(BaseModel):
     name: Optional[str] = None
     serial_number: Optional[str] = None
@@ -497,6 +529,14 @@ class SoftwareCreate(SoftwareBase):
     pass
 
 
+class SoftwareList(BaseModel):
+    id: int
+    name: str
+    serial_number: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
 class SoftwareUpdate(BaseModel):
     # Base asset fields
     name: Optional[str] = None
@@ -591,9 +631,67 @@ class SoftwareVersion(SoftwareVersionBase):
         from_attributes = True
 
 
+class SoftwareVersionList(BaseModel):
+    id: int
+    version: str
+    created_at: datetime
+    updated_at: datetime
+    build_number: Optional[str] = None
+    release_date: Optional[date] = None
+    end_of_life_date: Optional[date] = None
+    end_of_support_date: Optional[date] = None
+
+
 # Update Software schema to include versions relationship
 class SoftwareWithVersions(Software):
     versions: List[SoftwareVersion] = []
 
     class Config:
         from_attributes = True
+
+
+class CertificateKeyBase(AssetBase):
+    cert_type: Optional[str] = None
+    algorithm: Optional[str] = None
+    storage_location: Optional[str] = None
+
+    expiration_date: Optional[date] = None
+    last_rotation_date: Optional[date] = None
+    next_rotation_due: Optional[date] = None
+
+    cert_status: Optional[str] = None
+
+    issuer: Optional[str] = None
+    subject: Optional[str] = None
+
+
+class CertificateKeyCreate(CertificateKeyBase):
+    pass
+
+
+class CertificateKeyUpdate(AssetBase):
+    cert_type: Optional[str] = None
+    algorithm: Optional[str] = None
+    storage_location: Optional[str] = None
+
+    expiration_date: Optional[date] = None
+    last_rotation_date: Optional[date] = None
+    next_rotation_due: Optional[date] = None
+
+    cert_status: Optional[str] = None
+
+    issuer: Optional[str] = None
+    subject: Optional[str] = None
+
+
+class CertificateKeyList(BaseModel):
+    id: int
+    name: Optional[str] = None
+    serial_number: Optional[str] = None
+    status: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+class CertificateKey(AssetInDBBase, CertificateKeyBase):
+    type: Literal["certificate_key"] = "certificate_key"

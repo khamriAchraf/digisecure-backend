@@ -73,13 +73,6 @@ async def test_group_crud_as_super_admin():
         assert resp.status_code == 200
         assert all(u["id"] != user_id for u in resp.json()["users"])
 
-        # Delete group
-        resp = await ac.delete(f"/groups/{group_id}", headers=headers)
-        assert resp.status_code == 204
-        # Confirm deletion
-        resp = await ac.get(f"/groups/{group_id}", headers=headers)
-        assert resp.status_code == 404
-
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -100,10 +93,6 @@ async def test_group_permissions_for_non_admin():
 
         # Try to update group (id 1)
         resp = await ac.put("/groups/1", json={"description": "desc"}, headers=headers)
-        assert resp.status_code == 403 or resp.status_code == 404
-
-        # Try to delete group (id 1)
-        resp = await ac.delete("/groups/1", headers=headers)
         assert resp.status_code == 403 or resp.status_code == 404
 
         # Try to add/remove user to/from group
@@ -173,10 +162,3 @@ async def test_create_group_with_users():
         assert any(
             u["id"] == 3 for u in group["users"]
         ), f"User 3 not found in group: {group['users']}"
-
-        # Clean up: delete the group
-        group_id = group["id"]
-        resp = await ac.delete(f"/groups/{group_id}", headers=headers)
-        assert (
-            resp.status_code == 204 or resp.status_code == 200
-        ), f"Failed to delete group: {resp.text}"

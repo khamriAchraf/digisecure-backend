@@ -8,7 +8,8 @@ from sqlalchemy import text
 
 from app.api.v1 import auth
 from app.api.v1 import compliance as compliance_module
-from app.api.v1 import group, role, schema, table_config, user
+from app.api.v1 import document_store as document_store_module
+from app.api.v1 import group, recycle_bin, role, schema, table_config, user
 from app.api.v1.asset import router as asset_router
 from app.api.v1.reference_data import router as reference_data_router
 from app.core.config import settings
@@ -42,6 +43,8 @@ app.include_router(compliance_module.router, prefix="/api/v1")
 app.include_router(schema.router, prefix="/api/v1")
 app.include_router(table_config.router, prefix="/api/v1")
 app.include_router(reference_data_router, prefix="/api/v1")
+app.include_router(recycle_bin.router, prefix="/api/v1")
+app.include_router(document_store_module.router, prefix="/api/v1")
 
 permissions_cache = []
 

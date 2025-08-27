@@ -1,9 +1,12 @@
-from sqlalchemy import (Boolean, CheckConstraint, Column, Date, DateTime,
+import enum
+
+from sqlalchemy import (Boolean, CheckConstraint, Column, Date, DateTime, Enum,
                         ForeignKey, Integer, String, Table)
 from sqlalchemy.orm import Session, relationship
 
-from app.db.base import Base
+from app.db.base import Base, SoftDeleteMixin
 from app.db.models.compliance_scopes import AssetComplianceScope
+from app.db.models.document_store import software_docs
 from app.db.models.group import asset_groups
 
 software_version_computers = Table(
@@ -18,8 +21,39 @@ software_version_computers = Table(
     Column("computer_id", Integer, ForeignKey("computers.id"), primary_key=True),
 )
 
+software_version_virtual_machines = Table(
+    "software_version_virtual_machines",
+    Base.metadata,
+    Column(
+        "software_version_id",
+        Integer,
+        ForeignKey("software_versions.id"),
+        primary_key=True,
+    ),
+    Column(
+        "virtual_machine_id",
+        Integer,
+        ForeignKey("virtual_machines.id"),
+        primary_key=True,
+    ),
+)
 
-class Asset(Base):
+software_version_network_devices = Table(
+    "software_version_network_devices",
+    Base.metadata,
+    Column(
+        "software_version_id",
+        Integer,
+        ForeignKey("software_versions.id"),
+        primary_key=True,
+    ),
+    Column(
+        "network_device_id", Integer, ForeignKey("network_devices.id"), primary_key=True
+    ),
+)
+
+
+class Asset(Base, SoftDeleteMixin):
     __tablename__ = "assets"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
@@ -49,7 +83,22 @@ class Asset(Base):
 
     @property
     def compliance_scopes(self):
-        return [mapping.scope for mapping in self.compliance_mappings]
+        scopes = []
+        for mapping in self.compliance_mappings:
+            scope_obj = mapping.scope
+
+            # Attach mapping-specific attributes directly on the scope instance so that
+            # Pydantic's `from_orm` picks them up when serialising using
+            # `ComplianceScopeForAsset`.
+            scope_obj.compliant = mapping.compliant
+            scope_obj.justification = mapping.justification
+            scope_obj.last_review_date = mapping.last_review_date
+            scope_obj.next_review_date = mapping.next_review_date
+            scope_obj.compliance_notes = mapping.compliance_notes
+
+            scopes.append(scope_obj)
+
+        return scopes
 
     __mapper_args__ = {"polymorphic_on": type, "polymorphic_identity": "asset"}
 
@@ -78,6 +127,18 @@ class Asset(Base):
         ).delete()
         db.query(software_version_computers).filter(
             software_version_computers.c.software_version_id == self.id
+        ).delete()
+        db.query(software_version_virtual_machines).filter(
+            software_version_virtual_machines.c.virtual_machine_id == self.id
+        ).delete()
+        db.query(software_version_virtual_machines).filter(
+            software_version_virtual_machines.c.software_version_id == self.id
+        ).delete()
+        db.query(software_version_network_devices).filter(
+            software_version_network_devices.c.network_device_id == self.id
+        ).delete()
+        db.query(software_version_network_devices).filter(
+            software_version_network_devices.c.software_version_id == self.id
         ).delete()
         return None
 
@@ -175,6 +236,13 @@ class NetworkDevice(Asset):
     redundancy_level = Column(String, nullable=True)  # None, N+1, N+2
     failover_capability = Column(Boolean, nullable=True)
 
+    # Relationships
+    software_versions = relationship(
+        "SoftwareVersion",
+        secondary=software_version_network_devices,
+        back_populates="network_devices",
+    )
+
     __mapper_args__ = {"polymorphic_identity": "network_device"}
 
 
@@ -252,6 +320,13 @@ class VirtualMachine(Asset):
     ha_enabled = Column(Boolean, nullable=True)
     redundancy_level = Column(String, nullable=True)  # None, N+1, N+2
     failover_capability = Column(Boolean, nullable=True)
+
+    # Relationships
+    software_versions = relationship(
+        "SoftwareVersion",
+        secondary=software_version_virtual_machines,
+        back_populates="virtual_machines",
+    )
 
     __mapper_args__ = {"polymorphic_identity": "virtual_machine"}
 
@@ -335,6 +410,10 @@ class Software(Asset):
         "SoftwareVersion", back_populates="software", cascade="all, delete-orphan"
     )
 
+    documents = relationship(
+        "Document", secondary=software_docs, back_populates="software"
+    )
+
     __table_args__ = (
         CheckConstraint(
             vulnerability_status.in_(["Compliant", "Non-Compliant", "Pending"]),
@@ -365,3 +444,51 @@ class SoftwareVersion(Base):
         secondary=software_version_computers,
         back_populates="software_versions",
     )
+    virtual_machines = relationship(
+        "VirtualMachine",
+        secondary=software_version_virtual_machines,
+        back_populates="software_versions",
+    )
+    network_devices = relationship(
+        "NetworkDevice",
+        secondary=software_version_network_devices,
+        back_populates="software_versions",
+    )
+
+
+class KeyType(enum.Enum):
+    CERTIFICATE = "certificate"
+    PRIVATE_KEY = "private_key"
+    PUBLIC_KEY = "public_key"
+    API_KEY = "api_key"
+    SSH_KEY = "ssh_key"
+    OTHER = "other"
+
+
+class KeyStatus(enum.Enum):
+    ACTIVE = "active"
+    REVOKED = "revoked"
+    NEAR_EXPIRY = "near_expiry"
+    EXPIRED = "expired"
+    COMPROMISED = "compromised"
+
+
+class CertificateKey(Asset):
+    __tablename__ = "certificate_keys"
+
+    id = Column(Integer, ForeignKey("assets.id"), primary_key=True)
+
+    cert_type = Column(Enum(KeyType), nullable=False, default=KeyType.CERTIFICATE)
+    algorithm = Column(String, nullable=True)
+    storage_location = Column(String, nullable=True)
+
+    expiration_date = Column(DateTime, nullable=True)
+    last_rotation_date = Column(DateTime, nullable=True)
+    next_rotation_due = Column(DateTime, nullable=True)
+
+    cert_status = Column(Enum(KeyStatus), nullable=False, default=KeyStatus.ACTIVE)
+
+    issuer = Column(String, nullable=True)
+    subject = Column(String, nullable=True)
+
+    __mapper_args__ = {"polymorphic_identity": "certificate_key"}

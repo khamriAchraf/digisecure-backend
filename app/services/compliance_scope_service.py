@@ -12,9 +12,16 @@ from app.db.models.compliance_scopes import \
     ComplianceScope as ComplianceScopeModel
 from app.db.models.user import User
 from app.schemas.compliance_scope import (AssetComplianceScopeCreate,
-                                          AssetComplianceScopeUpdate,
+                                          AssetComplianceScopeUpdate)
+from app.schemas.compliance_scope import \
+    ComplianceControl as ComplianceControlSchema
+from app.schemas.compliance_scope import (ComplianceControlListItem,
                                           ComplianceScopeCreate,
-                                          ComplianceScopeUpdate)
+                                          ComplianceScopeUpdate,
+                                          ControlDocumentLinkCreate,
+                                          ControlDocumentLinkDelete,
+                                          ScopedAsset)
+from app.schemas.pagination import create_paginated_response
 
 
 class PermissionError(Exception):
@@ -43,7 +50,7 @@ class ComplianceScopeService:
         logger.info(
             f"User {self.current_user.id} attempts to LIST compliance scopes at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "compliance_scope"):
+        if not has_permission(self.current_user, "list", "compliance_scope"):
             logger.warning(
                 f"User {self.current_user.id} denied LIST access to compliance scopes"
             )
@@ -190,3 +197,206 @@ class ComplianceScopeService:
         for sid in scope_ids:
             self.db.add(Mapping(asset_id=asset_id, scope_id=sid))
         self.db.commit()
+
+    # ----------------------------------------
+    # Paginated assets within a given scope
+    # ----------------------------------------
+
+    def get_paginated_scope_assets(
+        self,
+        scope_id: int,
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: str | None = None,
+        sort_order: str = "asc",
+        search: str | None = None,
+        filters: dict | None = None,
+    ):
+        if not has_permission(self.current_user, "list", "compliance_scope"):
+            raise PermissionError("Not allowed to list compliance scopes.")
+
+        rows, total = compliance_crud.get_paginated_scope_assets(
+            self.db,
+            scope_id=scope_id,
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search=search,
+            filters=filters,
+        )
+
+        # Map joined rows (mapping, asset) into ScopedAsset items
+        items: List[ScopedAsset] = []
+        for mapping, asset in rows:
+            items.append(
+                ScopedAsset(
+                    id=asset.id,
+                    name=asset.name,
+                    type=asset.type,
+                    compliant=mapping.compliant,
+                    justification=mapping.justification,
+                    last_review_date=mapping.last_review_date,
+                    next_review_date=mapping.next_review_date,
+                    compliance_notes=mapping.compliance_notes,
+                )
+            )
+
+        return create_paginated_response(
+            data=items, total=total, page=page, per_page=per_page
+        )
+
+    def get_cursor_scope_assets(
+        self,
+        scope_id: int,
+        cursor: int | None = None,
+        per_page: int = 20,
+        sort_by: str | None = None,
+        sort_order: str = "asc",
+        search: str | None = None,
+        filters: dict | None = None,
+    ):
+        if not has_permission(self.current_user, "list", "compliance_scope"):
+            raise PermissionError("Not allowed to list compliance scopes.")
+
+        rows, total = compliance_crud.get_cursor_scope_assets(
+            self.db,
+            scope_id=scope_id,
+            cursor=cursor,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search=search,
+            filters=filters,
+        )
+
+        items: List[ScopedAsset] = []
+        for mapping, asset in rows:
+            items.append(
+                ScopedAsset(
+                    id=asset.id,
+                    name=asset.name,
+                    type=asset.type,
+                    compliant=mapping.compliant,
+                    justification=mapping.justification,
+                    last_review_date=mapping.last_review_date,
+                    next_review_date=mapping.next_review_date,
+                    compliance_notes=mapping.compliance_notes,
+                )
+            )
+
+        # For cursor mode, we still return PaginatedResponse for consistency
+        # with users endpoint behaviour
+        page_number = 1
+        return create_paginated_response(
+            data=items, total=total, page=page_number, per_page=per_page
+        )
+
+    # ----------------------------------------
+    # Controls for a given scope
+    # ----------------------------------------
+
+    def list_scope_controls(self, scope_id: int) -> list[ComplianceControlListItem]:
+        if not has_permission(self.current_user, "list", "compliance_scope"):
+            raise PermissionError("Not allowed to list compliance scopes.")
+        # aggregate query returns tuples (control, document_count)
+        rows = compliance_crud.list_scope_controls_with_count(self.db, scope_id)
+        items: list[ComplianceControlListItem] = []
+        for control, document_count in rows:
+            items.append(
+                ComplianceControlListItem(
+                    id=control.id,
+                    scope_id=control.scope_id,
+                    code=control.code,
+                    title=control.title,
+                    description=control.description,
+                    required_document_name=control.required_document_name,
+                    required_document_description=control.required_document_description,
+                    required_document_type=control.required_document_type,
+                    last_audit_date=control.last_audit_date,
+                    last_audit_result=control.last_audit_result,
+                    last_review_date=control.last_review_date,
+                    next_review_date=control.next_review_date,
+                    expiration_date=control.expiration_date,
+                    status=control.status,
+                    compliance_notes=control.compliance_notes,
+                    document_count=int(document_count or 0),
+                )
+            )
+        return items
+
+    def get_scope_control(
+        self, scope_id: int, control_id: int
+    ) -> ComplianceControlSchema | None:
+        if not has_permission(self.current_user, "list", "compliance_scope"):
+            raise PermissionError("Not allowed to list compliance scopes.")
+        control = compliance_crud.get_control_for_scope(self.db, scope_id, control_id)
+        return control
+
+    # ----------------------------------------
+    # Link/unlink documents to a control
+    # ----------------------------------------
+
+    def link_documents_to_control(
+        self, scope_id: int, control_id: int, payload: ControlDocumentLinkCreate
+    ):
+        if not has_permission(self.current_user, "update", "compliance_scope"):
+            raise PermissionError("Not allowed to update compliance scopes.")
+        control = compliance_crud.get_control(self.db, control_id)
+        if control is None or control.scope_id != scope_id:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Control not found in scope")
+
+        # Validate documents
+        existing_docs = compliance_crud.get_documents_by_ids(
+            self.db, payload.document_ids
+        )
+        existing_ids = {d.id for d in existing_docs}
+        missing = [
+            doc_id for doc_id in payload.document_ids if doc_id not in existing_ids
+        ]
+        if missing:
+            from fastapi import HTTPException
+
+            raise HTTPException(
+                status_code=404, detail=f"Documents not found: {missing}"
+            )
+
+        links = compliance_crud.create_control_document_links(
+            self.db,
+            control_id=control_id,
+            document_ids=payload.document_ids,
+        )
+        return links
+
+    def unlink_documents_from_control(
+        self, scope_id: int, control_id: int, payload: ControlDocumentLinkDelete
+    ) -> int:
+        if not has_permission(self.current_user, "update", "compliance_scope"):
+            raise PermissionError("Not allowed to update compliance scopes.")
+        control = compliance_crud.get_control(self.db, control_id)
+        if control is None or control.scope_id != scope_id:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Control not found in scope")
+
+        # Validate documents
+        existing_docs = compliance_crud.get_documents_by_ids(
+            self.db, payload.document_ids
+        )
+        existing_ids = {d.id for d in existing_docs}
+        missing = [
+            doc_id for doc_id in payload.document_ids if doc_id not in existing_ids
+        ]
+        if missing:
+            from fastapi import HTTPException
+
+            raise HTTPException(
+                status_code=404, detail=f"Documents not found: {missing}"
+            )
+
+        deleted = compliance_crud.delete_control_document_links(
+            self.db, control_id=control_id, document_ids=payload.document_ids
+        )
+        return deleted

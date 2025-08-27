@@ -64,10 +64,109 @@ def get_paginated_roles(
     return roles, total
 
 
+def get_paginated_roles_below_rank(
+    db: Session,
+    max_rank: int,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> Tuple[List[Role], int]:
+    query: Query = db.query(Role).filter(Role.rank > max_rank)
+
+    # Apply filters
+    if filters:
+        for key, value in filters.items():
+            if hasattr(Role, key) and value is not None and value != "":
+                query = query.filter(getattr(Role, key) == value)
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Role.name.ilike(search_term),
+                Role.description.ilike(search_term),
+            )
+        )
+
+    total = query.count()
+
+    # Apply sorting
+    if sort_by and hasattr(Role, sort_by):
+        column = getattr(Role, sort_by)
+        if sort_order.lower() == "desc":
+            query = query.order_by(column.desc())
+        else:
+            query = query.order_by(column.asc())
+
+    # Apply pagination
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    roles = query.all()
+    return roles, total
+
+
+def get_paginated_deleted_roles(
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> Tuple[List[Role], int]:
+    """
+    Returns a paginated list of soft-deleted roles.
+    """
+    query: Query = db.query(Role).only_deleted()
+
+    # Apply filters
+    if filters:
+        for key, value in filters.items():
+            if hasattr(Role, key) and value is not None and value != "":
+                query = query.filter(getattr(Role, key) == value)
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Role.name.ilike(search_term),
+                Role.description.ilike(search_term),
+            )
+        )
+
+    # Apply sorting
+    if sort_by and hasattr(Role, sort_by):
+        column = getattr(Role, sort_by)
+        if sort_order.lower() == "desc":
+            query = query.order_by(column.desc())
+        else:
+            query = query.order_by(column.asc())
+    else:
+        query = query.order_by(Role.id.asc())
+
+    # Apply pagination
+    total = query.count()
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    roles = query.all()
+    return roles, total
+
+
 def create_role(
-    db: Session, name: str, description: Optional[str] = None, is_builtin: bool = False
+    db: Session,
+    name: str,
+    rank: int,
+    description: Optional[str] = None,
+    is_builtin: bool = False,
 ) -> Role:
-    role = Role(name=name, description=description, is_builtin=is_builtin)
+    role = Role(name=name, description=description, is_builtin=is_builtin, rank=rank)
     db.add(role)
     try:
         db.commit()
@@ -98,7 +197,7 @@ def update_role(
 
 
 def delete_role(db: Session, role: Role) -> Role:
-    db.delete(role)
+    role.soft_delete(db)
     db.commit()
     return role
 
@@ -117,3 +216,24 @@ def unassign_permission(db: Session, role: Role, permission: Permission) -> Role
         db.commit()
         db.refresh(role)
     return role
+
+
+def list_roles_below_rank(
+    db: Session,
+    max_rank: int,
+    skip: int = 0,
+    limit: int = 100,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> List[Role]:
+    query: Query = db.query(Role).filter(Role.rank > max_rank)
+
+    # Apply filters
+    if filters:
+        for key, value in filters.items():
+            if hasattr(Role, key) and value is not None and value != "":
+                query = query.filter(getattr(Role, key) == value)
+
+    return query.offset(skip).limit(limit).all()

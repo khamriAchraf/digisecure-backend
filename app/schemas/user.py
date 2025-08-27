@@ -53,6 +53,13 @@ class UserBase(BaseModel):
     administartive_number: Optional[str] = None
 
 
+class UserList(BaseModel):
+    id: int
+    username: str
+    role: Role
+    status: str
+
+
 class UserCreate(UserBase):
     password: str
     role_id: Optional[int] = None

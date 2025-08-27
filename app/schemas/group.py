@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -99,6 +100,17 @@ class GroupAssetResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class GroupList(BaseModel):
+    id: int
+    name: str
+    type: Optional[str] = None
+    deleted_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    asset_count: int = 0
+    user_count: int = 0
 
 
 class GroupResponse(GroupBase):

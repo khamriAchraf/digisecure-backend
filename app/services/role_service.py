@@ -32,16 +32,89 @@ class RoleService:
         logger.info(f"User {self.current_user.id} successfully READ role {role_id}")
         return role
 
-    def list_roles(self, skip: int = 0, limit: int = 100):
+    def list_roles_below_rank(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        search: Optional[str] = None,
+        filters: Optional[dict] = None,
+    ):
         logger.info(
             f"User {self.current_user.id} attempts to LIST roles at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "role"):
+        if not has_permission(self.current_user, "list", "role"):
             logger.warning(f"User {self.current_user.id} denied LIST access to roles")
             raise PermissionError("Not allowed to list roles.")
-        roles = role_crud.list_roles(self.db, skip=skip, limit=limit)
+        roles = role_crud.list_roles_below_rank(
+            self.db,
+            self.current_user.role.rank,
+            skip=skip,
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search=search,
+            filters=filters,
+        )
         logger.info(f"User {self.current_user.id} successfully LISTED roles")
         return roles
+
+    def list_roles_below_rank(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        search: Optional[str] = None,
+        filters: Optional[dict] = None,
+    ):
+        logger.info(
+            f"User {self.current_user.id} attempts to LIST roles at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "list", "role"):
+            logger.warning(f"User {self.current_user.id} denied LIST access to roles")
+            raise PermissionError("Not allowed to list roles.")
+        roles = role_crud.list_roles(
+            self.db,
+            self.current_user.role.rank,
+            skip=skip,
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search=search,
+            filters=filters,
+        )
+        logger.info(f"User {self.current_user.id} successfully LISTED roles")
+        return roles
+
+    def get_paginated_roles_below_rank(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        search: Optional[str] = None,
+        filters: Optional[dict] = None,
+    ) -> Tuple[List[Role], int]:
+        logger.info(
+            f"User {self.current_user.id} attempts to LIST roles at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "list", "role"):
+            logger.warning(f"User {self.current_user.id} denied LIST access to roles")
+            raise PermissionError("Not allowed to list roles.")
+        roles, total = role_crud.get_paginated_roles_below_rank(
+            self.db,
+            self.current_user.role.rank,
+            page,
+            per_page,
+            sort_by,
+            sort_order,
+            search,
+            filters,
+        )
+        logger.info(f"User {self.current_user.id} successfully LISTED roles")
+        return roles, total
 
     def get_paginated_roles(
         self,
@@ -55,7 +128,7 @@ class RoleService:
         logger.info(
             f"User {self.current_user.id} attempts to LIST roles at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", "role"):
+        if not has_permission(self.current_user, "list", "role"):
             logger.warning(f"User {self.current_user.id} denied LIST access to roles")
             raise PermissionError("Not allowed to list roles.")
         roles, total = role_crud.get_paginated_roles(
@@ -76,7 +149,16 @@ class RoleService:
             )
             raise PermissionError("Not allowed to create roles.")
         try:
-            role = role_crud.create_role(self.db, name, description, is_builtin)
+            # Fetch the highest rank in the database and assign rank + 1 to the new role
+            highest_rank = self.db.query(Role.rank).order_by(Role.rank.desc()).first()
+            new_rank = (
+                (highest_rank[0] + 1)
+                if highest_rank and highest_rank[0] is not None
+                else 1
+            )
+            role = role_crud.create_role(
+                self.db, name, new_rank, description, is_builtin
+            )
         except ValueError as e:
             from fastapi import HTTPException
 

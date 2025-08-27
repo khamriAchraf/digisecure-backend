@@ -13,7 +13,6 @@ from app.db.models.table_config import TableConfig
 class UserStatus(enum.Enum):
     active = "active"
     inactive = "inactive"
-    deleted = "deleted"
 
 
 class UserRole(enum.Enum):
@@ -53,29 +52,9 @@ class User(Base, SoftDeleteMixin):
     table_configs = relationship(
         "TableConfig", back_populates="user", cascade="all, delete-orphan"
     )
-
-    class Config:
-        schema_extra = {
-            "examples": [
-                {
-                    "email": "user@example.com",
-                    "username": "john_doe",
-                    "full_name": "John Doe",
-                    "role": "user",
-                    "groups": ["group1", "group2"],
-                    "status": "active",
-                    "valid_until": "2025-01-01T00:00:00Z",
-                    "valid_from": "2024-01-01T00:00:00Z",
-                    "administartive_number": "1234567890",
-                    "phone": "+1234567890",
-                    "secondary_phone": "+1234567890",
-                    "timezone": "UTC",
-                    "location": "New York",
-                    "language": "en",
-                    "theme": "light",
-                }
-            ]
-        }
+    documents = relationship(
+        "Document", back_populates="user", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<User {self.username}>"
