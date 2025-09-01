@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from sqlalchemy import func, or_
@@ -11,7 +12,10 @@ from app.db.models.document_store import (Document, DocumentFolder,
 def get_document(db: Session, document_id: int) -> Optional[Document]:
     return (
         db.query(Document)
-        .options(joinedload(Document.versions))
+        .options(
+            joinedload(Document.versions),
+            joinedload(Document.user),
+        )
         .filter(Document.id == document_id)
         .first()
     )
@@ -152,6 +156,11 @@ def update_document(
     name: Optional[str] = None,
     description: Optional[str] = None,
     folder_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    review_status: Optional[str] = None,
+    review_notes: Optional[str] = None,
+    review_date: Optional[datetime] = None,
+    review_frequency_months: Optional[int] = None,
 ) -> Document:
     if name is not None:
         document.name = name
@@ -159,6 +168,16 @@ def update_document(
         document.description = description
     if folder_id is not None:
         document.folder_id = folder_id
+    if user_id is not None:
+        document.user_id = user_id
+    if review_status is not None:
+        document.review_status = review_status
+    if review_notes is not None:
+        document.review_notes = review_notes
+    if review_date is not None:
+        document.review_date = review_date
+    if review_frequency_months is not None:
+        document.review_frequency_months = review_frequency_months
     db.commit()
     db.refresh(document)
     return document

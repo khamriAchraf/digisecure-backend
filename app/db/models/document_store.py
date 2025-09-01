@@ -45,10 +45,10 @@ class Document(Base):
         Integer, ForeignKey("document_folders.id", ondelete="SET NULL"), nullable=True
     )
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    review_status = Column(String, nullable=True)
+    review_status = Column(String, nullable=False, default="Draft")
     review_notes = Column(String, nullable=True)
     review_date = Column(DateTime, nullable=True)
-    review_frequency = Column(String, nullable=True)
+    review_frequency_months = Column(Integer, nullable=False, default=12)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False

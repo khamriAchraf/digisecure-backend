@@ -337,6 +337,41 @@ def create_sample_assets(session):
     logger.info(f"Created {assets_created} sample assets")
 
 
+def upsert_document_controls_for_scope(session, scope, controls, scope_name):
+    """Create or update document controls for a given compliance scope.
+
+    - Creates controls that are missing
+    - Backfills/corrects review_frequency_months for existing ones
+    """
+    created = 0
+    updated = 0
+    for ctrl in controls:
+        existing_ctrl = (
+            session.query(ComplianceControl)
+            .filter_by(scope_id=scope.id, code=ctrl["code"])
+            .first()
+        )
+        if not existing_ctrl:
+            session.add(ComplianceControl(scope_id=scope.id, **ctrl))
+            created += 1
+        else:
+            desired_freq = ctrl.get("review_frequency_months")
+            if (
+                desired_freq is not None
+                and existing_ctrl.review_frequency_months != desired_freq
+            ):
+                existing_ctrl.review_frequency_months = desired_freq
+                updated += 1
+
+    if created or updated:
+        session.commit()
+        logger.info(
+            f"Created {created} and updated {updated} {scope_name} document controls."
+        )
+    else:
+        logger.info(f"{scope_name} document controls already present; no changes made.")
+
+
 def ensure_database_exists():
     """Ensure the target database exists; create it if missing."""
     admin_url = (
@@ -935,6 +970,14 @@ def main():
         },
     ]
 
+    analytics_permissions = [
+        {
+            "action": "list",
+            "resource": "analytics",
+            "description": "List analytics",
+        },
+    ]
+
     ALL_PERMISSIONS = {
         "user": user_permissions,
         "role": role_permissions,
@@ -955,6 +998,7 @@ def main():
         "recycle_bin_certificate_key": recycle_bin_certificate_key_permissions,
         "recycle_bin_group": recycle_bin_group_permissions,
         "certificate_key": certificate_key_permissions,
+        "analytics": analytics_permissions,
     }
 
     # Role-permission mapping
@@ -979,6 +1023,7 @@ def main():
             "recycle_bin_certificate_key": ["read", "list", "restore", "purge"],
             "recycle_bin_group": ["read", "list", "restore", "purge"],
             "certificate_key": ["read", "list", "create", "update", "delete"],
+            "analytics": ["list"],
         },
         "Admin": {
             "user": ["read", "list", "create", "update", "delete"],
@@ -1242,39 +1287,14 @@ def main():
                 "reference_url": "https://www.iso.org/isoiec-27001-information-security.html",
             },
             {
-                "name": "SOC 2",
-                "description": "AICPA Trust Services Criteria-based attestation for security, availability, processing integrity, confidentiality, and privacy.",
-                "reference_url": "https://www.aicpa.org/topic/audit-assurance/service-organization-reporting-soc",
+                "name": "NDSSI",
+                "description": "Directive nationale de la sécurité des systèmes d’information",
+                "reference_url": "https://www.dgssi.gov.ma/fr/publications/directive-nationale-de-la-securite-des-systemes-dinformation-dnssi",
             },
             {
-                "name": "HIPAA",
-                "description": "U.S. healthcare regulation for the protection of PHI (Protected Health Information).",
-                "reference_url": "https://www.hhs.gov/hipaa/index.html",
-            },
-            {
-                "name": "GDPR",
-                "description": "EU General Data Protection Regulation governing personal data protection and privacy.",
-                "reference_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
-            },
-            {
-                "name": "NIST CSF",
-                "description": "NIST Cybersecurity Framework for improving critical infrastructure cybersecurity.",
-                "reference_url": "https://www.nist.gov/cyberframework",
-            },
-            {
-                "name": "NIST SP 800-53",
-                "description": "NIST catalog of security and privacy controls for federal information systems and organizations.",
-                "reference_url": "https://csrc.nist.gov/publications/sp800-53",
-            },
-            {
-                "name": "FedRAMP",
-                "description": "U.S. federal program for security assessment, authorization, and continuous monitoring of cloud services.",
-                "reference_url": "https://www.fedramp.gov/",
-            },
-            {
-                "name": "SOX",
-                "description": "Sarbanes-Oxley Act requirements for financial reporting controls for U.S. public companies.",
-                "reference_url": "https://www.sec.gov/about/laws/soa2002.pdf",
+                "name": "ISO 22301",
+                "description": "International standard for business continuity management systems.",
+                "reference_url": "https://www.iso.org/standard/57460.html",
             },
         ]
 
@@ -1305,6 +1325,7 @@ def main():
                     "description": "Politique de sécurité de l'information couvrant l'ensemble de l'organisation et le périmètre PCI.",
                     "required_document_name": "Politique Générale de Sécurité",
                     "required_document_type": "policy",
+                    "review_frequency_months": 8,
                 },
                 {
                     "code": "DOC-002",
@@ -1312,6 +1333,7 @@ def main():
                     "description": "Politique encadrant la sécurité des réseaux, incluant segmentation CDE, filtrage et supervision.",
                     "required_document_name": "Politique de sécurité réseau",
                     "required_document_type": "policy",
+                    "review_frequency_months": 6,
                 },
                 {
                     "code": "DOC-003",
@@ -1319,6 +1341,7 @@ def main():
                     "description": "Politique couvrant l'utilisation, la mise à jour et la surveillance des solutions anti‑malware.",
                     "required_document_name": "Politique antivirale",
                     "required_document_type": "policy",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-004",
@@ -1326,6 +1349,7 @@ def main():
                     "description": "Description et justification du périmètre PCI DSS (CDE), incluant systèmes et flux concernés.",
                     "required_document_name": "Document du périmètre PCI",
                     "required_document_type": "document",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-005",
@@ -1333,6 +1357,7 @@ def main():
                     "description": "Définition des rôles et responsabilités en matière de sécurité et de conformité PCI DSS.",
                     "required_document_name": "Document des rôles et responsabilités",
                     "required_document_type": "document",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-006",
@@ -1340,6 +1365,7 @@ def main():
                     "description": "Méthodologie de gestion des risques couvrant l'identification, l'évaluation et le traitement des risques PCI.",
                     "required_document_name": "Méthodologie d'appréciation des risques",
                     "required_document_type": "methodology",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-007",
@@ -1347,6 +1373,7 @@ def main():
                     "description": "Cartographie/registre des risques identifiés et mesures associées pour le périmètre PCI.",
                     "required_document_name": "Cartographie des risques",
                     "required_document_type": "document",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-008",
@@ -1354,6 +1381,7 @@ def main():
                     "description": "Politique et pratiques de développement sécurisé (SDLC) incluant revues de code et correctifs.",
                     "required_document_name": "Charte de développement sécurisé",
                     "required_document_type": "policy",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-009",
@@ -1361,6 +1389,7 @@ def main():
                     "description": "Charte d'utilisation et de sécurité pour les comptes et activités d'administration.",
                     "required_document_name": "Charte des administrateurs",
                     "required_document_type": "policy",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-010",
@@ -1368,6 +1397,7 @@ def main():
                     "description": "Charte d'utilisation acceptable et règles de sécurité pour tous les utilisateurs.",
                     "required_document_name": "Charte des utilisateurs du système",
                     "required_document_type": "policy",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-011",
@@ -1375,6 +1405,7 @@ def main():
                     "description": "Engagements et responsabilités de l'organisation vis‑à‑vis de la conformité PCI DSS.",
                     "required_document_name": "Charte de conformité PCI DSS",
                     "required_document_type": "policy",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-012",
@@ -1382,6 +1413,7 @@ def main():
                     "description": "Schéma réseau à jour incluant la segmentation et les flux vers/depuis le CDE.",
                     "required_document_name": "Diagramme réseau",
                     "required_document_type": "diagram",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-013",
@@ -1389,6 +1421,7 @@ def main():
                     "description": "Schéma détaillant les flux de données de carte (données PAN/CHD) au sein de l'environnement.",
                     "required_document_name": "Diagramme de flux monétique",
                     "required_document_type": "diagram",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-014",
@@ -1396,6 +1429,7 @@ def main():
                     "description": "Standard de configuration sécurisée des pare‑feu incluant règles, justification et revue.",
                     "required_document_name": "Standard de configuration des pare‑feu",
                     "required_document_type": "standard",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-015",
@@ -1403,6 +1437,7 @@ def main():
                     "description": "Standard de configuration sécurisée pour routeurs et switches.",
                     "required_document_name": "Standard de configuration des routeurs et commutateurs",
                     "required_document_type": "standard",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-016",
@@ -1410,6 +1445,7 @@ def main():
                     "description": "Standards de durcissement des systèmes d'exploitation (serveurs et postes).",
                     "required_document_name": "Standard de configuration des systèmes (OS)",
                     "required_document_type": "standard",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-017",
@@ -1417,6 +1453,7 @@ def main():
                     "description": "Standards de durcissement et règles d'accès pour SGBD.",
                     "required_document_name": "Standard de configuration des bases de données",
                     "required_document_type": "standard",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-018",
@@ -1424,6 +1461,7 @@ def main():
                     "description": "Standards de configuration sécurisée pour serveurs applicatifs/web.",
                     "required_document_name": "Standard de configuration des serveurs applicatifs",
                     "required_document_type": "standard",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-019",
@@ -1431,6 +1469,7 @@ def main():
                     "description": "Standard de configuration et de sécurité pour les postes utilisateurs.",
                     "required_document_name": "Standard de configuration des postes de travail",
                     "required_document_type": "standard",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-020",
@@ -1438,6 +1477,7 @@ def main():
                     "description": "Procédure de collecte, conservation, intégrité et revue des journaux de sécurité.",
                     "required_document_name": "Procédure de gestion des logs",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-021",
@@ -1445,6 +1485,7 @@ def main():
                     "description": "Inventaire à jour des composants de l'environnement de données de cartes.",
                     "required_document_name": "Inventaire des composants CDE",
                     "required_document_type": "inventory",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-022",
@@ -1452,6 +1493,7 @@ def main():
                     "description": "Inventaire et suivi des certificats, clés et matériels cryptographiques.",
                     "required_document_name": "Inventaire des certificats et clés cryptographiques",
                     "required_document_type": "inventory",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-023",
@@ -1459,6 +1501,7 @@ def main():
                     "description": "Catalogue des applications (internes/externes) avec propriétaires et criticité.",
                     "required_document_name": "Inventaire des applications",
                     "required_document_type": "inventory",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-024",
@@ -1466,6 +1509,7 @@ def main():
                     "description": "Procédure couvrant création, attribution, révocation et rotation des identifiants.",
                     "required_document_name": "Procédure de gestion des identifiants",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-025",
@@ -1473,6 +1517,7 @@ def main():
                     "description": "Méthodologie, périmètre et critères des tests d'intrusion périodiques.",
                     "required_document_name": "Méthodologie des tests d'intrusion",
                     "required_document_type": "methodology",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-026",
@@ -1480,6 +1525,7 @@ def main():
                     "description": "Procédure d'attribution, revue périodique et retrait des droits d'accès.",
                     "required_document_name": "Procédure de gestion des habilitations",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-027",
@@ -1487,6 +1533,7 @@ def main():
                     "description": "Processus ITSM de gestion des changements incluant évaluation des risques et approbations.",
                     "required_document_name": "Processus de gestion des changements",
                     "required_document_type": "process",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-028",
@@ -1494,6 +1541,7 @@ def main():
                     "description": "Procédure de gestion du cycle de vie des comptes utilisateurs et techniques.",
                     "required_document_name": "Procédure de gestion des comptes",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-029",
@@ -1501,6 +1549,7 @@ def main():
                     "description": "Procédure d'inventaire, classification et suivi des actifs.",
                     "required_document_name": "Procédure de gestion des actifs",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-030",
@@ -1508,6 +1557,7 @@ def main():
                     "description": "Procédure d'authentification multi‑facteurs et exigences associées.",
                     "required_document_name": "Procédure d'authentification forte",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-031",
@@ -1515,6 +1565,7 @@ def main():
                     "description": "Procédure d'octroi, de modification et de retrait des accès logiques.",
                     "required_document_name": "Procédure de gestion des accès logiques",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-032",
@@ -1522,6 +1573,7 @@ def main():
                     "description": "Procédure encadrant les accès à distance sécurisés aux systèmes PCI.",
                     "required_document_name": "Procédure de gestion des accès distants",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-033",
@@ -1529,6 +1581,7 @@ def main():
                     "description": "Procédure de sauvegarde/restauration, chiffrement et tests de restauration.",
                     "required_document_name": "Procédure de gestion des sauvegardes",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-034",
@@ -1536,6 +1589,7 @@ def main():
                     "description": "Procédure de détection, d'escalade, de traitement et de post‑mortem des incidents.",
                     "required_document_name": "Procédure de réponse aux incidents de sécurité",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-035",
@@ -1543,6 +1597,7 @@ def main():
                     "description": "Procédure de détection, priorisation et remédiation des vulnérabilités.",
                     "required_document_name": "Procédure de gestion des vulnérabilités",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-036",
@@ -1550,6 +1605,7 @@ def main():
                     "description": "Procédure de génération, distribution, stockage, rotation et révocation des clés.",
                     "required_document_name": "Procédure de gestion des clés cryptographiques",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-037",
@@ -1557,6 +1613,7 @@ def main():
                     "description": "Procédure d'évaluation et de suivi des fournisseurs/tiers avec accès PCI.",
                     "required_document_name": "Procédure de gestion des prestataires",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-038",
@@ -1564,6 +1621,7 @@ def main():
                     "description": "Procédure de contrôle et de surveillance des accès physiques aux locaux CDE.",
                     "required_document_name": "Procédure de gestion des accès physiques",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-039",
@@ -1571,6 +1629,7 @@ def main():
                     "description": "Procédure d'effacement sécurisé et de destruction des supports contenant des données de carte.",
                     "required_document_name": "Procédure de mise en rebut des supports",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-040",
@@ -1578,6 +1637,7 @@ def main():
                     "description": "Plan de continuité d'activité couvrant la résilience des services incluant PCI.",
                     "required_document_name": "Plan de continuité d'activité (PCA)",
                     "required_document_type": "plan",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-041",
@@ -1585,6 +1645,7 @@ def main():
                     "description": "Procédure/plan de reprise d'activité, objectifs RTO/RPO et scénarios.",
                     "required_document_name": "Procédure de reprise d'activité (PRA)",
                     "required_document_type": "procedure",
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-042",
@@ -1592,6 +1653,7 @@ def main():
                     "description": "Compte‑rendu des revues périodiques des règles de filtrage et justifications.",
                     "required_document_name": "Revue des règles des pare‑feu",
                     "required_document_type": "record",
+                    "review_frequency_months": 6,
                 },
                 {
                     "code": "DOC-043",
@@ -1599,10 +1661,12 @@ def main():
                     "description": "Procès‑verbal des revues annuelles des politiques, standards et procédures PCI.",
                     "required_document_name": "PV de revue annuel des documents",
                     "required_document_type": "record",
+                    "review_frequency_months": 12,
                 },
             ]
 
             created_doc_controls = 0
+            updated_doc_controls = 0
             for ctrl in pci_document_controls:
                 existing_ctrl = (
                     session.query(ComplianceControl)
@@ -1612,10 +1676,19 @@ def main():
                 if not existing_ctrl:
                     session.add(ComplianceControl(scope_id=pci_scope.id, **ctrl))
                     created_doc_controls += 1
-            if created_doc_controls:
+                else:
+                    # Backfill or correct review_frequency_months for existing controls
+                    desired_freq = ctrl.get("review_frequency_months")
+                    if (
+                        desired_freq is not None
+                        and existing_ctrl.review_frequency_months != desired_freq
+                    ):
+                        existing_ctrl.review_frequency_months = desired_freq
+                        updated_doc_controls += 1
+            if created_doc_controls or updated_doc_controls:
                 session.commit()
                 logger.info(
-                    f"Created {created_doc_controls} PCI-DSS document controls."
+                    f"Created {created_doc_controls} and updated {updated_doc_controls} PCI-DSS document controls."
                 )
             else:
                 logger.info(
@@ -1623,6 +1696,198 @@ def main():
                 )
         else:
             logger.warning("PCI-DSS scope not found; skipping PCI controls creation.")
+
+        # Create ISO/IEC 27001 core document controls
+        logger.info("Creating ISO 27001 controls if not exist...")
+        iso_scope = session.query(ComplianceScope).filter_by(name="ISO 27001").first()
+        if iso_scope:
+            iso_27001_document_controls = [
+                {
+                    "code": "ISMS-001",
+                    "title": "Politique de sécurité de l'information",
+                    "description": "Politique ISMS couvrant le périmètre et les objectifs de sécurité.",
+                    "required_document_name": "Politique de sécurité de l'information",
+                    "required_document_type": "policy",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ISMS-002",
+                    "title": "Méthodologie d'appréciation des risques",
+                    "description": "Approche d'identification, d'évaluation et de traitement des risques ISMS.",
+                    "required_document_name": "Méthodologie d'appréciation des risques",
+                    "required_document_type": "methodology",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ISMS-003",
+                    "title": "Déclaration d'Applicabilité (SoA)",
+                    "description": "Déclaration d'applicabilité des contrôles de référence et leurs justifications.",
+                    "required_document_name": "Déclaration d'Applicabilité (SoA)",
+                    "required_document_type": "document",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ISMS-004",
+                    "title": "Plan de traitement des risques",
+                    "description": "Plan d'actions pour réduire les risques à des niveaux acceptables.",
+                    "required_document_name": "Plan de traitement des risques",
+                    "required_document_type": "plan",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ISMS-005",
+                    "title": "Procédure de gestion des incidents",
+                    "description": "Procédure de détection, d'escalade et de résolution des incidents de sécurité.",
+                    "required_document_name": "Procédure de gestion des incidents",
+                    "required_document_type": "procedure",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ISMS-006",
+                    "title": "Politique de contrôle d'accès",
+                    "description": "Règles d'octroi, de modification et de retrait des accès.",
+                    "required_document_name": "Politique de contrôle d'accès",
+                    "required_document_type": "policy",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ISMS-007",
+                    "title": "Politique de continuité d'activité (ISMS)",
+                    "description": "Exigences de continuité et intégration BC avec l'ISMS.",
+                    "required_document_name": "Politique de continuité d'activité",
+                    "required_document_type": "policy",
+                    "review_frequency_months": 12,
+                },
+            ]
+            upsert_document_controls_for_scope(
+                session, iso_scope, iso_27001_document_controls, "ISO 27001"
+            )
+        else:
+            logger.warning("ISO 27001 scope not found; skipping ISO controls creation.")
+
+        # Create ISO 22301 BCMS document controls
+        logger.info("Creating ISO 22301 controls if not exist...")
+        iso22301_scope = (
+            session.query(ComplianceScope).filter_by(name="ISO 22301").first()
+        )
+        if iso22301_scope:
+            iso_22301_document_controls = [
+                {
+                    "code": "BCMS-001",
+                    "title": "Politique de continuité d'activité",
+                    "description": "Politique BCMS décrivant objectifs et périmètre.",
+                    "required_document_name": "Politique de continuité d'activité",
+                    "required_document_type": "policy",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "BCMS-002",
+                    "title": "Analyse d'impact sur l'activité (BIA)",
+                    "description": "Méthodologie et rapport BIA identifiant processus critiques et MTPD.",
+                    "required_document_name": "Analyse d'impact sur l'activité",
+                    "required_document_type": "analysis",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "BCMS-003",
+                    "title": "Évaluation des risques BC",
+                    "description": "Méthodologie et résultats d'évaluation des risques de continuité.",
+                    "required_document_name": "Évaluation des risques BC",
+                    "required_document_type": "assessment",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "BCMS-004",
+                    "title": "Plans de continuité (PCAs)",
+                    "description": "Plans détaillés, rôles et procédures de continuité.",
+                    "required_document_name": "Plans de continuité",
+                    "required_document_type": "plan",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "BCMS-005",
+                    "title": "Rapports de tests et exercices",
+                    "description": "Résultats des tests/exercices BC, leçons apprises et actions.",
+                    "required_document_name": "Rapports de tests BC",
+                    "required_document_type": "record",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "BCMS-006",
+                    "title": "Procédures de reprise d'activité",
+                    "description": "Procédures de reprise et priorités de restauration.",
+                    "required_document_name": "Procédures de reprise d'activité",
+                    "required_document_type": "procedure",
+                    "review_frequency_months": 12,
+                },
+            ]
+            upsert_document_controls_for_scope(
+                session, iso22301_scope, iso_22301_document_controls, "ISO 22301"
+            )
+        else:
+            logger.warning(
+                "ISO 22301 scope not found; skipping ISO 22301 controls creation."
+            )
+
+        # Create NDSSI document controls
+        logger.info("Creating NDSSI controls if not exist...")
+        ndssi_scope = session.query(ComplianceScope).filter_by(name="NDSSI").first()
+        if ndssi_scope:
+            ndssi_document_controls = [
+                {
+                    "code": "ND-001",
+                    "title": "Politique SSI",
+                    "description": "Politique de sécurité des systèmes d'information conforme à la DNSSI.",
+                    "required_document_name": "Politique SSI",
+                    "required_document_type": "policy",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ND-002",
+                    "title": "Méthodologie d'analyse de risque",
+                    "description": "Méthodologie et registre des risques selon la directive nationale.",
+                    "required_document_name": "Méthodologie d'analyse de risque",
+                    "required_document_type": "methodology",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ND-003",
+                    "title": "Procédure de gestion des incidents",
+                    "description": "Processus de traitement des incidents de sécurité (détection à clôture).",
+                    "required_document_name": "Procédure de gestion des incidents",
+                    "required_document_type": "procedure",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ND-004",
+                    "title": "Charte et politique d'accès",
+                    "description": "Règles d'habilitation, révision périodique et retrait d'accès.",
+                    "required_document_name": "Politique d'accès",
+                    "required_document_type": "policy",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ND-005",
+                    "title": "Plan de continuité et PRA",
+                    "description": "PCA et PRA alignés à la directive nationale.",
+                    "required_document_name": "PCA/PRA",
+                    "required_document_type": "plan",
+                    "review_frequency_months": 12,
+                },
+                {
+                    "code": "ND-006",
+                    "title": "Charte des administrateurs",
+                    "description": "Règles d'utilisation et de sécurité pour comptes à privilèges.",
+                    "required_document_name": "Charte des administrateurs",
+                    "required_document_type": "policy",
+                    "review_frequency_months": 12,
+                },
+            ]
+            upsert_document_controls_for_scope(
+                session, ndssi_scope, ndssi_document_controls, "NDSSI"
+            )
+        else:
+            logger.warning("NDSSI scope not found; skipping NDSSI controls creation.")
 
         # Create a user for each role if the database name contains 'dev'
         if "dev" in settings.DB_NAME.lower():

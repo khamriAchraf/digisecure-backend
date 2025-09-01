@@ -142,6 +142,11 @@ class DocumentStoreService:
             name=doc_in.name,
             description=doc_in.description,
             folder_id=doc_in.folder_id,
+            user_id=doc_in.user_id,
+            review_status=doc_in.review_status,
+            review_notes=doc_in.review_notes,
+            review_date=doc_in.review_date,
+            review_frequency_months=doc_in.review_frequency_months,
         )
 
     def delete_document(self, document: DocumentModel) -> None:

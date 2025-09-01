@@ -30,6 +30,7 @@ async def test_admin_user_permissions():
         me_data = me_resp.json()
         assert me_data["username"] == admin_user["username"]
         assert me_data["email"] == admin_user["email"]
+        admin_rank = me_data["role"]["rank"]
 
         list_resp = await ac.get("/users/", headers=admin_headers)
         assert (
@@ -42,24 +43,47 @@ async def test_admin_user_permissions():
         users = users_response["data"]
         assert isinstance(users, list), "Response should contain a list of users"
 
-        other_user = None
+        readable_user = None
+        forbidden_user = None
         for user in users:
+            role = user.get("role") or {}
+            rank = role.get("rank")
+            if rank is None:
+                continue
             if (
                 user["id"] != me_data["id"]
-                and user.get("role", {}).get("name") != "Super-Admin"
+                and rank >= admin_rank
+                and readable_user is None
             ):
-                other_user = user
+                readable_user = user
+            if rank < admin_rank and forbidden_user is None:
+                forbidden_user = user
+            if readable_user and forbidden_user:
                 break
 
-        assert other_user is not None, "Should find another user to test with"
-        get_user_resp = await ac.get(
-            f"/users/{other_user['id']}", headers=admin_headers
+        assert (
+            readable_user is not None
+        ), "Should find a user with same or lower privilege"
+        get_user_resp_ok = await ac.get(
+            f"/users/{readable_user['id']}", headers=admin_headers
         )
         assert (
-            get_user_resp.status_code == 200
-        ), f"Admin user should be able to read other users: {get_user_resp.text}"
-        user_data = get_user_resp.json()
-        assert user_data["id"] == other_user["id"]
+            get_user_resp_ok.status_code == 200
+        ), f"Admin should read users with same/lower privilege: {get_user_resp_ok.text}"
+        user_data_ok = get_user_resp_ok.json()
+        assert user_data_ok["id"] == readable_user["id"]
+
+        assert (
+            forbidden_user is not None
+        ), "Should find a higher-privileged user to test access denial"
+        get_user_resp_forbidden = await ac.get(
+            f"/users/{forbidden_user['id']}", headers=admin_headers
+        )
+        assert get_user_resp_forbidden.status_code == 403, (
+            f"Admin should be denied reading higher-privileged users: "
+            f"{get_user_resp_forbidden.text}"
+        )
+        assert "hierarchy" in get_user_resp_forbidden.json()["detail"].lower()
 
         search_resp = await ac.get("/users/?search=test", headers=admin_headers)
         assert (
@@ -105,7 +129,7 @@ async def test_admin_user_permissions():
         # Test that admin can update other users too
         other_user_update_data = {"full_name": "Updated Other User Name"}
         other_update_resp = await ac.put(
-            f"/users/{other_user['id']}",
+            f"/users/{readable_user['id']}",
             json=other_user_update_data,
             headers=admin_headers,
         )

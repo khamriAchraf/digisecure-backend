@@ -110,6 +110,7 @@ class ComplianceControl(Base):
 
     # Moved from association: metadata now managed per control
     last_review_date = Column(Date, nullable=True)
+    review_frequency_months = Column(Integer, nullable=False, default=12)
     next_review_date = Column(Date, nullable=True)
     expiration_date = Column(Date, nullable=True)
     status = Column(String, nullable=True)

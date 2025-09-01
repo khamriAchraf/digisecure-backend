@@ -7,9 +7,10 @@ from app.main import app
 from tests.test_data import BASE_URL, SUPER_ADMIN, TEST_USERS
 
 
-def _extract_user_id_from_list(users_payload, email):
+def _extract_user_id_from_list(users_payload, identifier):
     for u in users_payload:
-        if u.get("email") == email:
+        # Listing payload may not include email; prefer username when available
+        if u.get("email") == identifier or u.get("username") == identifier:
             return u.get("id")
     return None
 
@@ -43,11 +44,11 @@ async def test_user_rank_list_unaffected_and_read_update_enforced():
         all_users = users_response["data"]
 
         # Resolve target user IDs from existing seeded users
-        super_admin_email = SUPER_ADMIN["email"]
-        technician_email = TEST_USERS["technician"]["email"]
+        super_admin_identifier = SUPER_ADMIN["username"]
+        technician_identifier = TEST_USERS["technician"]["username"]
 
-        super_admin_id = _extract_user_id_from_list(all_users, super_admin_email)
-        technician_id = _extract_user_id_from_list(all_users, technician_email)
+        super_admin_id = _extract_user_id_from_list(all_users, super_admin_identifier)
+        technician_id = _extract_user_id_from_list(all_users, technician_identifier)
 
         # In case pagination hid a user, fetch broader list
         if super_admin_id is None or technician_id is None:
@@ -58,10 +59,12 @@ async def test_user_rank_list_unaffected_and_read_update_enforced():
             all_users = wide_list_resp.json()["data"]
             if super_admin_id is None:
                 super_admin_id = _extract_user_id_from_list(
-                    all_users, super_admin_email
+                    all_users, super_admin_identifier
                 )
             if technician_id is None:
-                technician_id = _extract_user_id_from_list(all_users, technician_email)
+                technician_id = _extract_user_id_from_list(
+                    all_users, technician_identifier
+                )
 
         assert (
             super_admin_id is not None
@@ -135,11 +138,15 @@ async def test_user_rank_rules_with_technician():
         assert isinstance(users_response, dict) and "data" in users_response
         all_users = users_response["data"]
 
-        admin_email = TEST_USERS["admin"]["email"]  # higher rank than technician
-        observer_email = TEST_USERS["observer"]["email"]  # lower rank than technician
+        admin_identifier = TEST_USERS["admin"][
+            "username"
+        ]  # higher rank than technician
+        observer_identifier = TEST_USERS["observer"][
+            "username"
+        ]  # lower rank than technician
 
-        admin_id = _extract_user_id_from_list(all_users, admin_email)
-        observer_id = _extract_user_id_from_list(all_users, observer_email)
+        admin_id = _extract_user_id_from_list(all_users, admin_identifier)
+        observer_id = _extract_user_id_from_list(all_users, observer_identifier)
 
         if admin_id is None or observer_id is None:
             wide_list_resp = await ac.get(
@@ -148,9 +155,9 @@ async def test_user_rank_rules_with_technician():
             assert wide_list_resp.status_code == 200
             all_users = wide_list_resp.json()["data"]
             if admin_id is None:
-                admin_id = _extract_user_id_from_list(all_users, admin_email)
+                admin_id = _extract_user_id_from_list(all_users, admin_identifier)
             if observer_id is None:
-                observer_id = _extract_user_id_from_list(all_users, observer_email)
+                observer_id = _extract_user_id_from_list(all_users, observer_identifier)
 
         assert admin_id is not None, "Could not resolve Admin user id from listing"
         assert (

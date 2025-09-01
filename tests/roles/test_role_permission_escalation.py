@@ -10,9 +10,9 @@ from tests.test_data import BASE_URL, SUPER_ADMIN, TEST_PASSWORD
 async def test_role_permission_escalation():
     """
     Test the escalation of permissions for a user role:
-    - Create a role with only 'read' access to users
+    - Create a role with only 'list' access to users
     - Create a user with that role
-    - Verify the user can read users but cannot create roles
+    - Verify the user can list users but cannot create roles
     - Escalate the role to allow 'create' on roles
     - Verify the user can now create roles
     """
@@ -38,17 +38,17 @@ async def test_role_permission_escalation():
         assert resp.status_code == 201, f"Failed to create role: {resp.text}"
         role_id = resp.json()["id"]
 
-        # 3. Fetch permissions and find 'user:read' and 'role:create'
+        # 3. Fetch permissions and find 'user:list' and 'role:create'
         perm_resp = await ac.get("/roles/permissions", headers=super_headers)
         assert (
             perm_resp.status_code == 200
         ), f"Failed to fetch permissions: {perm_resp.text}"
         permissions = perm_resp.json()
-        user_read_slug = next(
+        user_list_slug = next(
             (
                 f"{p['resource']}:{p['action']}"
                 for p in permissions
-                if p["resource"] == "user" and p["action"] == "read"
+                if p["resource"] == "user" and p["action"] == "list"
             ),
             None,
         )
@@ -60,11 +60,11 @@ async def test_role_permission_escalation():
             ),
             None,
         )
-        assert user_read_slug, "user:read permission not found"
+        assert user_list_slug, "user:list permission not found"
         assert role_create_slug, "role:create permission not found"
 
-        # 4. Set role permissions to only 'user:read'
-        update_data = {"permissions": [user_read_slug]}
+        # 4. Set role permissions to only 'user:list'
+        update_data = {"permissions": [user_list_slug]}
         update_resp = await ac.put(
             f"/roles/{role_id}/permissions", json=update_data, headers=super_headers
         )
@@ -92,11 +92,11 @@ async def test_role_permission_escalation():
         user_token = login_resp.json()["access_token"]
         user_headers = {"Authorization": f"Bearer {user_token}"}
 
-        # 7. Check that user can read users
+        # 7. Check that user can list users
         users_resp = await ac.get("/users/", headers=user_headers)
         assert (
             users_resp.status_code == 200
-        ), f"User with 'read' should be able to list users: {users_resp.text}"
+        ), f"User with 'list' should be able to list users: {users_resp.text}"
 
         # 8. Check that user cannot create a new role
         new_role_data = {"name": "should_fail", "description": "should not be allowed"}
@@ -120,7 +120,7 @@ async def test_role_permission_escalation():
         ), f"Superadmin re-login failed: {login_resp.text}"
         super_token = login_resp.json()["access_token"]
         super_headers = {"Authorization": f"Bearer {super_token}"}
-        update_data = {"permissions": [user_read_slug, role_create_slug]}
+        update_data = {"permissions": [user_list_slug, role_create_slug]}
         update_resp = await ac.put(
             f"/roles/{role_id}/permissions", json=update_data, headers=super_headers
         )

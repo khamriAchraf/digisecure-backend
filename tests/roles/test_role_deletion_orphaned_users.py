@@ -45,18 +45,18 @@ async def test_role_deletion_orphaned_users():
             perm_resp.status_code == 200
         ), f"Failed to fetch permissions: {perm_resp.text}"
         permissions = perm_resp.json()
-        user_read_slug = next(
+        user_list_slug = next(
             (
                 f"{p['resource']}:{p['action']}"
                 for p in permissions
-                if p["resource"] == "user" and p["action"] == "read"
+                if p["resource"] == "user" and p["action"] == "list"
             ),
             None,
         )
-        assert user_read_slug, "user:read permission not found"
+        assert user_list_slug, "user:list permission not found"
 
-        # 4. Set role permissions to only 'user:read'
-        update_data = {"permissions": [user_read_slug]}
+        # 4. Set role permissions to only 'user:list'
+        update_data = {"permissions": [user_list_slug]}
         update_resp = await ac.put(
             f"/roles/{role_id}/permissions", json=update_data, headers=super_headers
         )
@@ -88,7 +88,7 @@ async def test_role_deletion_orphaned_users():
         users_resp = await ac.get("/users/", headers=user_headers)
         assert (
             users_resp.status_code == 200
-        ), f"User with 'read' should be able to list users: {users_resp.text}"
+        ), f"User with 'list' should be able to list users: {users_resp.text}"
 
         # 8. Log back in as super-admin and delete the role
         login_resp = await ac.post(
@@ -114,7 +114,7 @@ async def test_role_deletion_orphaned_users():
         user_token = login_resp.json()["access_token"]
         user_headers = {"Authorization": f"Bearer {user_token}"}
 
-        # 10. Check that user can no longer read users (should get 403)
+        # 10. Check that user can no longer list users (should get 403)
         users_resp = await ac.get("/users/", headers=user_headers)
         assert (
             users_resp.status_code == 403

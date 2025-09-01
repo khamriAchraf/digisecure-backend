@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -8,8 +9,11 @@ from app.core.logger import logger
 from app.core.security import has_permission
 from app.db.crud import asset as asset_crud
 from app.db.crud import compliance_scope as compliance_crud
+from app.db.models.compliance_scopes import ComplianceControl
 from app.db.models.compliance_scopes import \
     ComplianceScope as ComplianceScopeModel
+from app.db.models.compliance_scopes import ControlDocumentLink
+from app.db.models.document_store import Document
 from app.db.models.user import User
 from app.schemas.compliance_scope import (AssetComplianceScopeCreate,
                                           AssetComplianceScopeUpdate)
@@ -368,6 +372,27 @@ class ComplianceScopeService:
             control_id=control_id,
             document_ids=payload.document_ids,
         )
+
+        # Update each document's review frequency to the most stringent (minimum) across all linked controls
+        for doc in existing_docs:
+            min_freq = (
+                self.db.query(
+                    func.min(
+                        func.coalesce(ComplianceControl.review_frequency_months, 12)
+                    )
+                )
+                .join(
+                    ControlDocumentLink,
+                    ControlDocumentLink.control_id == ComplianceControl.id,
+                )
+                .filter(ControlDocumentLink.document_id == doc.id)
+                .scalar()
+            )
+            if min_freq is None:
+                min_freq = 12
+            doc.review_frequency_months = int(min_freq)
+        self.db.commit()
+
         return links
 
     def unlink_documents_from_control(
@@ -399,4 +424,31 @@ class ComplianceScopeService:
         deleted = compliance_crud.delete_control_document_links(
             self.db, control_id=control_id, document_ids=payload.document_ids
         )
+
+        # Recompute each affected document's most stringent (minimum) review frequency among remaining links
+        for doc_id in payload.document_ids:
+            # Compute min frequency across remaining controls for this document (default to 12)
+            min_freq = (
+                self.db.query(
+                    func.min(
+                        func.coalesce(ComplianceControl.review_frequency_months, 12)
+                    )
+                )
+                .join(
+                    ControlDocumentLink,
+                    ControlDocumentLink.control_id == ComplianceControl.id,
+                )
+                .filter(ControlDocumentLink.document_id == doc_id)
+                .scalar()
+            )
+            if min_freq is None:
+                min_freq = 12
+
+            # Update the document's review frequency
+            doc = self.db.query(Document).filter(Document.id == doc_id).one_or_none()
+            if doc is not None:
+                doc.review_frequency_months = int(min_freq)
+
+        self.db.commit()
+
         return deleted

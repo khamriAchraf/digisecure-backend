@@ -32,6 +32,8 @@ async def test_observer_user_permissions():
         me_data = me_resp.json()
         assert me_data["username"] == observer_user["username"]
         assert me_data["email"] == observer_user["email"]
+        # Capture observer rank for hierarchy checks (lower rank = more privileged)
+        observer_rank = me_data["role"]["rank"]
 
         list_resp = await ac.get("/users/", headers=observer_headers)
         assert (
@@ -44,21 +46,50 @@ async def test_observer_user_permissions():
         users = users_response["data"]
         assert isinstance(users, list), "Response should contain a list of users"
 
-        other_user = None
+        # Find a user with same or lower privilege (rank >= observer_rank) → should be readable
+        readable_user = None
+        # Find a user with higher privilege (rank < observer_rank) → should be forbidden
+        forbidden_user = None
         for user in users:
-            if user["id"] != me_data["id"]:
-                other_user = user
+            # Ensure role is present in the response
+            role = user.get("role") or {}
+            rank = role.get("rank")
+            if rank is None:
+                continue
+            if (
+                user["id"] != me_data["id"]
+                and rank >= observer_rank
+                and readable_user is None
+            ):
+                readable_user = user
+            if rank < observer_rank and forbidden_user is None:
+                forbidden_user = user
+            if readable_user and forbidden_user:
                 break
 
-        assert other_user is not None, "Should find another user to test with"
-        get_user_resp = await ac.get(
-            f"/users/{other_user['id']}", headers=observer_headers
+        assert (
+            readable_user is not None
+        ), "Should find a user with same or lower privilege"
+        get_user_resp_ok = await ac.get(
+            f"/users/{readable_user['id']}", headers=observer_headers
         )
         assert (
-            get_user_resp.status_code == 200
-        ), f"Observer user should be able to read other users: {get_user_resp.text}"
-        user_data = get_user_resp.json()
-        assert user_data["id"] == other_user["id"]
+            get_user_resp_ok.status_code == 200
+        ), f"Observer should read users with same/lower privilege: {get_user_resp_ok.text}"
+        user_data_ok = get_user_resp_ok.json()
+        assert user_data_ok["id"] == readable_user["id"]
+
+        assert (
+            forbidden_user is not None
+        ), "Should find a higher-privileged user to test access denial"
+        get_user_resp_forbidden = await ac.get(
+            f"/users/{forbidden_user['id']}", headers=observer_headers
+        )
+        assert get_user_resp_forbidden.status_code == 403, (
+            f"Observer should be denied reading higher-privileged users: "
+            f"{get_user_resp_forbidden.text}"
+        )
+        assert "hierarchy" in get_user_resp_forbidden.json()["detail"].lower()
 
         search_resp = await ac.get("/users/?search=test", headers=observer_headers)
         assert (

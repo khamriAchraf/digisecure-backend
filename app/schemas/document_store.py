@@ -18,10 +18,32 @@ class DocumentUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     folder_id: Optional[int] = None
+    review_status: Optional[str] = None
+    review_notes: Optional[str] = None
+    review_date: Optional[datetime] = None
+    review_frequency_months: Optional[int] = None
+    user_id: Optional[int] = None
 
 
 class Document(DocumentBase):
     id: int
+    review_status: Optional[str] = None
+    review_notes: Optional[str] = None
+    review_date: Optional[datetime] = None
+    review_frequency_months: Optional[int] = None
+    user_id: Optional[int] = None
+
+    # Minimal embedded user info when present on the document
+    class DocumentUser(BaseModel):
+        id: int
+        username: str
+        full_name: Optional[str] = None
+        email: str
+
+        class Config:
+            from_attributes = True
+
+    user: Optional["Document.DocumentUser"] = None
     created_at: datetime
     updated_at: datetime
 
@@ -94,3 +116,4 @@ class FolderContents(BaseModel):
 
 
 DocumentFolderNode.model_rebuild()
+Document.model_rebuild()

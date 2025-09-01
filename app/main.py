@@ -6,6 +6,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 
+from app.api.v1 import analytics as analytics_module
 from app.api.v1 import auth
 from app.api.v1 import compliance as compliance_module
 from app.api.v1 import document_store as document_store_module
@@ -35,6 +36,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(analytics_module.router, prefix="/api/v1")
 app.include_router(user.router, prefix="/api/v1")
 app.include_router(role.router, prefix="/api/v1")
 app.include_router(group.router, prefix="/api/v1")
