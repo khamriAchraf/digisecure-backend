@@ -29,7 +29,7 @@ logger.info(f"Starting API with parameters: {settings}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://digisecure.gnpartners.ma"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
