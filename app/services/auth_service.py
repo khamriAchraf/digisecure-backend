@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.logger import logger
 from app.core.security import get_password_hash, verify_password
+from app.db.crud import password_reset_token as password_reset_token_crud
 from app.db.crud import refresh_token as refresh_token_crud
 from app.db.models.user import User
 
@@ -17,6 +18,7 @@ SECRET_KEY = settings.JWT_SECRET
 ALGORITHM = settings.JWT_ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.JWT_EXPIRATION_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.JWT_REFRESH_EXPIRATION_DAYS
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -171,3 +173,131 @@ def revoke_all_user_refresh_tokens(user_id: int, db: Session) -> int:
 def mark_token_as_used(db: Session, token_id: str) -> Optional[Any]:
     """Mark a refresh token as used (for rotation tracking)"""
     return refresh_token_crud.mark_token_as_used(db, token_id)
+
+
+def create_password_reset_token(
+    db: Session,
+    email: EmailStr,
+    ip_address: Optional[str] = None,
+    user_agent: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Create a password reset token for a user.
+    Returns the raw token string if user exists, None otherwise.
+    Always succeeds silently to prevent account enumeration.
+    """
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        logger.info(f"Password reset requested for non-existent email: {email}")
+        return None
+
+    # Revoke all previous password reset tokens for this user
+    password_reset_token_crud.revoke_all_user_password_reset_tokens(db, user.id)
+
+    # Generate a random, high-entropy token
+    token_id = secrets.token_urlsafe(32)
+    raw_token = secrets.token_urlsafe(48)
+
+    # Hash the token for storage
+    token_hash = get_password_hash(raw_token)
+
+    # Calculate expiration
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+    )
+
+    # Store in database
+    password_reset_token_crud.create_password_reset_token(
+        db=db,
+        user_id=user.id,
+        token_id=token_id,
+        token_hash=token_hash,
+        expires_at=expire,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    logger.info(
+        f"Password reset token created for user {user.id}, token_id={token_id}, expires={expire}"
+    )
+    return raw_token
+
+
+def verify_password_reset_token(db: Session, token: str) -> Optional[User]:
+    """
+    Verify a password reset token and return the associated user.
+    Returns None if token is invalid, expired, used, or revoked.
+    """
+    # Try to find a valid token by attempting to verify against all active tokens
+    # Since we store hashed tokens, we need to check each one
+    now = datetime.now(timezone.utc)
+    active_tokens = (
+        db.query(password_reset_token_crud.PasswordResetToken)
+        .filter(
+            password_reset_token_crud.PasswordResetToken.is_revoked == False,
+            password_reset_token_crud.PasswordResetToken.used_at.is_(None),
+            password_reset_token_crud.PasswordResetToken.expires_at > now,
+        )
+        .all()
+    )
+
+    for db_token in active_tokens:
+        if verify_password(token, db_token.token_hash):
+            # Token is valid, get the user
+            user = get_user_by_id(db, db_token.user_id)
+            if user:
+                logger.debug(
+                    f"Valid password reset token verified for user {user.id}, token_id={db_token.token_id}"
+                )
+                return user
+            break
+
+    logger.warning("Invalid or expired password reset token attempted")
+    return None
+
+
+def reset_user_password(db: Session, token: str, new_password: str) -> Optional[User]:
+    """
+    Reset a user's password using a valid reset token.
+    Returns the user if successful, None otherwise.
+    """
+    # Verify token and get user
+    user = verify_password_reset_token(db, token)
+    if not user:
+        return None
+
+    # Hash the new password
+    new_hashed_password = get_password_hash(new_password)
+
+    # Update user password
+    user.hashed_password = new_hashed_password  # type: ignore
+    db.commit()
+    db.refresh(user)
+
+    # Mark the token as used
+    now = datetime.now(timezone.utc)
+    active_tokens = (
+        db.query(password_reset_token_crud.PasswordResetToken)
+        .filter(
+            password_reset_token_crud.PasswordResetToken.user_id == user.id,
+            password_reset_token_crud.PasswordResetToken.is_revoked == False,
+            password_reset_token_crud.PasswordResetToken.used_at.is_(None),
+            password_reset_token_crud.PasswordResetToken.expires_at > now,
+        )
+        .all()
+    )
+
+    for db_token in active_tokens:
+        if verify_password(token, db_token.token_hash):
+            password_reset_token_crud.mark_password_reset_token_used(
+                db, db_token.token_id
+            )
+            break
+
+    # Revoke all refresh tokens (logout from all devices)
+    revoked_count = revoke_all_user_refresh_tokens(user.id, db)
+
+    logger.info(
+        f"Password reset successful for user {user.id}, revoked {revoked_count} refresh tokens"
+    )
+    return user

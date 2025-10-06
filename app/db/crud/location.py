@@ -1,7 +1,8 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from app.db.models.location import Location
 from app.schemas.location import LocationCreate, LocationUpdate
@@ -17,6 +18,53 @@ def get_location_by_name(db: Session, name: str) -> Optional[Location]:
 
 def list_locations(db: Session, skip: int = 0, limit: int = 100) -> List[Location]:
     return db.query(Location).offset(skip).limit(limit).all()
+
+
+def get_paginated_locations(
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = None,
+    sort_order: str = "asc",
+    search: Optional[str] = None,
+    filters: Optional[dict] = None,
+) -> Tuple[List[Location], int]:
+    query: Query = db.query(Location)
+
+    # Apply filters
+    if filters:
+        for key, value in filters.items():
+            if hasattr(Location, key) and value is not None and value != "":
+                query = query.filter(getattr(Location, key) == value)
+
+    # Apply search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Location.name.ilike(search_term),
+                Location.address.ilike(search_term),
+                Location.town.ilike(search_term),
+                Location.country.ilike(search_term),
+                Location.state.ilike(search_term),
+                Location.postal_code.ilike(search_term),
+            )
+        )
+
+    total = query.count()
+
+    # Apply sorting
+    if sort_by and hasattr(Location, sort_by):
+        column = getattr(Location, sort_by)
+        if sort_order.lower() == "desc":
+            query = query.order_by(column.desc())
+        else:
+            query = query.order_by(column.asc())
+
+    # Apply pagination
+    offset = (page - 1) * per_page
+    items = query.offset(offset).limit(per_page).all()
+    return items, total
 
 
 def create_location(db: Session, location_in: LocationCreate) -> Location:
@@ -59,5 +107,5 @@ def update_location(
 
 
 def delete_location(db: Session, location: Location) -> None:
-    db.delete(location)
+    location.soft_delete(db)
     db.commit()

@@ -9,6 +9,7 @@ from app.core.security import can_access, get_password_hash, has_permission
 from app.db.crud import user as user_crud
 from app.db.models.user import User
 from app.schemas.user import UserCreate, UserList, UserUpdate
+from app.services.email_service import send_welcome_email
 
 
 class PermissionError(Exception):
@@ -113,8 +114,30 @@ class UserService:
             )
             raise PermissionError("Not allowed to create users.")
         try:
+            # Store the plain password before hashing (for email)
+            plain_password = user_in.password
             hashed_password = get_password_hash(user_in.password)
             user = user_crud.create_user(self.db, user_in, hashed_password)
+
+            # Send welcome email with credentials
+            email_sent = send_welcome_email(
+                email=user.email,
+                username=user.username,
+                password=plain_password,
+                user_full_name=user.full_name,
+            )
+
+            if email_sent:
+                logger.info(
+                    f"Welcome email with credentials sent to {user.email} for user {user.id}"
+                )
+            else:
+                logger.warning(
+                    f"Failed to send welcome email to {user.email} for user {user.id}. "
+                    f"User created successfully but should be notified manually."
+                )
+                # Don't fail user creation if email fails
+
         except ValueError as e:
             from fastapi import HTTPException
 

@@ -1,19 +1,46 @@
-from typing import List
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.dependencies import get_reference_data_service
 from app.schemas.location import Location, LocationCreate, LocationUpdate
+from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.services.reference_data_service import (PermissionError,
                                                  ReferenceDataService)
 
 router = APIRouter(prefix="/locations", tags=["reference_data:locations"])
 
 
-@router.get("/", response_model=List[Location])
-def list_locations(service: ReferenceDataService = Depends(get_reference_data_service)):
+def get_query_filters(request: Request) -> dict:
+    filters = {}
+    for key, value in request.query_params.items():
+        if key not in ["page", "per_page", "sort_by", "sort_order", "search"]:
+            filters[key] = value
+    return filters
+
+
+@router.get("/", response_model=PaginatedResponse[Location])
+def list_locations(
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", enum=["asc", "desc"]),
+    search: Optional[str] = Query(None),
+    service: ReferenceDataService = Depends(get_reference_data_service),
+    filters: dict = Depends(get_query_filters),
+):
     try:
-        return service.list_locations()
+        items, total = service.get_paginated_locations(
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search=search,
+            filters=filters,
+        )
+        return create_paginated_response(
+            data=items, total=total, page=page, per_page=per_page
+        )
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

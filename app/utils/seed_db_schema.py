@@ -1,6 +1,6 @@
 import argparse
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
@@ -9,8 +9,9 @@ from app.core.config import settings
 from app.core.logger import logger
 from app.core.security import get_password_hash
 from app.db.base import Base
-from app.db.models import (ComplianceControl, ComplianceScope, Location,
-                           Manufacturer, Permission, Role, TableConfig, User)
+from app.db.models import (ComplianceControl, ComplianceEvent, ComplianceScope,
+                           Location, Manufacturer, OperatingSystem, Permission, Role,
+                           TableConfig, User)
 from app.db.models.asset import Computer, NetworkDevice, Software
 from app.db.session import SessionLocal, engine
 
@@ -171,6 +172,7 @@ def create_sample_assets(session):
     # Get some locations and manufacturers for reference
     locations = session.query(Location).all()
     manufacturers = session.query(Manufacturer).all()
+    operating_systems = session.query(OperatingSystem).all()
     users = session.query(User).all()
 
     if not locations:
@@ -202,7 +204,9 @@ def create_sample_assets(session):
             "cpu": "Intel Core i7-12700K",
             "ram": "32GB DDR4",
             "storage": "1TB NVMe SSD",
-            "os": "Windows 11 Pro",
+            "operating_system_id": (
+                operating_systems[0].id if operating_systems else None
+            ),
             "mac_address": "00:1B:44:11:3A:B7",
             "ip_address": "192.168.1.100",
             "model": "Dell OptiPlex 7090",
@@ -236,7 +240,9 @@ def create_sample_assets(session):
             "cpu": "AMD Ryzen 7 5800H",
             "ram": "16GB DDR4",
             "storage": "512GB NVMe SSD",
-            "os": "Ubuntu 22.04 LTS",
+            "operating_system_id": (
+                operating_systems[1].id if operating_systems else None
+            ),
             "mac_address": "00:1B:44:11:3A:B8",
             "ip_address": "192.168.1.101",
             "model": "Lenovo ThinkPad T14",
@@ -337,6 +343,30 @@ def create_sample_assets(session):
     logger.info(f"Created {assets_created} sample assets")
 
 
+def create_operating_systems(session):
+    """Seed common operating systems (Windows and Linux variants)."""
+    logger.info("Creating operating systems if not exist...")
+    from tests.test_data import TEST_OPERATING_SYSTEMS
+
+    created = 0
+    for os_key, os_data in TEST_OPERATING_SYSTEMS.items():
+        existing = (
+            session.query(OperatingSystem)
+            .filter_by(name=os_data["name"], version=os_data["version"])
+            .first()  # unique on (name, version)
+        )
+        if not existing:
+            session.add(OperatingSystem(**os_data))
+            logger.info(f"Created operating system: {os_key}")
+            created += 1
+
+    if created:
+        session.commit()
+        logger.info(f"Created {created} operating systems")
+    else:
+        logger.info("Operating systems already present; no changes made.")
+
+
 def upsert_document_controls_for_scope(session, scope, controls, scope_name):
     """Create or update document controls for a given compliance scope.
 
@@ -370,6 +400,43 @@ def upsert_document_controls_for_scope(session, scope, controls, scope_name):
         )
     else:
         logger.info(f"{scope_name} document controls already present; no changes made.")
+
+
+def create_compliance_events_for_scope(session, scope, events, scope_name):
+    """Create compliance events for a given compliance scope.
+
+    - Creates events that are missing (based on name uniqueness within scope)
+    - Skips events that already exist
+    """
+    created = 0
+    for event_data in events:
+        existing_event = (
+            session.query(ComplianceEvent)
+            .filter_by(scope_id=scope.id, name=event_data["name"])
+            .first()
+        )
+        if not existing_event:
+            # Calculate next_due_date if frequency is provided
+            if event_data.get("frequency") and not event_data.get("next_due_date"):
+                today = date.today()
+                freq = event_data["frequency"]
+                if freq == "yearly":
+                    event_data["next_due_date"] = today + timedelta(days=365)
+                elif freq == "semi-annually":
+                    event_data["next_due_date"] = today + timedelta(days=180)
+                elif freq == "quarterly":
+                    event_data["next_due_date"] = today + timedelta(days=90)
+                elif freq == "monthly":
+                    event_data["next_due_date"] = today + timedelta(days=30)
+
+            session.add(ComplianceEvent(scope_id=scope.id, **event_data))
+            created += 1
+
+    if created:
+        session.commit()
+        logger.info(f"Created {created} {scope_name} compliance events.")
+    else:
+        logger.info(f"{scope_name} compliance events already present; no changes made.")
 
 
 def ensure_database_exists():
@@ -551,37 +618,106 @@ def main():
         },
     ]
 
-    # 6. Reference data management permissions
-    reference_data_permissions = [
+   
+    # 6a. manufacturer management permissions
+    manufacturer_permissions = [
         {
             "action": "read",
-            "resource": "reference_data",
-            "description": "View reference data information",
+            "resource": "manufacturer",
+            "description": "View manufacturer information",
         },
         {
             "action": "list",
-            "resource": "reference_data",
-            "description": "List reference data",
+            "resource": "manufacturer",
+            "description": "List manufacturers",
         },
         {
             "action": "create",
-            "resource": "reference_data",
-            "description": "Create new reference data",
+            "resource": "manufacturer",
+            "description": "Create new manufacturers",
         },
         {
             "action": "update",
-            "resource": "reference_data",
-            "description": "Update reference data information",
+            "resource": "manufacturer",
+            "description": "Update manufacturer information",
         },
         {
             "action": "delete",
-            "resource": "reference_data",
-            "description": "Delete reference data",
+            "resource": "manufacturer",
+            "description": "Delete manufacturers",
         },
         {
             "action": "purge",
-            "resource": "reference_data",
-            "description": "Permanently delete reference data",
+            "resource": "manufacturer",
+            "description": "Permanently delete manufacturers",
+        },
+    ]
+
+    # 6b. location management permissions
+    location_permissions = [
+        {
+            "action": "read",
+            "resource": "location",
+            "description": "View location information",
+        },
+        {
+            "action": "list",
+            "resource": "location",
+            "description": "List locations",
+        },
+        {
+            "action": "create",
+            "resource": "location",
+            "description": "Create new locations",
+        },
+        {
+            "action": "update",
+            "resource": "location",
+            "description": "Update location information",
+        },
+        {
+            "action": "delete",
+            "resource": "location",
+            "description": "Delete locations",
+        },
+        {
+            "action": "purge",
+            "resource": "location",
+            "description": "Permanently delete locations",
+        },
+    ]
+
+    # 6c. operating system management permissions
+    operating_system_permissions = [
+        {
+            "action": "read",
+            "resource": "operating_system",
+            "description": "View operating system information",
+        },
+        {
+            "action": "list",
+            "resource": "operating_system",
+            "description": "List operating systems",
+        },
+        {
+            "action": "create",
+            "resource": "operating_system",
+            "description": "Create new operating systems",
+        },
+        {
+            "action": "update",
+            "resource": "operating_system",
+            "description": "Update operating system information",
+        },
+        {
+            "action": "delete",
+            "resource": "operating_system",
+            "description": "Delete operating systems",
+        },
+        {
+            "action": "purge",
+            "resource": "operating_system",
+            "description": "Permanently delete operating systems",
         },
     ]
 
@@ -978,17 +1114,76 @@ def main():
         },
     ]
 
+    data_register_permissions = [
+        {
+            "action": "read",
+            "resource": "data_register",
+            "description": "View data register",
+        },
+        {
+            "action": "list",
+            "resource": "data_register",
+            "description": "List data register",
+        },
+        {
+            "action": "create",
+            "resource": "data_register",
+            "description": "Create data register",
+        },
+        {
+            "action": "update",
+            "resource": "data_register",
+            "description": "Update data register",
+        },
+        {
+            "action": "delete",
+            "resource": "data_register",
+            "description": "Delete data register",
+        },
+    ]
+
+    compliance_event_permissions = [
+        {
+            "action": "read",
+            "resource": "compliance_event",
+            "description": "View compliance events",
+        },
+        {
+            "action": "list",
+            "resource": "compliance_event",
+            "description": "List compliance events",
+        },
+        {
+            "action": "create",
+            "resource": "compliance_event",
+            "description": "Create compliance events",
+        },
+        {
+            "action": "update",
+            "resource": "compliance_event",
+            "description": "Update compliance events",
+        },
+        {
+            "action": "delete",
+            "resource": "compliance_event",
+            "description": "Delete compliance events",
+        },
+    ]
+
     ALL_PERMISSIONS = {
         "user": user_permissions,
         "role": role_permissions,
         "group": group_permissions,
-        "reference_data": reference_data_permissions,
+        "manufacturer": manufacturer_permissions,
+        "location": location_permissions,
+        "operating_system": operating_system_permissions,
         "computer": computer_permissions,
         "virtual_machine": virtual_machine_permissions,
         "network_device": network_device_permissions,
         "software": software_permissions,
         "document": document_permissions,
         "compliance_scope": compliance_scope_permissions,
+        "compliance_event": compliance_event_permissions,
         "asset": asset_compliance_permissions,
         "recycle_bin_user": recycle_bin_user_permissions,
         "recycle_bin_computer": recycle_bin_computer_permissions,
@@ -999,6 +1194,7 @@ def main():
         "recycle_bin_group": recycle_bin_group_permissions,
         "certificate_key": certificate_key_permissions,
         "analytics": analytics_permissions,
+        "data_register": data_register_permissions,
     }
 
     # Role-permission mapping
@@ -1007,13 +1203,42 @@ def main():
             "user": ["read", "list", "create", "update", "delete"],
             "role": ["read", "list", "create", "update", "delete"],
             "group": ["read", "list", "create", "update", "delete", "purge"],
-            "reference_data": ["read", "list", "create", "update", "delete"],
+            "manufacturer": ["read", "list", "create", "update", "delete"],
+            "location": ["read", "list", "create", "update", "delete"],
+            "operating_system": ["read", "list", "create", "update", "delete"],
             "computer": ["read", "list", "create", "update", "delete"],
             "virtual_machine": ["read", "list", "create", "update", "delete"],
             "network_device": ["read", "list", "create", "update", "delete"],
             "software": ["read", "list", "create", "update", "delete"],
             "document": ["read", "list", "create", "update", "delete"],
             "compliance_scope": ["read", "list", "create", "update", "delete"],
+            "compliance_event": ["read", "list", "create", "update", "delete"],
+            "asset": ["compliance_manage", "compliance_check"],
+            "recycle_bin_user": ["read", "list", "restore", "purge"],
+            "recycle_bin_computer": ["read", "list", "restore", "purge"],
+            "recycle_bin_virtual_machine": ["read", "list", "restore", "purge"],
+            "recycle_bin_network_device": ["read", "list", "restore", "purge"],
+            "recycle_bin_software": ["read", "list", "restore", "purge"],
+            "recycle_bin_certificate_key": ["read", "list", "restore", "purge"],
+            "recycle_bin_group": ["read", "list", "restore", "purge"],
+            "certificate_key": ["read", "list", "create", "update", "delete"],
+            "analytics": ["list"],
+            "data_register": ["read", "list", "create", "update", "delete"],
+        },
+        "Admin": {
+            "user": ["read", "list", "create", "update", "delete"],
+            "role": ["read", "list"],
+            "group": [],
+            "manufacturer": ["read", "list", "create", "update", "delete"],
+            "location": ["read", "list", "create", "update", "delete"],
+            "operating_system": ["read", "list", "create", "update", "delete"],
+            "computer": ["read", "list", "create", "update", "delete"],
+            "virtual_machine": ["read", "list", "create", "update", "delete"],
+            "network_device": ["read", "list", "create", "update", "delete"],
+            "software": ["read", "list", "create", "update", "delete"],
+            "document": ["read", "list", "create", "update", "delete"],
+            "compliance_scope": ["read", "list", "create", "update", "delete"],
+            "compliance_event": ["read", "list", "create", "update", "delete"],
             "asset": ["compliance_manage", "compliance_check"],
             "recycle_bin_user": ["read", "list", "restore", "purge"],
             "recycle_bin_computer": ["read", "list", "restore", "purge"],
@@ -1025,38 +1250,20 @@ def main():
             "certificate_key": ["read", "list", "create", "update", "delete"],
             "analytics": ["list"],
         },
-        "Admin": {
-            "user": ["read", "list", "create", "update", "delete"],
-            "role": ["read", "list"],
-            "group": [],
-            "reference_data": ["read", "list", "create", "update", "delete"],
-            "computer": ["read", "list", "create", "update", "delete"],
-            "virtual_machine": ["read", "list", "create", "update", "delete"],
-            "network_device": ["read", "list", "create", "update", "delete"],
-            "software": ["read", "list", "create", "update", "delete"],
-            "document": ["read", "list", "create", "update", "delete"],
-            "compliance_scope": ["read", "list", "create", "update", "delete"],
-            "asset": ["compliance_manage", "compliance_check"],
-            "recycle_bin_user": ["read", "list", "restore", "purge"],
-            "recycle_bin_computer": ["read", "list", "restore", "purge"],
-            "recycle_bin_virtual_machine": ["read", "list", "restore", "purge"],
-            "recycle_bin_network_device": ["read", "list", "restore", "purge"],
-            "recycle_bin_software": ["read", "list", "restore", "purge"],
-            "recycle_bin_certificate_key": ["read", "list", "restore", "purge"],
-            "recycle_bin_group": ["read", "list", "restore", "purge"],
-            "certificate_key": ["read", "list", "create", "update", "delete"],
-        },
         "Supervisor": {
             "user": ["read", "list", "create", "update"],
             "role": [],
             "group": [],
-            "reference_data": [],
+            "manufacturer": ["read", "list"],
+            "location": ["read", "list"],
+            "operating_system": ["read", "list"],
             "computer": ["read", "list", "create", "update"],
             "virtual_machine": ["read", "list", "create", "update"],
             "network_device": ["read", "list", "create", "update"],
             "software": ["read", "list", "create", "update"],
             "document": ["read", "list", "create", "update"],
             "compliance_scope": [],
+            "compliance_event": [],
             "recycle_bin_user": ["read", "list", "restore"],
             "recycle_bin_computer": ["read", "list", "restore"],
             "recycle_bin_virtual_machine": ["read", "list", "restore"],
@@ -1070,13 +1277,16 @@ def main():
             "user": ["read", "list", "update"],
             "role": [],
             "group": [],
-            "reference_data": [],
+            "manufacturer": ["read", "list"],
+            "location": ["read", "list"],
+            "operating_system": ["read", "list"],
             "computer": ["read", "list", "create", "update"],
             "virtual_machine": ["read", "list", "create", "update"],
             "network_device": ["read", "list", "create", "update"],
             "software": ["read", "list", "create", "update"],
             "document": ["read", "list", "create", "update"],
             "compliance_scope": [],
+            "compliance_event": [],
             "recycle_bin_user": [],
             "recycle_bin_computer": [],
             "recycle_bin_virtual_machine": [],
@@ -1090,13 +1300,16 @@ def main():
             "user": ["read", "list"],
             "role": [],
             "group": [],
-            "reference_data": [],
+            "manufacturer": ["read", "list"],
+            "location": ["read", "list"],
+            "operating_system": ["read", "list"],
             "computer": ["read", "list"],
             "virtual_machine": ["read", "list"],
             "network_device": ["read", "list"],
             "software": ["read", "list"],
             "document": ["read", "list"],
             "compliance_scope": ["read", "list"],
+            "compliance_event": ["read", "list"],
             "recycle_bin_user": [],
             "recycle_bin_computer": [],
             "recycle_bin_virtual_machine": [],
@@ -1110,13 +1323,16 @@ def main():
             "user": ["read", "list"],
             "role": [],
             "group": ["read", "list"],
-            "reference_data": ["read", "list"],
+            "manufacturer": ["read", "list"],
+            "location": ["read", "list"],
+            "operating_system": ["read", "list"],
             "computer": ["read", "list"],
             "virtual_machine": ["read", "list"],
             "network_device": ["read", "list"],
             "software": ["read", "list"],
             "document": ["read", "list"],
             "compliance_scope": ["read", "list"],
+            "compliance_event": ["read", "list"],
             "recycle_bin_user": [],
             "recycle_bin_computer": [],
             "recycle_bin_virtual_machine": [],
@@ -1130,13 +1346,16 @@ def main():
             "user": [],
             "role": [],
             "group": [],
-            "reference_data": [],
+            "manufacturer": ["read", "list"],
+            "location": ["read", "list"],
+            "operating_system": ["read", "list"],
             "computer": ["read", "list"],
             "virtual_machine": ["read", "list"],
             "network_device": ["read", "list"],
             "software": ["read", "list"],
             "document": [],
             "compliance_scope": [],
+            "compliance_event": [],
             "recycle_bin_user": [],
             "recycle_bin_computer": [],
             "recycle_bin_virtual_machine": [],
@@ -1273,6 +1492,9 @@ def main():
         session.commit()
         logger.info("Test manufacturers created.")
 
+        # Create operating systems
+        create_operating_systems(session)
+
         # Create compliance scopes
         logger.info("Creating compliance scopes if not exist...")
         preset_compliance_scopes = [
@@ -1312,6 +1534,171 @@ def main():
 
         # Create sample assets
         create_sample_assets(session)
+
+        # Create PCI-DSS v4.0 compliance events
+        logger.info("Creating PCI-DSS v4.0 compliance events if not exist...")
+        pci_scope = session.query(ComplianceScope).filter_by(name="PCI-DSS").first()
+        if pci_scope:
+            pci_compliance_events = [
+                {
+                    "name": "Date de début du projet de certification",
+                    "description": "Date officielle de démarrage du projet de mise en conformité PCI-DSS",
+                    "frequency": None,  # One-time event
+                    "notify": False,
+                    "remind_before_days": 30,
+                    "notes": "Événement unique marquant le début du projet de certification PCI-DSS",
+                },
+                {
+                    "name": "Audit de certification PCI-DSS",
+                    "description": "Audit annuel de certification PCI-DSS par un QSA (Qualified Security Assessor) ou auto-évaluation SAQ",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 60,
+                    "notes": "Audit obligatoire pour maintenir la certification PCI-DSS. Prévoir 2 mois de préparation.",
+                },
+                {
+                    "name": "Revue de périmètre PCI-DSS",
+                    "description": "Revue annuelle du périmètre CDE (Cardholder Data Environment) et validation de la segmentation réseau",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 30,
+                    "notes": "Exigence 12.5.2 - Documenter et valider le périmètre PCI-DSS et la segmentation annuellement",
+                },
+                {
+                    "name": "Test d'intrusion interne",
+                    "description": "Pentest interne du périmètre CDE pour identifier les vulnérabilités internes (Exigence 11.4.1)",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 45,
+                    "notes": "Exigence 11.4 - Test d'intrusion annuel obligatoire de l'infrastructure interne. Inclure tests de segmentation.",
+                },
+                {
+                    "name": "Test d'intrusion externe",
+                    "description": "Pentest externe des systèmes exposés à Internet dans le périmètre PCI (Exigence 11.4.2)",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 45,
+                    "notes": "Exigence 11.4 - Test d'intrusion externe annuel obligatoire par un testeur qualifié",
+                },
+                {
+                    "name": "Revue des règles de pare-feu",
+                    "description": "Revue semestrielle des règles de pare-feu et routeurs pour valider leur pertinence (Exigence 1.2.7)",
+                    "frequency": "semi-annually",
+                    "notify": True,
+                    "remind_before_days": 21,
+                    "notes": "Exigence 1.2.7 - Revue obligatoire tous les 6 mois de toutes les règles de filtrage avec justification",
+                },
+                {
+                    "name": "Scan de vulnérabilités interne",
+                    "description": "Scan trimestriel de vulnérabilités des systèmes internes du périmètre CDE (Exigence 11.3.1)",
+                    "frequency": "quarterly",
+                    "notify": True,
+                    "remind_before_days": 14,
+                    "notes": "Exigence 11.3.1 - Scans trimestriels obligatoires avec remédiation des vulnérabilités critiques/élevées",
+                },
+                {
+                    "name": "Scan ASV (Approved Scanning Vendor)",
+                    "description": "Scan trimestriel externe par un ASV approuvé PCI SSC des systèmes exposés à Internet (Exigence 11.3.2)",
+                    "frequency": "quarterly",
+                    "notify": True,
+                    "remind_before_days": 14,
+                    "notes": "Exigence 11.3.2 - Scans ASV trimestriels obligatoires pour tous les systèmes publics. Résultat 'Passing' requis.",
+                },
+                {
+                    "name": "Revue des accès utilisateurs",
+                    "description": "Revue trimestrielle des comptes et habilitations d'accès au CDE (Exigence 8.2.4)",
+                    "frequency": "quarterly",
+                    "notify": True,
+                    "remind_before_days": 14,
+                    "notes": "Exigence 8.2.4 - Validation trimestrielle que les accès sont appropriés et conformes au principe du moindre privilège",
+                },
+                {
+                    "name": "Revue des journaux d'événements",
+                    "description": "Revue quotidienne des journaux de sécurité et d'audit des systèmes critiques (Exigence 10.6)",
+                    "frequency": "monthly",
+                    "notify": True,
+                    "remind_before_days": 7,
+                    "notes": "Exigence 10.6 - Revue quotidienne ou hebdomadaire des logs selon criticité. Documenter les résultats.",
+                },
+                {
+                    "name": "Test de restauration des sauvegardes",
+                    "description": "Test annuel de restauration des sauvegardes critiques incluant les données du CDE (Exigence 10.5.1)",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 30,
+                    "notes": "Exigence 10.5.1 - Vérifier au moins annuellement que les sauvegardes sont fonctionnelles et restaurables",
+                },
+                {
+                    "name": "Formation de sensibilisation à la sécurité",
+                    "description": "Formation annuelle obligatoire de sensibilisation PCI-DSS pour tout le personnel (Exigence 12.6)",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 45,
+                    "notes": "Exigence 12.6 - Formation annuelle sur les politiques de sécurité et les procédures pour tous les employés",
+                },
+                {
+                    "name": "Revue des politiques et procédures",
+                    "description": "Revue annuelle de toutes les politiques et procédures de sécurité (Exigence 12.1.1)",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 30,
+                    "notes": "Exigence 12.1.1 - Revue et approbation annuelle de la politique de sécurité par la direction",
+                },
+                {
+                    "name": "Inventaire des actifs du CDE",
+                    "description": "Mise à jour de l'inventaire complet des composants système dans le périmètre PCI (Exigence 2.4)",
+                    "frequency": "quarterly",
+                    "notify": True,
+                    "remind_before_days": 14,
+                    "notes": "Exigence 2.4 - Maintenir un inventaire à jour de tous les composants système dans le périmètre",
+                },
+                {
+                    "name": "Revue des comptes privilégiés",
+                    "description": "Revue trimestrielle de tous les comptes administrateurs et à privilèges (Exigence 7.2.4)",
+                    "frequency": "quarterly",
+                    "notify": True,
+                    "remind_before_days": 14,
+                    "notes": "Exigence 7.2.4 - Valider que les privilèges d'administration sont justifiés et nécessaires",
+                },
+                {
+                    "name": "Test du plan de réponse aux incidents",
+                    "description": "Test annuel du plan de réponse aux incidents de sécurité (Exigence 12.10.4)",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 30,
+                    "notes": "Exigence 12.10.4 - Exercice annuel de simulation d'incident pour tester les procédures de réponse",
+                },
+                {
+                    "name": "Évaluation des risques formelle",
+                    "description": "Évaluation annuelle des risques selon la méthodologie documentée (Exigence 12.3.1)",
+                    "frequency": "yearly",
+                    "notify": True,
+                    "remind_before_days": 45,
+                    "notes": "Exigence 12.3.1 - Analyse de risque annuelle incluant menaces, vulnérabilités et impact",
+                },
+                {
+                    "name": "Revue de la détection d'intrusion (IDS/IPS)",
+                    "description": "Mise à jour et test des systèmes de détection/prévention d'intrusion (Exigence 11.5)",
+                    "frequency": "quarterly",
+                    "notify": True,
+                    "remind_before_days": 14,
+                    "notes": "Exigence 11.5 - Maintenir à jour les signatures et tester régulièrement l'efficacité des IDS/IPS",
+                },
+                {
+                    "name": "Validation de la segmentation réseau",
+                    "description": "Test semestriel de la segmentation réseau pour valider l'isolation du CDE (Exigence 11.4.3)",
+                    "frequency": "semi-annually",
+                    "notify": True,
+                    "remind_before_days": 21,
+                    "notes": "Exigence 11.4.3 - Tests de segmentation pour confirmer que le CDE est isolé des autres réseaux",
+                },
+            ]
+
+            create_compliance_events_for_scope(
+                session, pci_scope, pci_compliance_events, "PCI-DSS"
+            )
+        else:
+            logger.warning("PCI-DSS scope not found; skipping PCI events creation.")
 
         # Create PCI-DSS v4.0 top-level requirements as controls
         logger.info("Creating PCI-DSS v4.0 controls if not exist...")

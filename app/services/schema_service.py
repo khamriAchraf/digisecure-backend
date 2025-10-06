@@ -25,10 +25,12 @@ class SchemaService:
         Get JSON schema for a specific resource type.
         Requires 'create' permission on the resource.
         """
+
+        security_check_resource = resource_type
         logger.info(
             f"User {self.current_user.id} attempts to GET schema for {resource_type} at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "create", resource_type):
+        if not has_permission(self.current_user, "create", security_check_resource):
             logger.warning(
                 f"User {self.current_user.id} denied schema access for {resource_type}"
             )
@@ -45,10 +47,11 @@ class SchemaService:
         Get JSON edit schema for a specific resource type.
         Requires 'update' permission on the resource.
         """
+        security_check_resource = resource_type
         logger.info(
             f"User {self.current_user.id} attempts to GET edit schema for {resource_type} at {datetime.now(timezone.utc).isoformat()}"
         )
-        if not has_permission(self.current_user, "read", resource_type):
+        if not has_permission(self.current_user, "read", security_check_resource):
             logger.warning(
                 f"User {self.current_user.id} denied edit schema access for {resource_type}"
             )
@@ -69,6 +72,9 @@ class SchemaService:
             "group": self._get_group_schema(),
             "user": self._get_user_schema(),
             "role": self._get_role_schema(),
+            "location": self._get_location_schema(),
+            "manufacturer": self._get_manufacturer_schema(),
+            "operating_system": self._get_operating_system_schema(),
             "computer": self._get_computer_schema(),
             "virtual_machine": self._get_virtual_machine_schema(),
             "network_device": self._get_network_device_schema(),
@@ -87,6 +93,9 @@ class SchemaService:
         schemas = {
             "user": self._get_user_edit_schema(),
             "group": self._get_group_edit_schema(),
+            "location": self._get_location_edit_schema(),
+            "manufacturer": self._get_manufacturer_edit_schema(),
+            "operating_system": self._get_operating_system_edit_schema(),
             "computer": self._get_computer_edit_schema(),
             "virtual_machine": self._get_virtual_machine_edit_schema(),
             "network_device": self._get_network_device_edit_schema(),
@@ -96,6 +105,582 @@ class SchemaService:
         if resource_type not in schemas:
             raise ValueError(f"Unknown resource type: {resource_type}")
         return schemas[resource_type]
+
+    def _get_operating_system_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON schema for operating system reference data creation.
+        Built without a Pydantic model: provide a JSON Schema inline.
+        """
+
+        base_schema: Dict[str, Any] = {
+            "title": "OperatingSystemCreate",
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "title": "Name"},
+                "vendor": {"type": "string", "title": "Vendor"},
+                "version": {"type": "string", "title": "Version"},
+                "architecture": {
+                    "type": "string",
+                    "title": "Architecture",
+                    "enum": ["x86_64", "ARM64", "i386"],
+                },
+                "end_of_support_date": {
+                    "type": "string",
+                    "format": "date",
+                    "title": "End of support date",
+                },
+                "end_of_life_date": {
+                    "type": "string",
+                    "format": "date",
+                    "title": "End of life date",
+                },
+                "comment": {"type": "string", "title": "Comment"},
+            },
+            "required": ["name"],
+        }
+
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "operating_system",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.operating_system.create.title",
+                "description_key": "forms.operating_system.create.description",
+                "fields": {
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.operating_system.fields.name.placeholder",
+                        "label_key": "forms.operating_system.fields.name.label",
+                        "order": 1,
+                        "validation": {
+                            "required": True,
+                            "error_messages": {
+                                "required": "forms.operating_system.fields.name.errors.required",
+                            },
+                        },
+                    },
+                    "vendor": {
+                        "widget": "text",
+                        "placeholder_key": "forms.operating_system.fields.vendor.placeholder",
+                        "label_key": "forms.operating_system.fields.vendor.label",
+                        "order": 2,
+                        "validation": {"required": False},
+                    },
+                    "version": {
+                        "widget": "text",
+                        "placeholder_key": "forms.operating_system.fields.version.placeholder",
+                        "label_key": "forms.operating_system.fields.version.label",
+                        "order": 3,
+                        "validation": {"required": False},
+                    },
+                    "architecture": {
+                        "widget": "select",
+                        "options": [
+                            {
+                                "value": "x86_64",
+                                "label_key": "forms.operating_system.fields.architecture.options.x86_64",
+                            },
+                            {
+                                "value": "ARM64",
+                                "label_key": "forms.operating_system.fields.architecture.options.arm64",
+                            },
+                            {
+                                "value": "i386",
+                                "label_key": "forms.operating_system.fields.architecture.options.i386",
+                            },
+                        ],
+                        "placeholder_key": "forms.operating_system.fields.architecture.placeholder",
+                        "label_key": "forms.operating_system.fields.architecture.label",
+                        "order": 4,
+                        "validation": {"required": False},
+                    },
+                    "end_of_support_date": {
+                        "widget": "date",
+                        "placeholder_key": "forms.operating_system.fields.end_of_support_date.placeholder",
+                        "label_key": "forms.operating_system.fields.end_of_support_date.label",
+                        "order": 5,
+                        "validation": {"required": False},
+                    },
+                    "end_of_life_date": {
+                        "widget": "date",
+                        "placeholder_key": "forms.operating_system.fields.end_of_life_date.placeholder",
+                        "label_key": "forms.operating_system.fields.end_of_life_date.label",
+                        "order": 6,
+                        "validation": {"required": False},
+                    },
+                    "comment": {
+                        "widget": "textarea",
+                        "placeholder_key": "forms.operating_system.fields.comment.placeholder",
+                        "label_key": "forms.operating_system.fields.comment.label",
+                        "order": 7,
+                        "validation": {"required": False},
+                    },
+                },
+            },
+        }
+        return enhanced_schema
+
+    def _get_operating_system_edit_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON edit schema for operating system reference data.
+        Built without a Pydantic model: provide a JSON Schema inline and tabs.
+        """
+
+        base_schema: Dict[str, Any] = {
+            "title": "OperatingSystemUpdate",
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "title": "Name"},
+                "vendor": {"type": "string", "title": "Vendor"},
+                "version": {"type": "string", "title": "Version"},
+                "architecture": {
+                    "type": "string",
+                    "title": "Architecture",
+                    "enum": ["x86_64", "ARM64", "i386"],
+                },
+                "end_of_support_date": {
+                    "type": "string",
+                    "format": "date",
+                    "title": "End of support date",
+                },
+                "end_of_life_date": {
+                    "type": "string",
+                    "format": "date",
+                    "title": "End of life date",
+                },
+                "comment": {"type": "string", "title": "Comment"},
+            },
+        }
+
+        tabs = [
+            {"id": "general", "label_key": "forms.tabs.general"},
+            {"id": "lifecycle", "label_key": "forms.tabs.lifecycle"},
+        ]
+
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "operating_system",
+            "schema_type": "edit",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.operating_system.edit.title",
+                "description_key": "forms.operating_system.edit.description",
+                "tabs": tabs,
+                "fields": {
+                    # General
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.operating_system.fields.name.placeholder",
+                        "label_key": "forms.operating_system.fields.name.label",
+                        "order": 1,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "vendor": {
+                        "widget": "text",
+                        "placeholder_key": "forms.operating_system.fields.vendor.placeholder",
+                        "label_key": "forms.operating_system.fields.vendor.label",
+                        "order": 2,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "version": {
+                        "widget": "text",
+                        "placeholder_key": "forms.operating_system.fields.version.placeholder",
+                        "label_key": "forms.operating_system.fields.version.label",
+                        "order": 3,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "architecture": {
+                        "widget": "select",
+                        "options": [
+                            {
+                                "value": "x86_64",
+                                "label_key": "forms.operating_system.fields.architecture.options.x86_64",
+                            },
+                            {
+                                "value": "ARM64",
+                                "label_key": "forms.operating_system.fields.architecture.options.arm64",
+                            },
+                            {
+                                "value": "i386",
+                                "label_key": "forms.operating_system.fields.architecture.options.i386",
+                            },
+                        ],
+                        "placeholder_key": "forms.operating_system.fields.architecture.placeholder",
+                        "label_key": "forms.operating_system.fields.architecture.label",
+                        "order": 4,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "comment": {
+                        "widget": "textarea",
+                        "placeholder_key": "forms.operating_system.fields.comment.placeholder",
+                        "label_key": "forms.operating_system.fields.comment.label",
+                        "order": 5,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    # Lifecycle
+                    "end_of_support_date": {
+                        "widget": "date",
+                        "placeholder_key": "forms.operating_system.fields.end_of_support_date.placeholder",
+                        "label_key": "forms.operating_system.fields.end_of_support_date.label",
+                        "order": 1,
+                        "tab_id": "lifecycle",
+                        "validation": {"required": False},
+                    },
+                    "end_of_life_date": {
+                        "widget": "date",
+                        "placeholder_key": "forms.operating_system.fields.end_of_life_date.placeholder",
+                        "label_key": "forms.operating_system.fields.end_of_life_date.label",
+                        "order": 2,
+                        "tab_id": "lifecycle",
+                        "validation": {"required": False},
+                    },
+                },
+            },
+        }
+        return enhanced_schema
+
+    def _get_manufacturer_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON schema for manufacturer resource creation.
+        """
+        from app.schemas.manufacturer import \
+            ManufacturerCreate  # Local import to avoid circular
+
+        base_schema = ManufacturerCreate.model_json_schema()
+
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "manufacturer",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.manufacturer.create.title",
+                "description_key": "forms.manufacturer.create.description",
+                "fields": {
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.manufacturer.fields.name.placeholder",
+                        "label_key": "forms.manufacturer.fields.name.label",
+                        "order": 1,
+                        "validation": {
+                            "required": True,
+                            "error_messages": {
+                                "required": "forms.manufacturer.fields.name.errors.required",
+                            },
+                        },
+                    },
+                    "comment": {
+                        "widget": "textarea",
+                        "placeholder_key": "forms.manufacturer.fields.comment.placeholder",
+                        "label_key": "forms.manufacturer.fields.comment.label",
+                        "order": 2,
+                        "validation": {"required": False},
+                    },
+                },
+            },
+        }
+        return enhanced_schema
+
+    def _get_manufacturer_edit_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON edit schema for manufacturer resource.
+        """
+        from app.schemas.manufacturer import \
+            ManufacturerUpdate  # Local import to avoid circular
+
+        base_schema = ManufacturerUpdate.model_json_schema()
+
+        tabs = [
+            {"id": "general", "label_key": "forms.tabs.general"},
+        ]
+
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "manufacturer",
+            "schema_type": "edit",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.manufacturer.edit.title",
+                "description_key": "forms.manufacturer.edit.description",
+                "tabs": tabs,
+                "fields": {
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.manufacturer.fields.name.placeholder",
+                        "label_key": "forms.manufacturer.fields.name.label",
+                        "order": 1,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "comment": {
+                        "widget": "textarea",
+                        "placeholder_key": "forms.manufacturer.fields.comment.placeholder",
+                        "label_key": "forms.manufacturer.fields.comment.label",
+                        "order": 2,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                },
+            },
+        }
+        return enhanced_schema
+
+    def _get_location_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON schema for location resource creation.
+        """
+        from app.schemas.location import \
+            LocationCreate  # Local import to avoid circular
+
+        base_schema = LocationCreate.model_json_schema()
+
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "location",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.location.create.title",
+                "description_key": "forms.location.create.description",
+                "fields": {
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.name.placeholder",
+                        "label_key": "forms.location.fields.name.label",
+                        "order": 1,
+                        "validation": {
+                            "required": True,
+                            "error_messages": {
+                                "required": "forms.location.fields.name.errors.required",
+                            },
+                        },
+                    },
+                    "address": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.address.placeholder",
+                        "label_key": "forms.location.fields.address.label",
+                        "order": 2,
+                        "validation": {"required": False},
+                    },
+                    "postal_code": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.postal_code.placeholder",
+                        "label_key": "forms.location.fields.postal_code.label",
+                        "order": 3,
+                        "validation": {"required": False},
+                    },
+                    "town": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.town.placeholder",
+                        "label_key": "forms.location.fields.town.label",
+                        "order": 4,
+                        "validation": {"required": False},
+                    },
+                    "state": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.state.placeholder",
+                        "label_key": "forms.location.fields.state.label",
+                        "order": 5,
+                        "validation": {"required": False},
+                    },
+                    "country": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.country.placeholder",
+                        "label_key": "forms.location.fields.country.label",
+                        "order": 6,
+                        "validation": {"required": False},
+                    },
+                    "building_number": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.building_number.placeholder",
+                        "label_key": "forms.location.fields.building_number.label",
+                        "order": 7,
+                        "validation": {"required": False},
+                    },
+                    "floor_number": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.floor_number.placeholder",
+                        "label_key": "forms.location.fields.floor_number.label",
+                        "order": 8,
+                        "validation": {"required": False},
+                    },
+                    "room_number": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.room_number.placeholder",
+                        "label_key": "forms.location.fields.room_number.label",
+                        "order": 9,
+                        "validation": {"required": False},
+                    },
+                    "latitude": {
+                        "widget": "number",
+                        "placeholder_key": "forms.location.fields.latitude.placeholder",
+                        "label_key": "forms.location.fields.latitude.label",
+                        "order": 10,
+                        "validation": {"required": False},
+                    },
+                    "longitude": {
+                        "widget": "number",
+                        "placeholder_key": "forms.location.fields.longitude.placeholder",
+                        "label_key": "forms.location.fields.longitude.label",
+                        "order": 11,
+                        "validation": {"required": False},
+                    },
+                    "altitude": {
+                        "widget": "number",
+                        "placeholder_key": "forms.location.fields.altitude.placeholder",
+                        "label_key": "forms.location.fields.altitude.label",
+                        "order": 12,
+                        "validation": {"required": False},
+                    },
+                    "comment": {
+                        "widget": "textarea",
+                        "placeholder_key": "forms.location.fields.comment.placeholder",
+                        "label_key": "forms.location.fields.comment.label",
+                        "order": 13,
+                        "validation": {"required": False},
+                    },
+                },
+            },
+        }
+        return enhanced_schema
+
+    def _get_location_edit_schema(self) -> Dict[str, Any]:
+        """
+        Generate JSON edit schema for location resource.
+        """
+        from app.schemas.location import LocationUpdate
+
+        base_schema = LocationUpdate.model_json_schema()
+
+        tabs = [
+            {"id": "general", "label_key": "forms.tabs.general"},
+            {"id": "address", "label_key": "forms.tabs.address"},
+            {"id": "coordinates", "label_key": "forms.tabs.coordinates"},
+        ]
+
+        enhanced_schema = {
+            "version": "1.0.0",
+            "resource_type": "location",
+            "schema_type": "edit",
+            "schema": base_schema,
+            "ui": {
+                "title_key": "forms.location.edit.title",
+                "description_key": "forms.location.edit.description",
+                "tabs": tabs,
+                "fields": {
+                    "name": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.name.placeholder",
+                        "label_key": "forms.location.fields.name.label",
+                        "order": 1,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    "comment": {
+                        "widget": "textarea",
+                        "placeholder_key": "forms.location.fields.comment.placeholder",
+                        "label_key": "forms.location.fields.comment.label",
+                        "order": 2,
+                        "tab_id": "general",
+                        "validation": {"required": False},
+                    },
+                    # Address
+                    "address": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.address.placeholder",
+                        "label_key": "forms.location.fields.address.label",
+                        "order": 1,
+                        "tab_id": "address",
+                        "validation": {"required": False},
+                    },
+                    "postal_code": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.postal_code.placeholder",
+                        "label_key": "forms.location.fields.postal_code.label",
+                        "order": 2,
+                        "tab_id": "address",
+                        "validation": {"required": False},
+                    },
+                    "building_number": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.building_number.placeholder",
+                        "label_key": "forms.location.fields.building_number.label",
+                        "order": 3,
+                        "tab_id": "address",
+                        "validation": {"required": False},
+                    },
+                    "floor_number": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.floor_number.placeholder",
+                        "label_key": "forms.location.fields.floor_number.label",
+                        "order": 4,
+                        "tab_id": "address",
+                        "validation": {"required": False},
+                    },
+                    "room_number": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.room_number.placeholder",
+                        "label_key": "forms.location.fields.room_number.label",
+                        "order": 5,
+                        "tab_id": "address",
+                        "validation": {"required": False},
+                    },
+                    "town": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.town.placeholder",
+                        "label_key": "forms.location.fields.town.label",
+                        "order": 6,
+                        "tab_id": "address",
+                        "validation": {"required": False},
+                    },
+                    "state": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.state.placeholder",
+                        "label_key": "forms.location.fields.state.label",
+                        "order": 7,
+                        "tab_id": "address",
+                        "validation": {"required": False},
+                    },
+                    "country": {
+                        "widget": "text",
+                        "placeholder_key": "forms.location.fields.country.placeholder",
+                        "label_key": "forms.location.fields.country.label",
+                        "order": 8,
+                        "tab_id": "address",
+                        "validation": {"required": False},
+                    },
+                    # Coordinates
+                    "latitude": {
+                        "widget": "number",
+                        "placeholder_key": "forms.location.fields.latitude.placeholder",
+                        "label_key": "forms.location.fields.latitude.label",
+                        "order": 1,
+                        "tab_id": "coordinates",
+                        "validation": {"required": False},
+                    },
+                    "longitude": {
+                        "widget": "number",
+                        "placeholder_key": "forms.location.fields.longitude.placeholder",
+                        "label_key": "forms.location.fields.longitude.label",
+                        "order": 2,
+                        "tab_id": "coordinates",
+                        "validation": {"required": False},
+                    },
+                    "altitude": {
+                        "widget": "number",
+                        "placeholder_key": "forms.location.fields.altitude.placeholder",
+                        "label_key": "forms.location.fields.altitude.label",
+                        "order": 3,
+                        "tab_id": "coordinates",
+                        "validation": {"required": False},
+                    },
+                },
+            },
+        }
+        return enhanced_schema
 
     def _get_group_schema(self) -> Dict[str, Any]:
         """
@@ -571,32 +1156,25 @@ class SchemaService:
                         "order": 10,
                         "validation": {"required": False},
                     },
-                    "os": {
-                        "widget": "text",
-                        "placeholder_key": "forms.computer.fields.os.placeholder",
-                        "label_key": "forms.computer.fields.os.label",
-                        "order": 11,
-                        "validation": {"required": False},
-                    },
                     "hostname": {
                         "widget": "text",
                         "placeholder_key": "forms.computer.fields.hostname.placeholder",
                         "label_key": "forms.computer.fields.hostname.label",
-                        "order": 12,
+                        "order": 11,
                         "validation": {"required": False},
                     },
                     "ip_address": {
                         "widget": "text",
                         "placeholder_key": "forms.computer.fields.ip_address.placeholder",
                         "label_key": "forms.computer.fields.ip_address.label",
-                        "order": 13,
+                        "order": 12,
                         "validation": {"required": False},
                     },
                     "mac_address": {
                         "widget": "text",
                         "placeholder_key": "forms.computer.fields.mac_address.placeholder",
                         "label_key": "forms.computer.fields.mac_address.label",
-                        "order": 14,
+                        "order": 13,
                         "validation": {"required": False},
                     },
                     "manufacturer_id": {
@@ -605,7 +1183,7 @@ class SchemaService:
                         "quick_create_resource": "manufacturer",
                         "placeholder_key": "forms.computer.fields.manufacturer_id.placeholder",
                         "label_key": "forms.computer.fields.manufacturer_id.label",
-                        "order": 15,
+                        "order": 14,
                         "validation": {"required": False},
                     },
                     "location_id": {
@@ -614,6 +1192,15 @@ class SchemaService:
                         "quick_create_resource": "location",
                         "placeholder_key": "forms.computer.fields.location_id.placeholder",
                         "label_key": "forms.computer.fields.location_id.label",
+                        "order": 15,
+                        "validation": {"required": False},
+                    },
+                    "operating_system_id": {
+                        "widget": "select",
+                        "options": self._get_operating_system_options(),
+                        "quick_create_resource": "operating_system",
+                        "placeholder_key": "forms.computer.fields.operating_system_id.placeholder",
+                        "label_key": "forms.computer.fields.operating_system_id.label",
                         "order": 16,
                         "validation": {"required": False},
                     },
@@ -735,10 +1322,11 @@ class SchemaService:
                         "order": 10,
                         "validation": {"required": False},
                     },
-                    "os": {
-                        "widget": "text",
-                        "placeholder_key": "forms.virtual_machine.fields.os.placeholder",
-                        "label_key": "forms.virtual_machine.fields.os.label",
+                    "operating_system_id": {
+                        "widget": "select",
+                        "quick_create_resource": "operating_system",
+                        "placeholder_key": "forms.computer.fields.operating_system_id.placeholder",
+                        "label_key": "forms.computer.fields.operating_system_id.label",
                         "order": 11,
                         "validation": {"required": False},
                     },
@@ -1453,11 +2041,21 @@ class SchemaService:
                         "tab_id": "specifications",
                         "validation": {"required": False},
                     },
+                    "operating_system_id": {
+                        "widget": "select",
+                        "options": self._get_operating_system_options(),
+                        "quick_create_resource": "operating_system",
+                        "placeholder_key": "forms.computer.fields.operating_system_id.placeholder",
+                        "label_key": "forms.computer.fields.operating_system_id.label",
+                        "order": 2,
+                        "tab_id": "specifications",
+                        "validation": {"required": False},
+                    },
                     "cpu": {
                         "widget": "text",
                         "placeholder_key": "forms.computer.fields.cpu.placeholder",
                         "label_key": "forms.computer.fields.cpu.label",
-                        "order": 2,
+                        "order": 3,
                         "tab_id": "specifications",
                         "validation": {"required": False},
                     },
@@ -1465,7 +2063,7 @@ class SchemaService:
                         "widget": "text",
                         "placeholder_key": "forms.computer.fields.ram.placeholder",
                         "label_key": "forms.computer.fields.ram.label",
-                        "order": 3,
+                        "order": 4,
                         "tab_id": "specifications",
                         "validation": {"required": False},
                     },
@@ -1473,14 +2071,6 @@ class SchemaService:
                         "widget": "text",
                         "placeholder_key": "forms.computer.fields.storage.placeholder",
                         "label_key": "forms.computer.fields.storage.label",
-                        "order": 4,
-                        "tab_id": "specifications",
-                        "validation": {"required": False},
-                    },
-                    "os": {
-                        "widget": "text",
-                        "placeholder_key": "forms.computer.fields.os.placeholder",
-                        "label_key": "forms.computer.fields.os.label",
                         "order": 5,
                         "tab_id": "specifications",
                         "validation": {"required": False},
@@ -2055,55 +2645,12 @@ class SchemaService:
                         "tab_id": "specifications",
                         "validation": {"required": False},
                     },
-                    "os_type": {
+                    "operating_system_id": {
                         "widget": "select",
-                        "options": [
-                            {
-                                "value": "Windows",
-                                "label_key": "forms.virtual_machine.fields.os_type.options.windows",
-                            },
-                            {
-                                "value": "Linux",
-                                "label_key": "forms.virtual_machine.fields.os_type.options.linux",
-                            },
-                            {
-                                "value": "macOS",
-                                "label_key": "forms.virtual_machine.fields.os_type.options.macos",
-                            },
-                        ],
-                        "placeholder_key": "forms.virtual_machine.fields.os_type.placeholder",
-                        "label_key": "forms.virtual_machine.fields.os_type.label",
+                        "quick_create_resource": "operating_system",
+                        "placeholder_key": "forms.computer.fields.operating_system_id.placeholder",
+                        "label_key": "forms.computer.fields.operating_system_id.label",
                         "order": 4,
-                        "tab_id": "specifications",
-                        "validation": {"required": False},
-                    },
-                    "os_version": {
-                        "widget": "text",
-                        "placeholder_key": "forms.virtual_machine.fields.os_version.placeholder",
-                        "label_key": "forms.virtual_machine.fields.os_version.label",
-                        "order": 5,
-                        "tab_id": "specifications",
-                        "validation": {"required": False},
-                    },
-                    "os_architecture": {
-                        "widget": "select",
-                        "options": [
-                            {
-                                "value": "x86_64",
-                                "label_key": "forms.virtual_machine.fields.os_architecture.options.x86_64",
-                            },
-                            {
-                                "value": "ARM64",
-                                "label_key": "forms.virtual_machine.fields.os_architecture.options.arm64",
-                            },
-                            {
-                                "value": "i386",
-                                "label_key": "forms.virtual_machine.fields.os_architecture.options.i386",
-                            },
-                        ],
-                        "placeholder_key": "forms.virtual_machine.fields.os_architecture.placeholder",
-                        "label_key": "forms.virtual_machine.fields.os_architecture.label",
-                        "order": 6,
                         "tab_id": "specifications",
                         "validation": {"required": False},
                     },
@@ -2111,7 +2658,7 @@ class SchemaService:
                         "widget": "number",
                         "placeholder_key": "forms.virtual_machine.fields.cpu_allocation_percent.placeholder",
                         "label_key": "forms.virtual_machine.fields.cpu_allocation_percent.label",
-                        "order": 7,
+                        "order": 5,
                         "tab_id": "specifications",
                         "validation": {"required": False},
                     },
@@ -2119,7 +2666,7 @@ class SchemaService:
                         "widget": "number",
                         "placeholder_key": "forms.virtual_machine.fields.memory_allocation_percent.placeholder",
                         "label_key": "forms.virtual_machine.fields.memory_allocation_percent.label",
-                        "order": 8,
+                        "order": 6,
                         "tab_id": "specifications",
                         "validation": {"required": False},
                     },
@@ -2127,7 +2674,7 @@ class SchemaService:
                         "widget": "number",
                         "placeholder_key": "forms.virtual_machine.fields.storage_allocation_percent.placeholder",
                         "label_key": "forms.virtual_machine.fields.storage_allocation_percent.label",
-                        "order": 9,
+                        "order": 7,
                         "tab_id": "specifications",
                         "validation": {"required": False},
                     },
@@ -3612,6 +4159,50 @@ class SchemaService:
                 {
                     "value": "",
                     "label_key": "forms.group.fields.parent_id.options.no_parent",
+                }
+            ]
+
+    def _get_operating_system_options(self) -> List[Dict[str, Any]]:
+        """
+        Get available operating systems for the single OS select dropdown.
+        """
+        try:
+            from app.services.reference_data_service import \
+                ReferenceDataService
+
+            reference_data_service = ReferenceDataService(self.db, self.current_user)
+            operating_systems = reference_data_service.list_operating_systems(
+                limit=1000
+            )
+            options: List[Dict[str, Any]] = [
+                {
+                    "value": "",
+                    "label_key": "forms.computer.fields.operating_system_id.options.none",
+                }
+            ]
+            for os in operating_systems:
+                display_version = (
+                    f" {os.version}" if getattr(os, "version", None) else ""
+                )
+                label_params = {
+                    "name": os.name,
+                    "version": display_version.strip(),
+                    "vendor": getattr(os, "vendor", "") or "",
+                }
+                options.append(
+                    {
+                        "value": str(os.id),
+                        "label_key": "forms.computer.fields.operating_system_id.options.os_name",
+                        "label_params": label_params,
+                    }
+                )
+            return options
+        except Exception as e:
+            logger.warning(f"Failed to fetch operating system options: {e}")
+            return [
+                {
+                    "value": "",
+                    "label_key": "forms.computer.fields.operating_system_id.options.none",
                 }
             ]
 

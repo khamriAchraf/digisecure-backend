@@ -42,6 +42,16 @@ class LocationRef(BaseModel):
         from_attributes = True
 
 
+class OperatingSystemRef(BaseModel):
+    id: int
+    name: str
+    vendor: Optional[str] = None
+    version: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class GroupRef(BaseModel):
     id: int
     name: str
@@ -86,9 +96,22 @@ class AssetInDBBase(AssetBase):
     updated_at: datetime
     manufacturer: Optional[ManufacturerRef] = None
     location: Optional[LocationRef] = None
+    operating_system: Optional["OperatingSystemRef"] = None
     groups: List[GroupRef] = []
     assigned_user: Optional[UserRef] = None
     compliance_scopes: List[ComplianceScopeForAsset] = []
+
+    class Config:
+        from_attributes = True
+
+
+class AssetList(BaseModel):
+    id: int
+    name: str
+    type: str
+    serial_number: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -98,7 +121,7 @@ class ComputerBase(AssetBase):
     cpu: Optional[str] = None
     ram: Optional[str] = None
     storage: Optional[str] = None
-    os: Optional[str] = None
+    operating_system_id: Optional[int] = None
     mac_address: Optional[str] = None
     ip_address: Optional[str] = None
     model: Optional[str] = None
@@ -115,6 +138,7 @@ class ComputerList(BaseModel):
     serial_number: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    operating_system: Optional["OperatingSystemRef"] = None
 
 
 class ComputerUpdate(BaseModel):
@@ -126,12 +150,12 @@ class ComputerUpdate(BaseModel):
     purchase_date: Optional[date] = None
     warranty_expiry: Optional[date] = None
     location_id: Optional[int] = None
+    operating_system_id: Optional[int] = None
     group_ids: Optional[List[int]] = None
     assigned_to: Optional[int] = None
     cpu: Optional[str] = None
     ram: Optional[str] = None
     storage: Optional[str] = None
-    os: Optional[str] = None
     mac_address: Optional[str] = None
     ip_address: Optional[str] = None
     model: Optional[str] = None
@@ -311,9 +335,7 @@ class VirtualMachineBase(AssetBase):
     cpu_cores: Optional[int] = None
     memory_mb: Optional[int] = None
     storage_gb: Optional[int] = None
-    os_type: Optional[str] = None
-    os_version: Optional[str] = None
-    os_architecture: Optional[str] = None
+    operating_system_id: Optional[int] = None
 
     # Network configuration
     ip_address: Optional[str] = None
@@ -400,9 +422,7 @@ class VirtualMachineUpdate(BaseModel):
     cpu_cores: Optional[int] = None
     memory_mb: Optional[int] = None
     storage_gb: Optional[int] = None
-    os_type: Optional[str] = None
-    os_version: Optional[str] = None
-    os_architecture: Optional[str] = None
+    operating_system_id: Optional[int] = None
 
     # Network configuration
     ip_address: Optional[str] = None

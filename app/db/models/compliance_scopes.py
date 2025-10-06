@@ -43,6 +43,12 @@ class ComplianceScope(Base, SoftDeleteMixin):
         back_populates="scope",
         passive_deletes=True,
     )
+    events = relationship(
+        "ComplianceEvent",
+        back_populates="scope",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     @property
     def assets(self):

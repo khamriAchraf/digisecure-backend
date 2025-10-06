@@ -7,9 +7,12 @@ from app.core.rate_limiting import limiter
 from app.core.security import get_password_hash
 from app.db.models.user import User
 from app.db.session import get_db
-from app.schemas.user import (LogoutResponse, TokenRefresh, UserCreate,
+from app.schemas.user import (ForgotPasswordRequest, ForgotPasswordResponse,
+                              LogoutResponse, ResetPasswordRequest,
+                              ResetPasswordResponse, TokenRefresh, UserCreate,
                               UserLogin, UserResponse)
 from app.services import auth_service
+from app.services.email_service import send_password_reset_email
 from app.utils.connection_logger import log_login_attempt, log_successful_login
 
 router = APIRouter(
@@ -190,3 +193,79 @@ def read_users_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+@limiter.limit("3/hour")
+def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Request a password reset token.
+    Always returns success to prevent account enumeration.
+    If the email exists, a reset token will be created and an email will be sent.
+    """
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    # Create token (returns None if user doesn't exist, but we don't tell the client)
+    token = auth_service.create_password_reset_token(
+        db=db,
+        email=body.email,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    # Send email with reset link if user exists
+    if token:
+        # Get user info for personalization
+        user = db.query(User).filter(User.email == body.email).first()
+        user_full_name = user.full_name if user and user.full_name else None
+
+        # Send password reset email via Java cron job service
+        email_sent = send_password_reset_email(
+            email=body.email,
+            token=token,
+            user_full_name=user_full_name,
+        )
+
+        if email_sent:
+            logger.info(f"Password reset email scheduled for {body.email}")
+        else:
+            logger.error(f"Failed to schedule password reset email for {body.email}")
+            # Don't fail the request - still return success to prevent enumeration
+
+    # Always return the same response to prevent account enumeration
+    return ForgotPasswordResponse(
+        message="If an account with that email exists, a password reset link has been sent."
+    )
+
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+@limiter.limit("5/hour")
+def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Reset password using a valid reset token.
+    """
+    user = auth_service.reset_user_password(
+        db=db,
+        token=body.token,
+        new_password=body.new_password,
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired password reset token",
+        )
+
+    logger.info(f"Password successfully reset for user {user.id}")
+    return ResetPasswordResponse(
+        message="Password successfully reset. All sessions have been logged out."
+    )

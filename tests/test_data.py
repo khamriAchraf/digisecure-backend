@@ -91,5 +91,63 @@ TEST_MANUFACTURERS = {
     },
 }
 
+TEST_OPERATING_SYSTEMS = {
+    "operating_system1": {
+        "name": "Windows",
+        "version": "10 Pro 22H2",
+        "vendor": "Microsoft",
+        "architecture": "x86_64",
+    },
+    "operating_system2": {
+        "name": "Windows",
+        "version": "11 Pro 23H2",
+        "vendor": "Microsoft",
+        "architecture": "x86_64",
+    },
+    "operating_system3": {
+        "name": "Windows Server",
+        "version": "2019",
+        "vendor": "Microsoft",
+        "architecture": "x86_64",
+    },
+    "operating_system4": {
+        "name": "Windows Server",
+        "version": "2022",
+        "vendor": "Microsoft",
+        "architecture": "x86_64",
+    },
+    "operating_system5": {
+        "name": "Ubuntu",
+        "version": "20.04 LTS",
+        "vendor": "Canonical",
+        "architecture": "x86_64",
+    },
+    "operating_system6": {
+        "name": "Ubuntu",
+        "version": "22.04 LTS",
+        "vendor": "Canonical",
+        "architecture": "x86_64",
+    },
+    "operating_system7": {
+        "name": "Debian",
+        "version": "12 (Bookworm)",
+        "vendor": "Debian",
+        "architecture": "x86_64",
+    },
+    "operating_system8": {
+        "name": "CentOS",
+        "version": "7",
+        "vendor": "CentOS",
+        "architecture": "x86_64",
+    },
+    "operating_system9": {
+        "name": "RHEL",
+        "version": "9",
+        "vendor": "Red Hat",
+        "architecture": "x86_64",
+    },
+}
+
+
 TEST_PASSWORD = "testpass123!"
 BASE_URL = "http://test/api/v1"

@@ -49,6 +49,11 @@ def get_asset_by_type(db: Session, asset_id: int, asset_type: str) -> Optional[A
             joinedload(asset_class.location),
             joinedload(asset_class.groups),
             joinedload(asset_class.assigned_user),
+            *(
+                [joinedload(asset_class.operating_system)]
+                if asset_class is Computer
+                else []
+            ),
         )
         .filter(asset_class.id == asset_id)
         .first()
@@ -71,6 +76,11 @@ def get_paginated_assets(
         joinedload(AssetPoly.location),
         joinedload(AssetPoly.groups),
         joinedload(AssetPoly.assigned_user),
+        *(
+            [joinedload(AssetPoly.operating_system)]
+            if AssetPoly is Computer or AssetPoly is VirtualMachine
+            else []
+        ),
     )
 
     # Apply filters

@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str
     JWT_EXPIRATION_MINUTES: int
     JWT_REFRESH_EXPIRATION_DAYS: int
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    EMAIL_SERVICE_URL: str = os.getenv("EMAIL_SERVICE_URL", "http://localhost:8080")
+    PASSWORD_RESET_URL: str = os.getenv(
+        "PASSWORD_RESET_URL", "http://localhost:3000/reset-password"
+    )
     DEBUG: bool = False
     GEOLITE2_DB_PATH: str = os.getenv("GEOLITE2_DB_PATH", "./data/GeoLite2-City.mmdb")
 
@@ -37,6 +42,11 @@ class TestSettings(BaseSettings):
     JWT_ALGORITHM: str
     JWT_EXPIRATION_MINUTES: int
     JWT_REFRESH_EXPIRATION_DAYS: int
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    EMAIL_SERVICE_URL: str = os.getenv("EMAIL_SERVICE_URL", "http://localhost:8080")
+    PASSWORD_RESET_URL: str = os.getenv(
+        "PASSWORD_RESET_URL", "http://localhost:3000/reset-password"
+    )
     DEBUG: bool = False
     GEOLITE2_DB_PATH: str = os.getenv("GEOLITE2_DB_PATH", "./data/GeoLite2-City.mmdb")
 

@@ -1,24 +1,47 @@
-from typing import List
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.dependencies import get_reference_data_service
 from app.schemas.manufacturer import (Manufacturer, ManufacturerCreate,
                                       ManufacturerUpdate)
+from app.schemas.pagination import PaginatedResponse, create_paginated_response
 from app.services.reference_data_service import (PermissionError,
                                                  ReferenceDataService)
 
 router = APIRouter(prefix="/manufacturers", tags=["reference_data:manufacturers"])
 
 
-@router.get("/", response_model=List[Manufacturer])
+def get_query_filters(request: Request) -> dict:
+    filters = {}
+    for key, value in request.query_params.items():
+        if key not in ["page", "per_page", "sort_by", "sort_order", "search"]:
+            filters[key] = value
+    return filters
+
+
+@router.get("/", response_model=PaginatedResponse[Manufacturer])
 def list_manufacturers(
-    skip: int = 0,
-    limit: int = 100,
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", enum=["asc", "desc"]),
+    search: Optional[str] = Query(None),
     service: ReferenceDataService = Depends(get_reference_data_service),
+    filters: dict = Depends(get_query_filters),
 ):
     try:
-        return service.list_manufacturers(skip=skip, limit=limit)
+        items, total = service.get_paginated_manufacturers(
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search=search,
+            filters=filters,
+        )
+        return create_paginated_response(
+            data=items, total=total, page=page, per_page=per_page
+        )
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

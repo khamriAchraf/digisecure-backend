@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, relationship
 from app.db.base import Base, SoftDeleteMixin
 from app.db.models.asset import Asset
 from app.db.models.group import user_groups
+from app.db.models.password_reset_token import PasswordResetToken
 from app.db.models.refresh_token import RefreshToken
 from app.db.models.table_config import TableConfig
 
@@ -49,6 +50,9 @@ class User(Base, SoftDeleteMixin):
     refresh_tokens = relationship(
         "RefreshToken", back_populates="user", cascade="all, delete-orphan"
     )
+    password_reset_tokens = relationship(
+        "PasswordResetToken", back_populates="user", cascade="all, delete-orphan"
+    )
     table_configs = relationship(
         "TableConfig", back_populates="user", cascade="all, delete-orphan"
     )
@@ -65,5 +69,8 @@ class User(Base, SoftDeleteMixin):
             {"assigned_to": None}
         )
         db.query(RefreshToken).filter(RefreshToken.user_id == self.id).delete()
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == self.id
+        ).delete()
         db.query(TableConfig).filter(TableConfig.user_id == self.id).delete()
         db.query(user_groups).filter(user_groups.c.user_id == self.id).delete()

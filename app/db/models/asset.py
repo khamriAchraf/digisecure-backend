@@ -150,13 +150,16 @@ class Computer(Asset):
     cpu = Column(String, nullable=True)
     ram = Column(String, nullable=True)
     storage = Column(String, nullable=True)
-    os = Column(String, nullable=True)
+    operating_system_id = Column(
+        Integer, ForeignKey("operating_systems.id"), nullable=True
+    )
     mac_address = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)
     model = Column(String, nullable=True)
     hostname = Column(String, nullable=True)
 
     # Relationships
+    operating_system = relationship("OperatingSystem")
     software_versions = relationship(
         "SoftwareVersion",
         secondary=software_version_computers,
@@ -262,9 +265,9 @@ class VirtualMachine(Asset):
     cpu_cores = Column(Integer, nullable=True)
     memory_mb = Column(Integer, nullable=True)
     storage_gb = Column(Integer, nullable=True)
-    os_type = Column(String, nullable=True)  # Windows, Linux, macOS
-    os_version = Column(String, nullable=True)
-    os_architecture = Column(String, nullable=True)  # x86_64, ARM64, etc.
+    operating_system_id = Column(
+        Integer, ForeignKey("operating_systems.id"), nullable=True
+    )
 
     # Network configuration
     ip_address = Column(String, nullable=True)
@@ -322,6 +325,7 @@ class VirtualMachine(Asset):
     failover_capability = Column(Boolean, nullable=True)
 
     # Relationships
+    operating_system = relationship("OperatingSystem")
     software_versions = relationship(
         "SoftwareVersion",
         secondary=software_version_virtual_machines,

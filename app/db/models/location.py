@@ -1,9 +1,11 @@
 from sqlalchemy import Column, Float, Integer, String, Text
+from sqlalchemy.orm import Session
 
-from app.db.base import Base
+from app.db.base import Base, SoftDeleteMixin
+from app.db.models.asset import Asset
 
 
-class Location(Base):
+class Location(Base, SoftDeleteMixin):
     __tablename__ = "locations"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
@@ -19,3 +21,10 @@ class Location(Base):
     room_number = Column(String, nullable=True)
     longitude = Column(Float, nullable=True)
     floor_number = Column(String, nullable=True)
+
+    def soft_delete(self, db: Session):
+        db.query(Asset).filter(Asset.location_id == self.id).update(
+            {"location_id": None}
+        )
+        super().soft_delete()
+        return None

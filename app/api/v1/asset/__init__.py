@@ -8,7 +8,7 @@ from app.api.v1.asset.network_device import router as network_device_router
 from app.api.v1.asset.software import router as software_router
 from app.api.v1.asset.utils import get_query_filters
 from app.api.v1.asset.virtual_machine import router as virtual_machine_router
-from app.schemas.asset import Asset
+from app.schemas.asset import AssetList
 from app.schemas.pagination import PaginatedResponse, create_paginated_response
 
 router = APIRouter(prefix="/assets", tags=["assets"])
@@ -38,7 +38,7 @@ from app.services.compliance_scope_service import ComplianceScopeService
 @router.get(
     "/",
     summary="List all assets (all types)",
-    response_model=PaginatedResponse[Asset],
+    response_model=PaginatedResponse[AssetList],
 )
 def list_all_assets(
     page: int = Query(1, ge=1),
@@ -46,11 +46,21 @@ def list_all_assets(
     sort_by: Optional[str] = Query(None),
     sort_order: str = Query("asc", enum=["asc", "desc"]),
     search: Optional[str] = Query(None),
+    location_id: Optional[int] = Query(None, description="Filter by location ID"),
+    manufacturer_id: Optional[int] = Query(
+        None, description="Filter by manufacturer ID"
+    ),
     service: AssetService = Depends(get_asset_service),
     filters: dict = Depends(get_query_filters),
 ):
     """
     Fetch all assets regardless of type, with pagination, sorting, and search.
+
+    Supports filtering by:
+    - location_id: Filter assets by their location
+    - manufacturer_id: Filter assets by their manufacturer
+    - warranty_expired: Filter by warranty status (true/false)
+    - Any other asset attribute can be used as a query parameter for filtering
     """
     try:
         assets, total = service.get_paginated_assets(
