@@ -3,7 +3,7 @@
 branch=$(git symbolic-ref HEAD --short)
 v=$(cat ../app/main.py | grep "version" | grep -Po "version=.\K([0-9]+\.[0-9]+(\.[0-9]+)?)")
 
-if [[ $branch == "main" || $branch =~ release\/v[0-9]+\.[0-9]+\.[0-9]+ ]]
+if [[ $branch == "master" || $branch =~ release\/v[0-9]+\.[0-9]+\.[0-9]+ ]]
 then
     export version=${v}
 else
