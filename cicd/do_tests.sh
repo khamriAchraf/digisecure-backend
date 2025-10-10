@@ -2,13 +2,13 @@
 
 export TESTING=true
 
-DB_PASSWORD='79SZdilJJm6M9SwxAsNObNB96p'
+DB_PASSWORD="${DB_PASSWORD:-default_password}"
 CONTAINER_NAME=postgres-test
 IMAGE_NAME="xxx-backend"
 
 docker network create test-net
 
-docker run -p 5432:5432 --name postgres-test --network test-net -e POSTGRES_PASSWORD=$DB_PASSWORD -d postgres:17
+docker run -p 5433:5432 --name postgres-test --network test-net -e POSTGRES_PASSWORD=$DB_PASSWORD -d postgres:17
 
 echo "Waiting for Postgres to start..."
 until docker exec $CONTAINER_NAME pg_isready -U postgres > /dev/null 2>&1; do
