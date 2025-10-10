@@ -25,6 +25,8 @@ RUN poetry install --no-ansi --no-root
 # Copy application code
 COPY . .
 
+RUN chmod +x run_all_tests.sh run_unit_tests.sh run_e2e_tests.sh do_tests.sh || true
+
 EXPOSE 8000
 
 # Default command starts FastAPI app; docker-compose overrides to run seeding first
