@@ -32,9 +32,6 @@ echo "Database 'dev', 'test' created successfully."
 source ./version.sh
 echo "Building version: $version"
 
-PROJECT_ROOT="$(dirname "$0")/.."
-cd "$PROJECT_ROOT"
-
 docker build -t ${IMAGE_NAME}:${version} -t ${IMAGE_NAME}:latest .
 
 docker rm -f ${IMAGE_NAME}-test || true
