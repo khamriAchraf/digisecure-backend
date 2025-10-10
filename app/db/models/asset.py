@@ -457,19 +457,19 @@ class SoftwareVersion(Base):
         secondary=software_version_virtual_machines,
         back_populates="software_versions",
     )
-    network_devices = relationship(
-        "NetworkDevice",
+    network_devices = relationship(  # pragma: allowlist secret
+        "NetworkDevice",  # pragma: allowlist secret
         secondary=software_version_network_devices,
         back_populates="software_versions",
     )
 
 
 class KeyType(enum.Enum):
-    CERTIFICATE = "certificate"
+    CERTIFICATE = "certificate"  # pragma: allowlist secret
     PRIVATE_KEY = "private_key"  # pragma: allowlist secret
     PUBLIC_KEY = "public_key"  # pragma: allowlist secret
-    API_KEY = "api_key"
-    SSH_KEY = "ssh_key"
+    API_KEY = "api_key"  # pragma: allowlist secret
+    SSH_KEY = "ssh_key"  # pragma: allowlist secret
     OTHER = "other"
 
 
