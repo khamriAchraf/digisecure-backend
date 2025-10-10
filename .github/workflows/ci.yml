@@ -76,6 +76,6 @@ jobs:
               git clone https://github.com/khamriAchraf/backend.git .
             fi
 
-            chmod +x ./cicd/do_tests.sh
-            ./cicd/do_tests.sh
+            chmod +x do_tests.sh
+            ./do_tests.sh
           "
