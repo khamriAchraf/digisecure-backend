@@ -6,7 +6,11 @@ DB_PASSWORD="${DB_PASSWORD:-default_password}"
 CONTAINER_NAME=postgres-test
 IMAGE_NAME="xxx-backend"
 
+docker network rm test-net || true
+
 docker network create test-net
+
+docker rm -f $CONTAINER_NAME 2>/dev/null || true
 
 docker run -p 5433:5432 --name postgres-test --network test-net -e POSTGRES_PASSWORD=$DB_PASSWORD -d postgres:17
 
