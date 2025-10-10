@@ -381,7 +381,7 @@ async def test_asset_location_and_manufacturer_filtering():
             "country": "Test Country",
         }
         location_resp = await ac.post(
-            "/locations/", json=location_payload, headers=headers
+            "/reference_data/locations/", json=location_payload, headers=headers
         )
         assert (
             location_resp.status_code == 201
@@ -393,7 +393,7 @@ async def test_asset_location_and_manufacturer_filtering():
             "name": f"Test-Manufacturer-{unique_suffix}",
         }
         manufacturer_resp = await ac.post(
-            "/manufacturers/", json=manufacturer_payload, headers=headers
+            "/reference_data/manufacturers/", json=manufacturer_payload, headers=headers
         )
         assert (
             manufacturer_resp.status_code == 201

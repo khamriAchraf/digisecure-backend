@@ -48,7 +48,7 @@ async def test_manufacturer_crud_as_super_admin():
         # List manufacturers
         resp = await ac.get("/reference_data/manufacturers/", headers=headers)
         assert resp.status_code == 200
-        assert any(m["id"] == manufacturer_id for m in resp.json())
+        assert any(m["id"] == manufacturer_id for m in resp.json()["data"])
 
         # Get manufacturer by id
         resp = await ac.get(
@@ -144,18 +144,12 @@ async def test_manufacturer_pagination():
             manufacturer_ids.append(resp.json()["id"])
 
         # Test pagination with limit
-        resp = await ac.get("/reference_data/manufacturers/?limit=3", headers=headers)
-        assert resp.status_code == 200
-        manufacturers = resp.json()
-        assert len(manufacturers) <= 3
-
-        # Test pagination with skip
         resp = await ac.get(
-            "/reference_data/manufacturers/?skip=2&limit=2", headers=headers
+            "/reference_data/manufacturers/?per_page=3", headers=headers
         )
         assert resp.status_code == 200
-        manufacturers = resp.json()
-        assert len(manufacturers) <= 2
+        manufacturers = resp.json()["data"]
+        assert len(manufacturers) <= 3
 
         # Clean up - delete created manufacturers
         for manufacturer_id in manufacturer_ids:

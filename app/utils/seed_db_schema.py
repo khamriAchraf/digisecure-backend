@@ -10,8 +10,8 @@ from app.core.logger import logger
 from app.core.security import get_password_hash
 from app.db.base import Base
 from app.db.models import (ComplianceControl, ComplianceEvent, ComplianceScope,
-                           Location, Manufacturer, OperatingSystem, Permission, Role,
-                           TableConfig, User)
+                           Location, Manufacturer, OperatingSystem, Permission,
+                           Role, TableConfig, User)
 from app.db.models.asset import Computer, NetworkDevice, Software
 from app.db.session import SessionLocal, engine
 
@@ -260,6 +260,9 @@ def create_sample_assets(session):
                 manufacturers[2].id
                 if len(manufacturers) > 2
                 else manufacturers[0].id if manufacturers else None
+            ),
+            "operating_system_id": (
+                operating_systems[9].id if operating_systems else None
             ),
             "status": "active",
             "purchase_date": date(2023, 3, 15),
@@ -618,7 +621,6 @@ def main():
         },
     ]
 
-   
     # 6a. manufacturer management permissions
     manufacturer_permissions = [
         {
@@ -1712,7 +1714,7 @@ def main():
                     "description": "Politique de sécurité de l'information couvrant l'ensemble de l'organisation et le périmètre PCI.",
                     "required_document_name": "Politique Générale de Sécurité",
                     "required_document_type": "policy",
-                    "review_frequency_months": 8,
+                    "review_frequency_months": 12,
                 },
                 {
                     "code": "DOC-002",

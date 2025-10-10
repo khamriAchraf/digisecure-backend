@@ -60,7 +60,7 @@ async def test_location_crud_as_super_admin():
         # List locations
         resp = await ac.get("/reference_data/locations/", headers=headers)
         assert resp.status_code == 200
-        assert any(l["id"] == location_id for l in resp.json())
+        assert any(l["id"] == location_id for l in resp.json()["data"])
 
         # Get location by id
         resp = await ac.get(f"/reference_data/locations/{location_id}", headers=headers)

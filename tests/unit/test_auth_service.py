@@ -23,7 +23,7 @@ class TestTokenWithRoleAndPermissions:
     ):
         """Test access token creation with role_id and permissions."""
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
-        mock_datetime.utcnow.return_value = mock_now
+        mock_datetime.now.return_value = mock_now
 
         mock_jwt.encode.return_value = "mock_access_token"
 
@@ -59,7 +59,7 @@ class TestTokenWithRoleAndPermissions:
     ):
         """Test refresh token creation with role_id and permissions."""
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
-        mock_datetime.utcnow.return_value = mock_now
+        mock_datetime.now.return_value = mock_now
 
         mock_jwt.encode.return_value = "mock_refresh_token"
 
@@ -194,7 +194,7 @@ class TestTokenCreation:
         """Test successful access token creation."""
         # Mock datetime.now(timezone.utc) to return a fixed time
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
-        mock_datetime.utcnow.return_value = mock_now
+        mock_datetime.now.return_value = mock_now
 
         mock_jwt.encode.return_value = "mock_access_token"
 
@@ -221,7 +221,7 @@ class TestTokenCreation:
     def test_create_access_token_with_custom_expiry(self, mock_jwt, mock_datetime):
         """Test access token creation with custom expiration."""
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
-        mock_datetime.utcnow.return_value = mock_now
+        mock_datetime.now.return_value = mock_now
 
         mock_jwt.encode.return_value = "mock_access_token"
 
@@ -246,7 +246,7 @@ class TestTokenCreation:
     def test_create_refresh_token_success(self, mock_jwt, mock_datetime):
         """Test successful refresh token creation."""
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
-        mock_datetime.utcnow.return_value = mock_now
+        mock_datetime.now.return_value = mock_now
 
         mock_jwt.encode.return_value = "mock_refresh_token"
 
@@ -281,7 +281,7 @@ class TestTokenCreation:
     def test_create_refresh_token_with_custom_expiry(self, mock_jwt, mock_datetime):
         """Test refresh token creation with custom expiration."""
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
-        mock_datetime.utcnow.return_value = mock_now
+        mock_datetime.now.return_value = mock_now
 
         mock_jwt.encode.return_value = "mock_refresh_token"
 
@@ -581,7 +581,7 @@ class TestTokenExpiration:
     def test_access_token_expiration_time(self, mock_jwt, mock_datetime):
         """Test that access tokens use correct expiration time."""
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
-        mock_datetime.utcnow.return_value = mock_now
+        mock_datetime.now.return_value = mock_now
 
         mock_jwt.encode.return_value = "mock_token"
 
@@ -600,7 +600,7 @@ class TestTokenExpiration:
     def test_refresh_token_expiration_time(self, mock_jwt, mock_datetime):
         """Test that refresh tokens use correct expiration time."""
         mock_now = datetime(2023, 1, 1, 12, 0, 0)
-        mock_datetime.utcnow.return_value = mock_now
+        mock_datetime.now.return_value = mock_now
 
         mock_jwt.encode.return_value = "mock_token"
 

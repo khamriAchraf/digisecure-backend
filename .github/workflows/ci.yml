@@ -48,9 +48,34 @@ jobs:
           mkdir -p data
           curl -L "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz" -o data/GeoLite2-City.mmdb
 
-      - name: Run tests
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Run tests on remote server
+        env:
+          SSH_HOST: ${{ secrets.REMOTE_HOST }}
+          SSH_USER: ${{ secrets.REMOTE_USER }}
+          SSH_PASS: ${{ secrets.REMOTE_PASSWORD }}
         run: |
-          chmod +x ./run_all_tests.sh
-          chmod +x ./run_unit_tests.sh
-          chmod +x ./run_e2e_tests.sh
-          ./run_all_tests.sh
+          set -e
+          echo "Running CI remotely on $SSH_HOST"
+
+          # Define test folder
+          TEST_DIR=~/ci_test
+
+          # Clone or update repo on remote server, then run tests
+          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "
+            set -e
+            mkdir -p $TEST_DIR
+            cd $TEST_DIR
+
+            if [ -d .git ]; then
+              git fetch --all
+              git reset --hard origin/main
+            else
+              git clone https://github.com/<your-org>/<your-repo>.git .
+            fi
+
+            chmod +x ./cicd/do_tests.sh
+            ./cicd/do_tests.sh
+          "

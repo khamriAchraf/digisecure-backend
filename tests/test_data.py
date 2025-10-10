@@ -146,6 +146,12 @@ TEST_OPERATING_SYSTEMS = {
         "vendor": "Red Hat",
         "architecture": "x86_64",
     },
+    "operating_system10": {
+        "name": "Cisco IOS",
+        "version": "15.9(3)M11",
+        "vendor": "Cisco",
+        "architecture": "MIPS",
+    },
 }
 
 

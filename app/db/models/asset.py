@@ -183,6 +183,9 @@ class NetworkDevice(Asset):
     connection_type = Column(String, nullable=True)  # Ethernet, WiFi, Fiber
     management_ip = Column(String, nullable=True)
     firmware_version = Column(String, nullable=True)
+    operating_system_id = Column(
+        Integer, ForeignKey("operating_systems.id"), nullable=True
+    )
 
     # Physical security
     rack_location = Column(String, nullable=True)
@@ -245,6 +248,7 @@ class NetworkDevice(Asset):
         secondary=software_version_network_devices,
         back_populates="network_devices",
     )
+    operating_system = relationship("OperatingSystem")
 
     __mapper_args__ = {"polymorphic_identity": "network_device"}
 
@@ -462,8 +466,8 @@ class SoftwareVersion(Base):
 
 class KeyType(enum.Enum):
     CERTIFICATE = "certificate"
-    PRIVATE_KEY = "private_key"
-    PUBLIC_KEY = "public_key"
+    PRIVATE_KEY = "private_key"  # pragma: allowlist secret
+    PUBLIC_KEY = "public_key"  # pragma: allowlist secret
     API_KEY = "api_key"
     SSH_KEY = "ssh_key"
     OTHER = "other"
