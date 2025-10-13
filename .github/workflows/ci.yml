@@ -56,6 +56,16 @@ jobs:
           SSH_HOST: ${{ secrets.REMOTE_HOST }}
           SSH_USER: ${{ secrets.REMOTE_USER }}
           SSH_PASS: ${{ secrets.REMOTE_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_SCHEMA: ${{ secrets.DB_SCHEMA }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
+          JWT_EXPIRATION_MINUTES: ${{ secrets.JWT_EXPIRATION_MINUTES }}
+          JWT_REFRESH_EXPIRATION_DAYS: ${{ secrets.JWT_REFRESH_EXPIRATION_DAYS }}
         run: |
           set -e
           echo "Running CI remotely on $SSH_HOST"

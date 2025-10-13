@@ -3,7 +3,7 @@
 export TESTING=true
 export PYTHONPATH=$PWD
 
-DB_PASSWORD="${DB_PASSWORD:-default_password}"
+DB_PASSWORD="${DB_PASSWORD}"
 CONTAINER_NAME=postgres-test
 IMAGE_NAME="xxx-backend"
 
