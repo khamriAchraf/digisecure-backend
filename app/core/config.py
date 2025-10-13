@@ -32,17 +32,17 @@ class Settings(BaseSettings):
 
 
 class TestSettings(BaseSettings):
-    DB_HOST: str = os.getenv("DB_HOST", "")
-    DB_PORT: int = os.getenv("DB_PORT", "")
-    DB_USER: str = os.getenv("DB_USER", "")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
-    DB_NAME: str = os.getenv("DB_NAME", "")
-    DB_SCHEMA: str = os.getenv("DB_SCHEMA", "")
-    JWT_SECRET: str = os.getenv("JWT_SECRET", "")
-    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "")
-    JWT_EXPIRATION_MINUTES: int = os.getenv("JWT_EXPIRATION_MINUTES", 60)
-    JWT_REFRESH_EXPIRATION_DAYS: int = os.getenv("JWT_REFRESH_EXPIRATION_DAYS", 7)
-    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    DB_HOST: str
+    DB_PORT: int
+    DB_USER: str
+    DB_PASSWORD: str
+    DB_NAME: str
+    DB_SCHEMA: str
+    JWT_SECRET: str
+    JWT_ALGORITHM: str
+    JWT_EXPIRATION_MINUTES: int
+    JWT_REFRESH_EXPIRATION_DAYS: int
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int
     EMAIL_SERVICE_URL: str = os.getenv("EMAIL_SERVICE_URL", "http://localhost:8080")
     PASSWORD_RESET_URL: str = os.getenv(
         "PASSWORD_RESET_URL", "http://localhost:3000/reset-password"
