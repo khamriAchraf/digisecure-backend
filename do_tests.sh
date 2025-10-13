@@ -56,14 +56,14 @@ docker run --rm -i --network test-net \
   -e TESTING=true \
   -e ENV=dev \
   -e DB_HOST=postgres-test \
-  -e DB_PORT=5432 \
+  -e DB_PORT=5433 \
   -e DB_USER=postgres \
   -e DB_PASSWORD=${DB_PASSWORD} \
   -e DB_NAME=dev \
   -e DB_SCHEMA=public \
   -e JWT_SECRET=${JWT_SECRET} \
   -e JWT_ALGORITHM=HS256 \
-  -e JWT_EXPIRATION_MINUTES=15 \
+  -e JWT_EXPIRATION_MINUTES=60 \
   -e JWT_REFRESH_EXPIRATION_DAYS=7 \
   ${IMAGE_NAME}:${version} \
   /bin/bash -c "echo $TESTING && ./run_all_tests.sh"
