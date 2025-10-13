@@ -21,7 +21,7 @@ RUN poetry install --no-ansi --no-root
 
 COPY . .
 
-RUN chmod +x run_all_tests.sh run_unit_tests.sh run_e2e_tests.sh do_tests.sh || true
+RUN chmod +x do_tests.sh run_remote_tests.sh || true
 
 EXPOSE 8000
 
