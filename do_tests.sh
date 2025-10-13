@@ -54,6 +54,7 @@ echo '                                                                          
 
 docker run --rm -i --network test-net \
   -e TESTING=true \
+  -e DEBUG=true
   -e ENV=dev \
   -e DB_HOST=postgres-test \
   -e DB_PORT=5433 \
