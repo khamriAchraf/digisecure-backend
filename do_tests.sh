@@ -54,5 +54,6 @@ echo '                                                                          
 
 docker run --rm -i --network test-net \
   -e ENV=dev \
+  -e TESTING=true \
   ${IMAGE_NAME}:${version} \
-  /bin/bash -c "export TESTING=true && ./run_all_tests.sh"
+  /bin/bash -c "./run_all_tests.sh"
