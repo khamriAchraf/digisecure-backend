@@ -67,4 +67,4 @@ docker run --rm -i --network test-net \
   -e JWT_EXPIRATION_MINUTES=60 \
   -e JWT_REFRESH_EXPIRATION_DAYS=7 \
   ${IMAGE_NAME}:${version} \
-  /bin/bash -c "echo $DB_PASSWORD && echo $DB_PORT ./run_remote_tests.sh"
+  /bin/bash -c "echo $DB_PASSWORD && echo $DB_PORT && ./run_remote_tests.sh"
