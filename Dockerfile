@@ -25,4 +25,4 @@ RUN chmod +x run_all_tests.sh run_unit_tests.sh run_e2e_tests.sh do_tests.sh || 
 
 EXPOSE 8000
 
-CMD /bin/bash -c "./seed_db.sh && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+CMD ["bash", "-c", "./seed_db.sh && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

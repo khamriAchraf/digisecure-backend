@@ -76,6 +76,9 @@ jobs:
               git clone https://github.com/khamriAchraf/backend.git .
             fi
 
+            export DB_PASSWORD='${DB_PASSWORD}'
+            export JWT_SECRET='${JWT_SECRET}'
+
             chmod +x do_tests.sh
             ./do_tests.sh
           "
