@@ -1,15 +1,19 @@
 from typing import List, Optional, Tuple
-
-from sqlalchemy import or_
+from datetime import date, timedelta
+from sqlalchemy import or_, select, union_all, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 
-from app.db.models.compliance_event import ComplianceEvent
-from app.db.models.group import Group
+from app.db.models.compliance_scopes import ComplianceScope
+from app.db.models.compliance_event import ComplianceEvent, compliance_event_notify_users, compliance_event_notify_groups
+from app.db.models.group import Group, user_groups
 from app.db.models.user import User
-from app.schemas.compliance_event import (ComplianceEventCreate,
-                                          ComplianceEventList,
-                                          ComplianceEventUpdate)
+from app.schemas.compliance_event import (
+    ComplianceEventCreate,
+    ComplianceEventList,
+    ComplianceEventUpdate,
+)
+from app.schemas.analytics import UpcomingEvent
 
 
 def get_event(db: Session, event_id: int) -> Optional[ComplianceEvent]:
@@ -240,3 +244,64 @@ def remove_group_from_event(
         db.commit()
         db.refresh(event)
     return event
+
+
+def get_events_needing_reminder(db: Session) -> List[ComplianceEvent]:
+    today = date.today()
+
+    user_emails_subq = (
+        select(
+            compliance_event_notify_users.c.compliance_event_id.label("event_id"),
+            User.email.label("email"),
+        )
+        .join(User, User.id == compliance_event_notify_users.c.user_id)
+    )
+    
+    group_emails_subq = (
+        select(
+            compliance_event_notify_groups.c.compliance_event_id.label("event_id"),
+            User.email.label("email"),
+        )
+        .join(
+            user_groups,
+            user_groups.c.group_id == compliance_event_notify_groups.c.group_id,
+        )
+        .join(User, User.id == user_groups.c.user_id)
+    )
+    
+    all_emails_subq = union_all(user_emails_subq, group_emails_subq).subquery()
+    
+    results = (
+        db.query(
+            ComplianceEvent.id,
+            ComplianceEvent.name,
+            ComplianceScope.name.label("scope_name"),
+            ComplianceEvent.next_due_date,
+            func.array_agg(func.distinct(all_emails_subq.c.email)).label("notify_list"),
+        )
+        .join(ComplianceScope, ComplianceEvent.scope_id == ComplianceScope.id)
+        .outerjoin(all_emails_subq, all_emails_subq.c.event_id == ComplianceEvent.id)
+        .filter(ComplianceEvent.notify == True)
+        .filter(ComplianceEvent.notified == False)
+        .filter(
+            ComplianceEvent.next_due_date <=
+            func.now() + func.make_interval(0, 0, 0, ComplianceEvent.remind_before_days)
+        )
+        .group_by(
+            ComplianceEvent.id,
+            ComplianceScope.name,
+            ComplianceEvent.next_due_date,
+        )
+        .all()
+    )
+    
+    return [
+        UpcomingEvent(
+            id=row.id,
+            name=row.name,
+            scope_name=row.scope_name,
+            next_due_date=row.next_due_date,
+            notify_list=row.notify_list or [],
+        )
+        for row in results
+    ]

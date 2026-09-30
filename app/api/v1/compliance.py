@@ -318,7 +318,7 @@ def replace_asset_scopes(
 @router.get("/events", response_model=PaginatedResponse[ComplianceEventList])
 def list_events_paginated(
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=1000),
+    per_page: int = Query(20, ge=1, le=99999999999),
     sort_by: Optional[str] = Query(None),
     sort_order: str = Query("asc", enum=["asc", "desc"]),
     search: Optional[str] = Query(None),
@@ -483,5 +483,20 @@ def remove_group_from_event(
     """Remove a group from an event's notification list."""
     try:
         service.remove_group_from_event(event_id, group_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/events/notify-status", response_model=ComplianceEvent)
+def update_event(
+    payload: dict,
+    service: ComplianceEventService = Depends(get_compliance_event_service),
+):
+    """Update a compliance event."""
+    try:
+        success_ids = payload.get("success_ids", [])
+        print("Received event status notification", payload)
+        if not success_ids:
+            raise HTTPException(status_code=404, detail="Event not found")
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))

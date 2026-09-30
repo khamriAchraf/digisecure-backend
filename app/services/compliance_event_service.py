@@ -238,3 +238,24 @@ class ComplianceEventService:
             raise HTTPException(status_code=404, detail="Group not found")
 
         return event_crud.remove_group_from_event(self.db, event, group)
+    
+    def get_event_groups_and_users(self, event_id: int):
+        logger.info(
+            f"User {self.current_user.id} attempts to GET groups and users for event {event_id} at {datetime.now(timezone.utc).isoformat()}"
+        )
+        if not has_permission(self.current_user, "read", "compliance_event"):
+            logger.warning(
+                f"User {self.current_user.id} denied READ access to get groups and users for event {event_id}"
+            )
+            raise PermissionError("Not allowed to read compliance events.")
+
+        event = event_crud.get_event(self.db, event_id)
+        if event is None:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Event not found")
+
+        return {
+            "notify_users": event.notify_users,
+            "notify_groups": event.notify_groups,
+        }

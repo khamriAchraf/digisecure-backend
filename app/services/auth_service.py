@@ -13,6 +13,7 @@ from app.core.security import get_password_hash, verify_password
 from app.db.crud import password_reset_token as password_reset_token_crud
 from app.db.crud import refresh_token as refresh_token_crud
 from app.db.models.user import User
+from app.db.models.api_key import ApiKey
 
 SECRET_KEY = settings.JWT_SECRET
 ALGORITHM = settings.JWT_ALGORITHM
@@ -301,3 +302,18 @@ def reset_user_password(db: Session, token: str, new_password: str) -> Optional[
         f"Password reset successful for user {user.id}, revoked {revoked_count} refresh tokens"
     )
     return user
+
+
+def create_api_key(db: Session, owner_id: int, name: str, expires_at=None):
+    raw_key = secrets.token_urlsafe(48)
+    key_hash = get_password_hash(raw_key)
+    api_key = ApiKey(
+        name=name,
+        key_hash=key_hash,
+        owner_id=owner_id,
+        expires_at=expires_at,
+    )
+    db.add(api_key)
+    db.commit()
+    db.refresh(api_key)
+    return raw_key

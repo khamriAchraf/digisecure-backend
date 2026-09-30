@@ -2,9 +2,13 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
+from fastapi.security import APIKeyHeader
 from app.core.logger import logger, request_id_ctx
 from app.db.models.user import User
+from app.db.models.api_key import ApiKey
+from app.core.security import verify_password
+from datetime import UTC, datetime
+
 from app.db.session import get_db
 from app.services.asset_service import AssetService
 from app.services.auth_service import decode_access_token, get_user_by_id
@@ -36,6 +40,22 @@ def get_current_user(
     db.execute(text(f"SET LOCAL app.current_user_id = '{user.id}'"))
     db.execute(text(f"SET LOCAL app.request_id = '{request_id}'"))
     return user
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def get_current_external_service(
+    api_key: str = Depends(api_key_header), db: Session = Depends(get_db)
+):
+    if not api_key:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing API key")
+
+    keys = db.query(ApiKey).filter(ApiKey.is_active == True).all()
+    for db_key in keys:
+        if verify_password(api_key, db_key.key_hash):
+            if db_key.expires_at and db_key.expires_at < datetime.now(UTC):
+                raise HTTPException(status_code=401, detail="API key expired")
+            return db_key
+    raise HTTPException(status_code=401, detail="Invalid API key")
 
 
 def get_user_service(

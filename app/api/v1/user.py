@@ -47,7 +47,7 @@ def get_user_permissions(
         user = service.get_user_by_identifier(identifier)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return service.get_user_permissions(user)
+        return service.get_user_permissions(user)  
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 

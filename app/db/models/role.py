@@ -32,6 +32,7 @@ class Role(Base, SoftDeleteMixin):
         "Permission", secondary=role_permissions, back_populates="roles"
     )
     users = relationship("User", back_populates="role")
+    api_keys = relationship("ApiKey", back_populates="role")
     rank = Column(Integer, nullable=False)
 
     def soft_delete(self, db: Session):

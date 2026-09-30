@@ -1,4 +1,5 @@
-from typing import Dict
+from typing import Dict, List
+from datetime import date
 
 from pydantic import BaseModel
 
@@ -13,3 +14,14 @@ class ScopeComplianceBreakdown(BaseModel):
 class ScopesComplianceSummary(BaseModel):
     scopes: Dict[int, ScopeComplianceBreakdown]
     overall_progress_percentage: float
+
+class UpcomingEvent(BaseModel):
+    id: int
+    name: str
+    scope_name: str
+    next_due_date: date
+    notify_list: List[str]
+    
+class UpcomingEventsResponse(BaseModel):
+    events: List[UpcomingEvent]
+    callback_url: str

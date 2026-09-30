@@ -9,9 +9,18 @@ from app.core.config import settings
 from app.core.logger import logger
 from app.core.security import get_password_hash
 from app.db.base import Base
-from app.db.models import (ComplianceControl, ComplianceEvent, ComplianceScope,
-                           Location, Manufacturer, OperatingSystem, Permission,
-                           Role, TableConfig, User)
+from app.db.models import (
+    ComplianceControl,
+    ComplianceEvent,
+    ComplianceScope,
+    Location,
+    Manufacturer,
+    OperatingSystem,
+    Permission,
+    Role,
+    TableConfig,
+    User,
+)
 from app.db.models.asset import Computer, NetworkDevice, Software
 from app.db.session import SessionLocal, engine
 
@@ -560,6 +569,12 @@ def main():
             "description": "Limited access for end users",
             "is_builtin": True,
             "rank": 7,
+        },
+        {
+            "name": "system_cronjob",
+            "description": "Role for system cronjob operations",
+            "is_builtin": True,
+            "rank": 99,
         },
     ]
 
@@ -1144,6 +1159,24 @@ def main():
         },
     ]
 
+    api_keys_permissions = [
+        {
+            "action": "list",
+            "resource": " api_key",
+            "description": "List API keys",
+        },
+        {
+            "action": "create",
+            "resource": " api_key",
+            "description": "Create API keys",
+        },
+        {
+            "action": "delete",
+            "resource": " api_key",
+            "description": "Delete API keys",
+        },
+    ]
+
     compliance_event_permissions = [
         {
             "action": "read",
@@ -1197,10 +1230,14 @@ def main():
         "certificate_key": certificate_key_permissions,
         "analytics": analytics_permissions,
         "data_register": data_register_permissions,
+        "api_key": api_keys_permissions,
     }
 
     # Role-permission mapping
     ROLE_PERMISSION_MAP = {
+        "system_cronjob": {
+            "analytics": ["list"],
+        },
         "Super-Admin": {
             "user": ["read", "list", "create", "update", "delete"],
             "role": ["read", "list", "create", "update", "delete"],
@@ -1226,6 +1263,7 @@ def main():
             "certificate_key": ["read", "list", "create", "update", "delete"],
             "analytics": ["list"],
             "data_register": ["read", "list", "create", "update", "delete"],
+            "api_key": ["list", "create", "delete"],
         },
         "Admin": {
             "user": ["read", "list", "create", "update", "delete"],
@@ -1251,6 +1289,7 @@ def main():
             "recycle_bin_group": ["read", "list", "restore", "purge"],
             "certificate_key": ["read", "list", "create", "update", "delete"],
             "analytics": ["list"],
+            
         },
         "Supervisor": {
             "user": ["read", "list", "create", "update"],

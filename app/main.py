@@ -29,7 +29,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://digisecure.gnpartners.ma", "http://localhost:3000"],
+    allow_origins=["https://digisecure.gnpartners.ma", "http://localhost:3000", "http://localhost:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,10 +72,8 @@ def read_root(request: Request):
 
 @app.middleware("http")
 async def logging_context_middleware(request: Request, call_next):
-    # Set request_id from header or generate
     req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     set_request_id(req_id)
-    # Try to extract user_id from Authorization header
     user_id = None
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.lower().startswith("bearer "):

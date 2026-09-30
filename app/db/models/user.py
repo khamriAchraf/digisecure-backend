@@ -45,6 +45,7 @@ class User(Base, SoftDeleteMixin):
     valid_from = Column(DateTime, nullable=True)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
 
+    api_keys = relationship("ApiKey", back_populates="owner")
     role = relationship("Role", back_populates="users")
     groups = relationship("Group", secondary=user_groups, back_populates="users")
     refresh_tokens = relationship(

@@ -44,6 +44,7 @@ class ComplianceEvent(Base):
     next_due_date = Column(Date, nullable=True)
     last_done_date = Column(Date, nullable=True)
     notify = Column(Boolean, nullable=True)
+    notified = Column(Boolean, nullable=True, default=False)
     remind_before_days = Column(Integer, nullable=True)
     notes = Column(Text, nullable=True)
 

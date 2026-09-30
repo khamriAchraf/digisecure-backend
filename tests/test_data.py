@@ -4,6 +4,13 @@ Contains user credentials, role information, and other test constants.
 """
 
 TEST_USERS = {
+    "system_cronjob": {
+        "username": "system_cronjob",
+        "email": "system@cronjob",
+        "password": "xxx_ecQxR9wSXGxQCZ2M5M63feC1axad20smM",
+        "role_id": 99,
+        "role_name": "system_cronjob",
+    },
     "admin": {
         "username": "admin1",
         "email": "admin1@example.com",
@@ -64,6 +71,7 @@ ROLES = {
     5: {"name": "Hotliner"},
     6: {"name": "Observer"},
     7: {"name": "Self-Service"},
+    99: {"name": "system_cronjob"},
 }
 
 TEST_LOCATIONS = {

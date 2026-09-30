@@ -11,6 +11,7 @@ from app.schemas.user import (ForgotPasswordRequest, ForgotPasswordResponse,
                               LogoutResponse, ResetPasswordRequest,
                               ResetPasswordResponse, TokenRefresh, UserCreate,
                               UserLogin, UserResponse)
+from app.schemas.api_key import ApiKeyCreate, ApiKeyResponse
 from app.services import auth_service
 from app.services.email_service import send_password_reset_email
 from app.utils.connection_logger import log_login_attempt, log_successful_login
@@ -269,3 +270,20 @@ def reset_password(
     return ResetPasswordResponse(
         message="Password successfully reset. All sessions have been logged out."
     )
+
+
+@router.post("/api-key", response_model=ApiKeyCreate)
+def create_api_key(
+    request: Request,
+    api_key_data: ApiKeyCreate,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme),
+):
+    user_id = auth_service.decode_access_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = auth_service.get_user_by_id(db, int(user_id))
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    api_key = auth_service.create_api_key(api_key_data, user, db)

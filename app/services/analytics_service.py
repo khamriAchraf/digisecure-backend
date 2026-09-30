@@ -4,6 +4,11 @@ from app.core.security import has_permission
 from app.db.models.compliance_scopes import ComplianceScope
 from app.db.models.user import User
 from app.services.compliance_scope_service import ComplianceScopeService
+from app.services.compliance_event_service import ComplianceEventService
+from app.schemas.analytics import UpcomingEvent
+from app.db.crud import compliance_event as compliance_event_crud
+from app.core.config import settings
+
 
 
 class PermissionError(Exception):
@@ -34,6 +39,10 @@ class AnalyticsService:
     def get_scopes_compliance_summary(self) -> dict:
         self._ensure_permission()
         return get_scopes_compliance_summary(self.db, self.current_user)
+    
+    def get_events_needing_reminder(self) -> list[UpcomingEvent] | None: 
+        events=compliance_event_crud.get_events_needing_reminder(self.db)
+        return events, settings.EVENT_NOTIFICATION_CALLBACK_URL
 
 
 def get_active_compliance_scopes_count(db: Session) -> int:
@@ -134,3 +143,4 @@ def get_scopes_compliance_summary(db: Session, current_user: User) -> dict:
         "scopes": scopes_summary,
         "overall_progress_percentage": overall_progress,
     }
+

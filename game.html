@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CDM Deploy Maze</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, sans-serif;
+      background: #f7f4ef;
+      color: #222;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .game {
+      width: min(100%, 720px);
+      background: #fffaf3;
+      border: 1px solid #ddd3c5;
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .panel {
+      background: #f3eee6;
+      border: 1px solid #ddd3c5;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .maze {
+      display: grid;
+      grid-template-columns: repeat(15, 1fr);
+      gap: 4px;
+      margin: 16px 0;
+      user-select: none;
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(16px, 4vw, 28px);
+      background: #f6f1e9;
+      border: 1px solid #e5dbcf;
+    }
+
+    .wall {
+      background: #d6ccbe;
+      border-color: #c6b9a8;
+    }
+
+    .player {
+      background: #ffe5d1;
+      border-color: #e8b995;
+    }
+
+    .item {
+      background: #fdf6e8;
+      border-color: #dfcfae;
+    }
+
+    .door {
+      background: #eee7dd;
+      border-color: #cbbda9;
+    }
+
+    .finish {
+      background: #eef3ea;
+      border-color: #cddbc4;
+    }
+
+    .message {
+      min-height: 24px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 56px);
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 1px solid #d6ccbe;
+      background: #fffaf3;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #f3eee6;
+    }
+
+    .wide {
+      grid-column: span 3;
+      font-size: 14px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 14px;
+      color: #444;
+    }
+
+    .legend span {
+      background: #f3eee6;
+      border: 1px solid #ddd3c5;
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="game">
+    <h1>🍑 CDM Deploy Maze</h1>
+    <p class="subtitle">
+      Guide the peach from Dev to Prod. Collect the deployment requirements first.
+    </p>
+
+    <section class="topbar">
+      <div class="panel">
+        <strong>Checklist:</strong>
+        <span id="checklist"></span>
+      </div>
+
+      <div class="panel">
+        <strong>Moves:</strong>
+        <span id="moves">0</span>
+      </div>
+    </section>
+
+    <div id="message" class="message">
+      Use arrow keys or WASD to move.
+    </div>
+
+    <div id="maze" class="maze"></div>
+
+    <div class="legend">
+      <span>🍑 You</span>
+      <span>🧪 Tests</span>
+      <span>✅ Approval</span>
+      <span>🏷️ Version</span>
+      <span>👁️ Monitoring</span>
+      <span>🚪 Gate</span>
+      <span>🚀 Prod</span>
+    </div>
+
+    <div class="controls">
+      <div></div>
+      <button onclick="move(0, -1)">↑</button>
+      <div></div>
+
+      <button onclick="move(-1, 0)">←</button>
+      <button onclick="move(0, 1)">↓</button>
+      <button onclick="move(1, 0)">→</button>
+
+      <button class="wide" onclick="restart()">Restart</button>
+    </div>
+  </main>
+
+  <script>
+    const originalLevel = [
+      "###############",
+      "#P............#",
+      "#.###.#.#####.#",
+      "#...#.#...T#..#",
+      "###.#.###.#.#.#",
+      "#...#.....#.#.#",
+      "#.#######.#.#.#",
+      "#A......#.#.#.#",
+      "#.#####.#.#.#.#",
+      "#.....#.#...#V#",
+      "#.###.#.#####.#",
+      "#...#...M...aG#",
+      "###############"
+    ];
+
+    const emojis = {
+      P: "🍑",
+      G: "🚀",
+      T: "🧪",
+      A: "✅",
+      V: "🏷️",
+      M: "👁️",
+      a: "🚪",
+      "#": "",
+      ".": ""
+    };
+
+    const itemNames = {
+      T: "Tests",
+      A: "Approval",
+      V: "Version",
+      M: "Monitoring"
+    };
+
+    const requiredItems = ["T", "A", "V", "M"];
+
+    const doors = {
+      a: "A"
+    };
+
+    let level;
+    let player;
+    let collected;
+    let moves;
+    let won;
+
+    const maze = document.getElementById("maze");
+    const message = document.getElementById("message");
+    const checklist = document.getElementById("checklist");
+    const movesDisplay = document.getElementById("moves");
+
+    function restart() {
+      level = originalLevel.map(row => row.split(""));
+      collected = new Set();
+      moves = 0;
+      won = false;
+
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          if (level[y][x] === "P") {
+            player = { x, y };
+            level[y][x] = ".";
+          }
+        }
+      }
+
+      message.textContent = "Use arrow keys or WASD to move.";
+      render();
+    }
+
+    function render() {
+      maze.innerHTML = "";
+      maze.style.gridTemplateColumns = `repeat(${level[0].length}, 1fr)`;
+
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          const tile = level[y][x];
+          const cell = document.createElement("div");
+
+          cell.className = "cell";
+
+          if (tile === "#") cell.classList.add("wall");
+          if (requiredItems.includes(tile)) cell.classList.add("item");
+          if (doors[tile]) cell.classList.add("door");
+          if (tile === "G") cell.classList.add("finish");
+
+          if (player.x === x && player.y === y) {
+            cell.classList.add("player");
+            cell.textContent = emojis.P;
+          } else {
+            cell.textContent = emojis[tile] || "";
+          }
+
+          maze.appendChild(cell);
+        }
+      }
+
+      checklist.innerHTML = requiredItems
+        .map(item => {
+          const done = collected.has(item);
+          return `${done ? "✅" : "⬜"} ${itemNames[item]}`;
+        })
+        .join(" · ");
+
+      movesDisplay.textContent = moves;
+    }
+
+    function move(dx, dy) {
+      if (won) return;
+
+      const nextX = player.x + dx;
+      const nextY = player.y + dy;
+      const tile = level[nextY]?.[nextX];
+
+      if (!tile || tile === "#") {
+        message.textContent = "Blocked by the deployment wall.";
+        return;
+      }
+
+      if (doors[tile]) {
+        const neededItem = doors[tile];
+
+        if (!collected.has(neededItem)) {
+          message.textContent = `This gate needs ${itemNames[neededItem]}.`;
+          return;
+        }
+
+        message.textContent = "Gate opened.";
+      }
+
+      player.x = nextX;
+      player.y = nextY;
+      moves++;
+
+      if (requiredItems.includes(tile)) {
+        collected.add(tile);
+        level[nextY][nextX] = ".";
+        message.textContent = `${itemNames[tile]} collected.`;
+      }
+
+      if (tile === "G") {
+        const missing = requiredItems.filter(item => !collected.has(item));
+
+        if (missing.length > 0) {
+          message.textContent = `Prod is not ready. Missing: ${missing.map(item => itemNames[item]).join(", ")}.`;
+        } else {
+          won = true;
+          message.textContent = `🚀 Deployment successful in ${moves} moves.`;
+        }
+      }
+
+      render();
+    }
+
+    window.addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+
+      if (key === "arrowup" || key === "w") move(0, -1);
+      if (key === "arrowdown" || key === "s") move(0, 1);
+      if (key === "arrowleft" || key === "a") move(-1, 0);
+      if (key === "arrowright" || key === "d") move(1, 0);
+      if (key === "r") restart();
+    });
+
+    restart();
+  </script>
+</body>
+</html>

@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     PASSWORD_RESET_URL: str = os.getenv(
         "PASSWORD_RESET_URL", "http://localhost:3000/reset-password"
     )
+    EVENT_NOTIFICATION_CALLBACK_URL: str
+    SYSTEM_CRONJOB_API_KEY: str
     DEBUG: bool = False
     GEOLITE2_DB_PATH: str = os.getenv("GEOLITE2_DB_PATH", "./data/GeoLite2-City.mmdb")
 
@@ -47,6 +49,8 @@ class TestSettings(BaseSettings):
     PASSWORD_RESET_URL: str = os.getenv(
         "PASSWORD_RESET_URL", "http://localhost:3000/reset-password"
     )
+    EVENT_NOTIFICATION_CALLBACK_URL: str
+    SYSTEM_CRONJOB_API_KEY: str
     DEBUG: bool = False
     GEOLITE2_DB_PATH: str = os.getenv("GEOLITE2_DB_PATH", "./data/GeoLite2-City.mmdb")
 

@@ -8,15 +8,21 @@ from app.db.models.role import Permission, Role
 
 
 def get_role(db: Session, role_id: int) -> Optional[Role]:
-    return db.query(Role).filter(Role.id == role_id).first()
+    query= db.query(Role)
+    query=exclude_system_roles(query)
+    return query.filter(Role.id == role_id).first()
 
 
 def get_role_by_name(db: Session, name: str) -> Optional[Role]:
-    return db.query(Role).filter(Role.name == name).first()
+    query= db.query(Role)
+    query=exclude_system_roles(query)
+    return query.filter(Role.name == name).first()
 
 
 def list_roles(db: Session, skip: int = 0, limit: int = 100) -> List[Role]:
-    return db.query(Role).offset(skip).limit(limit).all()
+    query= db.query(Role)
+    query=exclude_system_roles(query)
+    return query.offset(skip).limit(limit).all()
 
 
 def get_paginated_roles(
@@ -29,6 +35,7 @@ def get_paginated_roles(
     filters: Optional[dict] = None,
 ) -> Tuple[List[Role], int]:
     query: Query = db.query(Role)
+    query=exclude_system_roles(query)
 
     # Apply filters
     if filters:
@@ -75,7 +82,7 @@ def get_paginated_roles_below_rank(
     filters: Optional[dict] = None,
 ) -> Tuple[List[Role], int]:
     query: Query = db.query(Role).filter(Role.rank > max_rank)
-
+    query = exclude_system_roles(query)
     # Apply filters
     if filters:
         for key, value in filters.items():
@@ -105,7 +112,7 @@ def get_paginated_roles_below_rank(
     # Apply pagination
     offset = (page - 1) * per_page
     query = query.offset(offset).limit(per_page)
-
+    query = exclude_system_roles(query)
     roles = query.all()
     return roles, total
 
@@ -237,3 +244,7 @@ def list_roles_below_rank(
                 query = query.filter(getattr(Role, key) == value)
 
     return query.offset(skip).limit(limit).all()
+
+def exclude_system_roles(query: Query) -> Query:
+    """Exclude roles whose name starts with 'system'."""
+    return query.filter(~Role.name.ilike("system%"))
