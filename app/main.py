@@ -28,7 +28,11 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://digisecure.gnpartners.ma", "http://localhost:3000", "http://localhost:8080"],
+    allow_origins=[
+        "https://digisecure.achrafkhamri.com",
+        "https://digisecure.gnpartners.ma",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

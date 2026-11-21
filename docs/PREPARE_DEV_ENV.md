@@ -1,90 +1,76 @@
-## Development
+# Local Development Setup
 
-### Requirements
+The quick start in the [README](../README.md) covers installing dependencies,
+configuring PostgreSQL, seeding a local database, and starting the API.
 
-- Python >=3.12
+## Requirements
+
+- Python 3.12
 - Poetry
-- Pre-commit
-- Docker
+- PostgreSQL 17
+- Docker only if you want to run PostgreSQL in a container
 
-### Setup Instructions
+## Environment configuration
 
-After cloning the repository, follow these steps to set up your development environment:
+The application loads its settings from `app/core/.env`. Create it from the
+tracked, secret-free template:
 
-1. **Install Python and Poetry**
+```powershell
+Copy-Item docs\.env.example app\core\.env
+```
 
-   Make sure you have Python 3.12 or higher installed.  
-   Install [Poetry](https://python-poetry.org/docs/#installation) if you haven't already.
+Edit the database settings and replace the example JWT secret and
+`SYSTEM_CRONJOB_API_KEY` with local-only values. Never commit `app/core/.env`.
+The required database settings are `DB_HOST`, `DB_PORT`, `DB_USER`,
+`DB_PASSWORD`, `DB_NAME`, and `DB_SCHEMA`. `JWT_SECRET`, `JWT_ALGORITHM`,
+`JWT_EXPIRATION_MINUTES`, `JWT_REFRESH_EXPIRATION_DAYS`,
+`EVENT_NOTIFICATION_CALLBACK_URL`, and `SYSTEM_CRONJOB_API_KEY` are also
+required.
 
-2. **Install Dependencies**
+Optional settings such as `EMAIL_SERVICE_URL`, `PASSWORD_RESET_URL`,
+`PASSWORD_RESET_TOKEN_EXPIRE_MINUTES`, `DEBUG`, and `GEOLITE2_DB_PATH` have
+defaults in `app/core/config.py`. GeoIP lookup requires a separately downloaded
+MaxMind GeoLite2 City database; without it, the application logs a warning.
+See [docs/GEOLOCATION.md](./GEOLOCATION.md) for details.
 
-   In the project root directory, run:
+## Install and run
 
-   ```
-   poetry install --no-root
-   ```
+From the repository root:
 
-   This will install all dependencies specified in `pyproject.toml`.
+```powershell
+poetry install --no-root
+poetry run python -m app.utils.seed_db_schema --skip-fixtures
+poetry run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
 
-3. **Install and run pre-commit Hooks**
+The seed command creates missing tables and baseline role, permission, and
+compliance data. It requires a development database and a database user with
+permission to create the database if absent, plus its schema objects,
+functions, and triggers. Run it only against a local or disposable development
+database. Add `--username`, `--email`, and `--password` to create a
+super-admin, or omit `--skip-fixtures` to add demo data.
 
-   Install pre-commit and set up the hooks:
+The legacy `seed_db.sh` script is not suitable for setup: it ignores
+super-admin arguments and creates the hard-coded `admin` / `admin` account.
+Use the Python module command above instead.
 
-   ```
-   poetry add --group dev pre-commit
-   ```
+The API listens on `http://localhost:8000`; use `/health` to check database
+connectivity and `/docs` for the interactive API documentation.
 
-   Setup and run the pre-commit hooks
-   ```
-   poetry run pre-commit install
-   poetry run pre-commit run --all-files
-   ```
+## PostgreSQL auditing
 
-   This ensures code quality checks run automatically before each commit.
+For a PostgreSQL environment with `pgaudit`, see
+[DATABASE_SETUP.md](./DATABASE_SETUP.md). A local `pgaudit` setup is optional
+for starting the API.
 
-4. **Copy and Configure Environment Variables**
+## Tests
 
-   Copy the example environment file and adjust as needed:
+Install the project's development dependencies with `poetry install --no-root`.
+Configure the test settings in `app/core/.env.test` before running tests:
 
-   ```
-   cp .env.example app/core/.env
-   ```
+```powershell
+poetry run pytest
+```
 
-   Edit `.env` to set up your local configuration (database, secrets, etc).
-
-5. **Download the MaxMind GeoLite2 City Database**
-
-   **Note:** The GeoLite2 City database is not included in the repository due to its size and MaxMind's license restrictions. Each developer/server must download it individually.
-
-   - Register for a free MaxMind account: https://www.maxmind.com/en/geolite2/signup
-   - Download the latest GeoLite2 City database (`GeoLite2-City.mmdb`) from: https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
-   - Place the `.mmdb` file in the `data/` directory (or the path specified by `GEOLITE2_DB_PATH` in your `.env`)
-   - **Do not commit the `.mmdb` file to git!** It is already included in `.gitignore`.
-
-6. **Set Up the Database**
-
-   You can use Docker to run a local database, or connect to your own instance.  
-   For advanced auditing capabilities (required for the application), follow the instructions in [DATABASE_SETUP.md](./DATABASE_SETUP.md) to set up PostgreSQL with pgaudit using Docker.
-
-   Seed the database with initial data and a super-admin user
-
-   ./seed_db.sh <username> <email> <password>
-
-
-7. **Run the Application**
-
-   Start the development server:
-
-   ```
-   ./dev_start_app.sh
-   ```
-
-8. ** Run Tests**
-
-   To run the test suite:
-
-   ```
-   ./run_all_tests.sh
-   ```
-
-You're now ready to start developing!
+Keep test settings and test databases separate from development and production
+credentials and data.
