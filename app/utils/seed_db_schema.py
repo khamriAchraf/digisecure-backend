@@ -45,6 +45,14 @@ def parse_arguments():
         default="Super Administrator",
         help="Full name for the super-admin user (default: Super Administrator)",
     )
+    parser.add_argument(
+        "--skip-fixtures",
+        action="store_true",
+        help=(
+            "Skip test/demo locations, manufacturers, operating systems, assets, "
+            "and development test users"
+        ),
+    )
 
     return parser.parse_args()
 
@@ -1507,34 +1515,38 @@ def main():
                 session, args.username, args.email, args.password, args.full_name
             )
 
-        # Create test locations
-        logger.info("Creating test locations if not exist...")
-        for location_key, location_data in TEST_LOCATIONS.items():
-            existing_location = (
-                session.query(Location).filter_by(name=location_data["name"]).first()
-            )
-            if not existing_location:
-                location = Location(**location_data)
-                session.add(location)
-        session.commit()
-        logger.info("Test locations created.")
+        if not args.skip_fixtures:
+            # Create test locations
+            logger.info("Creating test locations if not exist...")
+            for location_data in TEST_LOCATIONS.values():
+                existing_location = (
+                    session.query(Location)
+                    .filter_by(name=location_data["name"])
+                    .first()
+                )
+                if not existing_location:
+                    location = Location(**location_data)
+                    session.add(location)
+            session.commit()
+            logger.info("Test locations created.")
 
-        # Create test manufacturers
-        logger.info("Creating test manufacturers if not exist...")
-        for manufacturer_key, manufacturer_data in TEST_MANUFACTURERS.items():
-            existing_manufacturer = (
-                session.query(Manufacturer)
-                .filter_by(name=manufacturer_data["name"])
-                .first()
-            )
-            if not existing_manufacturer:
-                manufacturer = Manufacturer(**manufacturer_data)
-                session.add(manufacturer)
-        session.commit()
-        logger.info("Test manufacturers created.")
+            # Create test manufacturers
+            logger.info("Creating test manufacturers if not exist...")
+            for manufacturer_data in TEST_MANUFACTURERS.values():
+                existing_manufacturer = (
+                    session.query(Manufacturer)
+                    .filter_by(name=manufacturer_data["name"])
+                    .first()
+                )
+                if not existing_manufacturer:
+                    manufacturer = Manufacturer(**manufacturer_data)
+                    session.add(manufacturer)
+            session.commit()
+            logger.info("Test manufacturers created.")
 
-        # Create operating systems
-        create_operating_systems(session)
+            create_operating_systems(session)
+        else:
+            logger.info("Skipping test/demo fixture creation.")
 
         # Create compliance scopes
         logger.info("Creating compliance scopes if not exist...")
@@ -1573,8 +1585,8 @@ def main():
         session.commit()
         logger.info("Compliance scopes created.")
 
-        # Create sample assets
-        create_sample_assets(session)
+        if not args.skip_fixtures:
+            create_sample_assets(session)
 
         # Create PCI-DSS v4.0 compliance events
         logger.info("Creating PCI-DSS v4.0 compliance events if not exist...")
@@ -2318,7 +2330,7 @@ def main():
             logger.warning("NDSSI scope not found; skipping NDSSI controls creation.")
 
         # Create a user for each role if the database name contains 'dev'
-        if "dev" in settings.DB_NAME.lower():
+        if not args.skip_fixtures and "dev" in settings.DB_NAME.lower():
             logger.info(
                 "Detected 'dev' in DB name, creating test users from test_data.py..."
             )

@@ -8,59 +8,43 @@ The seeding process creates:
 1. **Preset Roles**: Super-Admin, Admin, Supervisor, Technician, Hotliner, Observer, Self-Service
 2. **User Management Permissions**: read, create, update, delete, purge
 3. **Role-Permission Mappings**: Assigns appropriate permissions to each role
-4. **Super-Admin User** (optional): Creates a user with Super-Admin role and full system access
+4. **Compliance reference data**: Preset scopes, events, and controls
+5. **Super-Admin User** (optional): Creates a user with Super-Admin role and full system access
+6. **Test/demo fixtures** (optional): Locations, manufacturers, operating systems, sample assets, and (for development databases) test users
 
 ## Usage
 
-### Method 1: Using the Shell Script (Recommended)
+### Recommended: Using the Python Script Directly
 
-The `seed_db.sh` script provides a convenient way to seed the database:
-
-```bash
-# Seed only roles and permissions (no user creation)
-./seed_db.sh
-
-# Create super-admin user with credentials
-./seed_db.sh <username> <email> <password>
-
-# Examples:
-./seed_db.sh admin admin@example.com mypassword
-./seed_db.sh "John Doe" john@company.com "secure123!"
-
-# Show help
-./seed_db.sh --help
-```
-
-### Method 2: Using the Python Script Directly
-
-You can also run the Python script directly with more options:
+The direct script avoids creating a user unless credentials are explicitly
+provided. Use `--skip-fixtures` for a baseline seed without test/demo data:
 
 ```bash
-# Seed only roles and permissions
-poetry run python app/db/seed.py
+# Seed baseline and compliance data without test/demo fixtures
+poetry run python -m app.utils.seed_db_schema --skip-fixtures
 
 # Create super-admin user with all required arguments
-poetry run python app/db/seed.py --username admin --email admin@example.com --password mypassword
+poetry run python -m app.utils.seed_db_schema --username admin --email admin@example.com --password mypassword
 
 # Create super-admin user with custom full name
-poetry run python app/db/seed.py --username admin --email admin@example.com --password mypassword --full-name "System Administrator"
+poetry run python -m app.utils.seed_db_schema --username admin --email admin@example.com --password mypassword --full-name "System Administrator"
 
 # Show help
-poetry run python app/db/seed.py --help
+poetry run python -m app.utils.seed_db_schema --help
 ```
+
+### Legacy Shell Script
+
+> **Warning:** `seed_db.sh` creates an `admin` account with the hard-coded
+> password `admin`. Do not use it for production or shared databases.
 
 ## Arguments
 
-### Shell Script Arguments
-- `username`: Username for the super-admin user (required if creating user)
-- `email`: Email for the super-admin user (required if creating user)
-- `password`: Password for the super-admin user (required if creating user)
-
-### Python Script Arguments
 - `--username`: Username for the super-admin user
 - `--email`: Email for the super-admin user
 - `--password`: Password for the super-admin user
 - `--full-name`: Full name for the super-admin user (default: "Super Administrator")
+- `--skip-fixtures`: Skip test/demo locations, manufacturers, operating systems, assets, and test users
 
 ## Important Notes
 

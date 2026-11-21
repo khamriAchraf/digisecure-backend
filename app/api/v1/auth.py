@@ -1,15 +1,17 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.logger import logger
 from app.core.rate_limiting import limiter
-from app.core.security import get_password_hash
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.user import (ForgotPasswordRequest, ForgotPasswordResponse,
                               LogoutResponse, ResetPasswordRequest,
-                              ResetPasswordResponse, TokenRefresh, UserCreate,
+                              ResetPasswordResponse, TokenRefresh,
                               UserLogin, UserResponse)
 from app.schemas.api_key import ApiKeyCreate, ApiKeyResponse
 from app.services import auth_service
@@ -25,38 +27,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 @router.post("/register", response_model=UserResponse)
 @limiter.limit("5/hour")
-def register(request: Request, user_create: UserCreate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == user_create.email).first()
-    if user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    hashed_password = get_password_hash(user_create.password)
-    # Find the super-admin role
-    from app.db.models.role import Role
-
-    super_admin_role = db.query(Role).filter_by(name="Super-Admin").first()
-    if not super_admin_role:
-        raise HTTPException(status_code=500, detail="Super-Admin role not found")
-    new_user = User(
-        email=user_create.email,
-        username=user_create.username,
-        full_name=user_create.full_name,
-        hashed_password=hashed_password,
-        language=user_create.language,
-        theme=user_create.theme,
-        status=user_create.status,
-        location=user_create.location,
-        phone=user_create.phone,
-        secondary_phone=user_create.secondary_phone,
-        timezone=user_create.timezone,
-        valid_from=user_create.valid_from,
-        valid_until=user_create.valid_until,
-        administartive_number=user_create.administartive_number,
-        role=super_admin_role,
+def register(request: Request):
+    raise HTTPException(
+        status_code=403,
+        detail="Public registration is disabled. Contact an administrator.",
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
 
 
 @router.post("/login", response_model=UserLogin)
@@ -90,15 +65,11 @@ def login(
         ip_address=ip_address,
         user_agent=user_agent,
     )
-    print(f"Access token: {access_token}")
     return UserLogin(
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
     )
-
-
-from pydantic import BaseModel
 
 
 class RefreshTokenRequest(BaseModel):
@@ -156,9 +127,21 @@ def refresh_token(
 
 
 @router.post("/logout", response_model=LogoutResponse)
-def logout(request: Request, refresh_token: str, db: Session = Depends(get_db)):
+def logout(
+    request: Request,
+    body: Optional[RefreshTokenRequest] = None,
+    refresh_token: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     """Logout and revoke refresh token"""
-    success = auth_service.revoke_refresh_token(refresh_token, db)
+    if body and refresh_token and body.refresh_token != refresh_token:
+        raise HTTPException(
+            status_code=422, detail="Conflicting refresh tokens were provided"
+        )
+    token_to_revoke = body.refresh_token if body else refresh_token
+    if not token_to_revoke:
+        raise HTTPException(status_code=422, detail="refresh_token is required")
+    success = auth_service.revoke_refresh_token(token_to_revoke, db)
     if success:
         logger.info(f"User logged out successfully, token revoked")
         return {"message": "Successfully logged out"}
