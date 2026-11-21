@@ -13,7 +13,6 @@ from app.api.v1 import document_store as document_store_module
 from app.api.v1 import group, recycle_bin, role, schema, table_config, user
 from app.api.v1.asset import router as asset_router
 from app.api.v1.reference_data import router as reference_data_router
-from app.core.config import settings
 from app.core.logger import clear_log_context, set_request_id, set_user_id
 from app.core.rate_limiting import limiter
 from app.db.models.role import Permission
@@ -53,7 +52,6 @@ permissions_cache = []
 
 @app.on_event("startup")
 def load_permissions_cache():
-    print(f"starting app with params: {settings}")
     global permissions_cache
     with SessionLocal() as db:
         permissions_cache = db.query(Permission).all()
